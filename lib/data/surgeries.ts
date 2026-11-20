@@ -86,6 +86,16 @@ export async function listKanbanSurgeries(supabase: SupabaseClient) {
   return data as unknown as SurgeryListItem[];
 }
 
+export async function listSurgeriesForSelect(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("surgeries")
+    .select("id,code")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as { id: string; code: string }[];
+}
+
 export async function listSurgeries(supabase: SupabaseClient, search?: string) {
   let query = supabase
     .from("surgeries")
