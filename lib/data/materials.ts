@@ -38,6 +38,16 @@ export async function listMaterials(supabase: SupabaseClient, search?: string) {
   return data as Material[];
 }
 
+export async function listActiveMaterialsForSelect(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("materials_catalog")
+    .select("id,name")
+    .eq("active", true)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Pick<Material, "id" | "name">[];
+}
+
 export async function getMaterial(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase
     .from("materials_catalog")

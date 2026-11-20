@@ -8,12 +8,26 @@ import {
   listStageHistory,
   getFinancialRecord,
 } from "@/lib/data/surgeries";
+import {
+  getAuthorizationRequest,
+  getOrReservation,
+  getOrCreateChecklist,
+  listPreoperativeItems,
+  listSurgeryMaterialItems,
+} from "@/lib/data/operations";
+import { listActiveMaterialsForSelect } from "@/lib/data/materials";
+import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
+import { listApprovedProtocolVersionsForSurgery } from "@/lib/data/protocols";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RequirementItem } from "@/components/surgeries/requirement-item";
 import { FinancialForm } from "@/components/surgeries/financial-form";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
+import { AuthorizationCard } from "@/components/surgeries/authorization-card";
+import { OrReservationCard } from "@/components/surgeries/or-reservation-card";
+import { PreoperativeCard } from "@/components/surgeries/preoperative-card";
+import { SurgeryMaterialsCard } from "@/components/surgeries/surgery-materials-card";
 
 const PRIORITY_LABEL: Record<string, string> = {
   low: "Baixa",
@@ -50,6 +64,27 @@ export default async function SurgeryDetailPage({
     listRequirements(supabase, id),
     listStageHistory(supabase, id),
     getFinancialRecord(supabase, id),
+  ]);
+
+  const [
+    authorization,
+    orReservation,
+    checklistId,
+    materials,
+    suppliers,
+    importableVersions,
+  ] = await Promise.all([
+    getAuthorizationRequest(supabase, id),
+    getOrReservation(supabase, id),
+    getOrCreateChecklist(supabase, id),
+    listActiveMaterialsForSelect(supabase),
+    listActiveSuppliersForSelect(supabase),
+    listApprovedProtocolVersionsForSurgery(supabase, surgery.primary_procedure_id, surgery.hospital_id),
+  ]);
+
+  const [preoperativeItems, materialItems] = await Promise.all([
+    listPreoperativeItems(supabase, checklistId),
+    listSurgeryMaterialItems(supabase, id),
   ]);
 
   return (
@@ -143,6 +178,56 @@ export default async function SurgeryDetailPage({
               <RequirementItem key={requirement.id} requirement={requirement} />
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Autorização</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AuthorizationCard
+            surgeryId={surgery.id}
+            insuranceProviderId={surgery.insurance_provider_id}
+            authorization={authorization}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Reserva do centro cirúrgico</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OrReservationCard
+            surgeryId={surgery.id}
+            hospitalId={surgery.hospital_id}
+            reservation={orReservation}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Checklist pré-operatório</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PreoperativeCard surgeryId={surgery.id} items={preoperativeItems} />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Materiais da cirurgia</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SurgeryMaterialsCard
+            surgeryId={surgery.id}
+            items={materialItems}
+            materials={materials}
+            suppliers={suppliers}
+            importableVersions={importableVersions}
+          />
         </CardContent>
       </Card>
 

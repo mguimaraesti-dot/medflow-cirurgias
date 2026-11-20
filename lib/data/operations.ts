@@ -1,0 +1,305 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type {
+  AuthorizationInput,
+  OrReservationInput,
+  PreoperativeItemInput,
+  SurgeryMaterialItemInput,
+} from "@/lib/validation/operations";
+
+// ----------------------------------------------------------------------------
+// Autorização
+// ----------------------------------------------------------------------------
+
+export type AuthorizationRequest = {
+  id: string;
+  surgery_id: string;
+  insurance_provider_id: string | null;
+  protocol_number: string | null;
+  requested_procedure: string | null;
+  status: string;
+  sent_at: string | null;
+  returned_at: string | null;
+  approved_at: string | null;
+  validity_date: string | null;
+  denial_reason: string | null;
+  created_at: string;
+};
+
+export type AuthorizationHistoryEntry = {
+  id: string;
+  status: string;
+  notes: string | null;
+  changed_at: string;
+};
+
+export async function getAuthorizationRequest(supabase: SupabaseClient, surgeryId: string) {
+  const { data, error } = await supabase
+    .from("authorization_requests")
+    .select("*")
+    .eq("surgery_id", surgeryId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as AuthorizationRequest | null;
+}
+
+export async function listAuthorizationHistory(supabase: SupabaseClient, authorizationId: string) {
+  const { data, error } = await supabase
+    .from("authorization_history")
+    .select("id,status,notes,changed_at")
+    .eq("authorization_id", authorizationId)
+    .order("changed_at", { ascending: true });
+  if (error) throw error;
+  return data as AuthorizationHistoryEntry[];
+}
+
+export async function createAuthorizationRequest(
+  supabase: SupabaseClient,
+  surgeryId: string,
+  insuranceProviderId: string | null,
+  input: AuthorizationInput
+) {
+  const { error } = await supabase.from("authorization_requests").insert({
+    surgery_id: surgeryId,
+    insurance_provider_id: insuranceProviderId,
+    ...input,
+  });
+  if (error) throw error;
+}
+
+export async function updateAuthorizationRequest(
+  supabase: SupabaseClient,
+  id: string,
+  input: AuthorizationInput
+) {
+  const { error } = await supabase.from("authorization_requests").update(input).eq("id", id);
+  if (error) throw error;
+}
+
+// ----------------------------------------------------------------------------
+// Reserva de centro cirúrgico
+// ----------------------------------------------------------------------------
+
+export type OrReservation = {
+  id: string;
+  surgery_id: string;
+  hospital_id: string;
+  expected_date: string | null;
+  requested_date: string | null;
+  confirmed_date: string | null;
+  confirmed_time: string | null;
+  room: string | null;
+  status: string;
+  change_reason: string | null;
+};
+
+export async function getOrReservation(supabase: SupabaseClient, surgeryId: string) {
+  const { data, error } = await supabase
+    .from("or_reservations")
+    .select("*")
+    .eq("surgery_id", surgeryId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as OrReservation | null;
+}
+
+export async function createOrReservation(
+  supabase: SupabaseClient,
+  surgeryId: string,
+  hospitalId: string,
+  input: OrReservationInput
+) {
+  const { error } = await supabase
+    .from("or_reservations")
+    .insert({ surgery_id: surgeryId, hospital_id: hospitalId, ...input });
+  if (error) throw error;
+}
+
+export async function updateOrReservation(
+  supabase: SupabaseClient,
+  id: string,
+  input: OrReservationInput
+) {
+  const { error } = await supabase.from("or_reservations").update(input).eq("id", id);
+  if (error) throw error;
+}
+
+// ----------------------------------------------------------------------------
+// Pré-operatório
+// ----------------------------------------------------------------------------
+
+export type PreoperativeItem = {
+  id: string;
+  checklist_id: string;
+  description: string;
+  due_date: string | null;
+  status: "pending" | "in_progress" | "done" | "waived";
+  notes: string | null;
+  completed_at: string | null;
+};
+
+export async function getOrCreateChecklist(supabase: SupabaseClient, surgeryId: string) {
+  const { data: existing, error: existingError } = await supabase
+    .from("preoperative_checklists")
+    .select("id")
+    .eq("surgery_id", surgeryId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return existing.id as string;
+
+  const { data, error } = await supabase
+    .from("preoperative_checklists")
+    .insert({ surgery_id: surgeryId })
+    .select("id")
+    .single();
+  if (error) {
+    // corrida: outra requisição já criou o checklist entre o select e o
+    // insert — a constraint única garante que não há duplicata, só
+    // reaproveitamos o registro que já existe.
+    if (error.code === "23505") {
+      const { data: retry, error: retryError } = await supabase
+        .from("preoperative_checklists")
+        .select("id")
+        .eq("surgery_id", surgeryId)
+        .single();
+      if (retryError) throw retryError;
+      return retry.id as string;
+    }
+    throw error;
+  }
+  return data.id as string;
+}
+
+export async function listPreoperativeItems(supabase: SupabaseClient, checklistId: string) {
+  const { data, error } = await supabase
+    .from("preoperative_items")
+    .select("id,checklist_id,description,due_date,status,notes,completed_at")
+    .eq("checklist_id", checklistId)
+    .order("due_date", { ascending: true, nullsFirst: false });
+  if (error) throw error;
+  return data as PreoperativeItem[];
+}
+
+export async function addPreoperativeItem(
+  supabase: SupabaseClient,
+  checklistId: string,
+  input: PreoperativeItemInput
+) {
+  const { error } = await supabase
+    .from("preoperative_items")
+    .insert({ checklist_id: checklistId, ...input });
+  if (error) throw error;
+}
+
+export async function setPreoperativeItemStatus(
+  supabase: SupabaseClient,
+  id: string,
+  status: PreoperativeItem["status"]
+) {
+  const { error } = await supabase
+    .from("preoperative_items")
+    .update({
+      status,
+      completed_at: status === "done" ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function removePreoperativeItem(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase.from("preoperative_items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ----------------------------------------------------------------------------
+// Materiais da cirurgia
+// ----------------------------------------------------------------------------
+
+export type SurgeryMaterialItem = {
+  id: string;
+  surgery_id: string;
+  material_id: string;
+  supplier_id: string | null;
+  quantity: number;
+  unit: string | null;
+  status: string;
+  notes: string | null;
+  material: { id: string; name: string } | null;
+  supplier: { id: string; company_name: string } | null;
+};
+
+export async function listSurgeryMaterialItems(supabase: SupabaseClient, surgeryId: string) {
+  const { data, error } = await supabase
+    .from("surgery_material_items")
+    .select(
+      "id,surgery_id,material_id,supplier_id,quantity,unit,status,notes,material:materials_catalog(id,name),supplier:suppliers(id,company_name)"
+    )
+    .eq("surgery_id", surgeryId)
+    .neq("status", "removed")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data as unknown as SurgeryMaterialItem[];
+}
+
+export async function addSurgeryMaterialItem(
+  supabase: SupabaseClient,
+  surgeryId: string,
+  input: SurgeryMaterialItemInput
+) {
+  const { error } = await supabase
+    .from("surgery_material_items")
+    .insert({ surgery_id: surgeryId, ...input });
+  if (error) throw error;
+}
+
+export async function setSurgeryMaterialItemStatus(
+  supabase: SupabaseClient,
+  id: string,
+  status: string
+) {
+  const { error } = await supabase
+    .from("surgery_material_items")
+    .update({ status })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function removeSurgeryMaterialItem(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase
+    .from("surgery_material_items")
+    .update({ status: "removed" })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function importProtocolVersionItems(
+  supabase: SupabaseClient,
+  surgeryId: string,
+  protocolVersionId: string
+) {
+  const { data: items, error } = await supabase
+    .from("protocol_items")
+    .select("material_id,quantity,unit,specs,preferred_supplier_id")
+    .eq("protocol_version_id", protocolVersionId);
+  if (error) throw error;
+  if (!items || items.length === 0) return 0;
+
+  const rows = items.map((item) => ({
+    surgery_id: surgeryId,
+    source_protocol_version_id: protocolVersionId,
+    material_id: item.material_id,
+    supplier_id: item.preferred_supplier_id,
+    quantity: item.quantity,
+    unit: item.unit,
+    notes: item.specs,
+    status: "suggested",
+  }));
+
+  const { error: insertError } = await supabase.from("surgery_material_items").insert(rows);
+  if (insertError) throw insertError;
+  return rows.length;
+}
