@@ -37,6 +37,25 @@ export async function listPatients(supabase: SupabaseClient, search?: string) {
   return data as unknown as Patient[];
 }
 
+export async function listActivePatientsForSelect(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("patients")
+    .select("id,full_name,cpf")
+    .order("full_name", { ascending: true });
+  if (error) throw error;
+  return data as Pick<Patient, "id" | "full_name" | "cpf">[];
+}
+
+export async function getPatient(supabase: SupabaseClient, id: string) {
+  const { data, error } = await supabase
+    .from("patients")
+    .select(SELECT_COLUMNS)
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data as unknown as Patient;
+}
+
 export async function createPatient(supabase: SupabaseClient, input: PatientInput) {
   const { error } = await supabase.from("patients").insert(input);
   if (error) throw error;

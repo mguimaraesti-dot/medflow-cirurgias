@@ -34,6 +34,16 @@ export async function listInsuranceProviders(supabase: SupabaseClient, search?: 
   return data as InsuranceProvider[];
 }
 
+export async function listActiveInsuranceProvidersForSelect(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("insurance_providers")
+    .select("id,name")
+    .eq("active", true)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Pick<InsuranceProvider, "id" | "name">[];
+}
+
 export async function createInsuranceProvider(
   supabase: SupabaseClient,
   input: InsuranceProviderInput

@@ -28,6 +28,16 @@ export async function listProcedures(supabase: SupabaseClient, search?: string) 
   return data as Procedure[];
 }
 
+export async function listActiveProceduresForSelect(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("procedures")
+    .select("id,name")
+    .eq("active", true)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Pick<Procedure, "id" | "name">[];
+}
+
 export async function createProcedure(supabase: SupabaseClient, input: ProcedureInput) {
   const { error } = await supabase.from("procedures").insert(input);
   if (error) throw error;

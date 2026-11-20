@@ -31,6 +31,16 @@ export async function listHospitals(supabase: SupabaseClient, search?: string) {
   return data as Hospital[];
 }
 
+export async function listActiveHospitalsForSelect(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("hospitals")
+    .select("id,name")
+    .eq("active", true)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Pick<Hospital, "id" | "name">[];
+}
+
 export async function getHospital(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase.from("hospitals").select("*").eq("id", id).single();
   if (error) throw error;
