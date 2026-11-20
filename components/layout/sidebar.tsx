@@ -11,6 +11,17 @@ import { cn } from "@/lib/utils";
 export function Sidebar({ userEmail }: { userEmail: string | null }) {
   const pathname = usePathname();
 
+  // Entre os itens cujo href bate com a rota atual (exato ou prefixo),
+  // só o mais específico (href mais longo) fica marcado como ativo — sem
+  // isso, "/surgeries/patients" também acendia "Cirurgias" (href "/surgeries"),
+  // já que um é prefixo do outro.
+  const activeHref = NAV_ITEMS.reduce<string | null>((best, item) => {
+    const matches = pathname === item.href || pathname.startsWith(item.href + "/");
+    if (!matches) return best;
+    if (best === null || item.href.length > best.length) return item.href;
+    return best;
+  }, null);
+
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
       <div className="border-b border-slate-200 px-4 py-4">
@@ -20,7 +31,7 @@ export function Sidebar({ userEmail }: { userEmail: string | null }) {
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = item.href === activeHref;
           const Icon = item.icon;
           return (
             <Link
