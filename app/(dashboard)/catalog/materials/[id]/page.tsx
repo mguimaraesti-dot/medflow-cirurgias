@@ -34,7 +34,7 @@ export default async function MaterialDetailPage({
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Catálogo de materiais
+        Materiais
       </Link>
 
       <div className="flex items-center justify-between">

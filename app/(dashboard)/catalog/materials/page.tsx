@@ -22,7 +22,7 @@ export default async function MaterialsCatalogPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-foreground">Catálogo de materiais</h1>
+          <h1 className="text-lg font-medium text-foreground">Materiais</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Materiais e OPME. Um material pode ter vários fornecedores.
           </p>
