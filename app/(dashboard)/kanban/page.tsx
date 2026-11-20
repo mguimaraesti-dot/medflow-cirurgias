@@ -17,7 +17,6 @@ import { MapStatsRow } from "@/components/kanban/map-stats";
 import { MapFilters } from "@/components/kanban/map-filters";
 import { MapListTable } from "@/components/kanban/map-list-table";
 import { ViewToggle } from "@/components/kanban/view-toggle";
-import { StageProgress } from "@/components/kanban/stage-progress";
 import { Button } from "@/components/ui/button";
 
 type SearchParams = {
@@ -67,11 +66,6 @@ export default async function KanbanPage({
   const isListView = params.view === "lista" || !!params.overdue;
   const activeSurgeries = surgeries.filter((s) => s.status === "active");
 
-  const countByStage: Record<string, number> = {};
-  for (const s of activeSurgeries) {
-    countByStage[s.stage_id] = (countByStage[s.stage_id] ?? 0) + 1;
-  }
-
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -101,12 +95,6 @@ export default async function KanbanPage({
         />
         <ViewToggle />
       </div>
-
-      <StageProgress
-        stages={stages}
-        countByStage={countByStage}
-        overdueCount={stats.overdue}
-      />
 
       <div className="mt-4">
         {isListView ? (
