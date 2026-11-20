@@ -20,8 +20,8 @@ export function CancelSurgeryButton({ surgeryId }: { surgeryId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-      <p className="text-sm font-medium text-red-800">Cancelar esta cirurgia?</p>
+    <div className="flex flex-col gap-2 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3">
+      <p className="text-sm font-medium text-red-800 dark:text-red-300">Cancelar esta cirurgia?</p>
       <Textarea
         placeholder="Motivo do cancelamento (obrigatório)"
         value={reason}

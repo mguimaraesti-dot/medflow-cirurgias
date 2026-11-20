@@ -40,19 +40,19 @@ export function RequirementItem({ requirement }: { requirement: SurgeryRequireme
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border p-4"
     >
       <div className="flex items-center justify-between">
-        <p className="font-medium text-slate-900">{LABELS[requirement.requirement_key]}</p>
+        <p className="font-medium text-foreground">{LABELS[requirement.requirement_key]}</p>
         <Badge variant={statusVariant}>{status}</Badge>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox name="is_satisfied" value="on" defaultChecked={requirement.is_satisfied} />
         Satisfeito
       </label>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox
           name="waived"
           value="on"
@@ -71,7 +71,7 @@ export function RequirementItem({ requirement }: { requirement: SurgeryRequireme
       ) : null}
 
       {state.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       ) : null}

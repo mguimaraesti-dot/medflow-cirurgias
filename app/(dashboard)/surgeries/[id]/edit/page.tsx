@@ -28,15 +28,15 @@ export default async function EditSurgeryPage({
     <div className="mx-auto max-w-2xl">
       <Link
         href={`/surgeries/${id}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {surgery.code}
       </Link>
 
-      <h1 className="text-lg font-medium text-slate-900">Editar cirurgia {surgery.code}</h1>
+      <h1 className="text-lg font-medium text-foreground">Editar cirurgia {surgery.code}</h1>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+      <div className="mt-6 rounded-xl border border-border bg-card p-6">
         <SurgeryForm
           surgery={surgery}
           patients={patients}

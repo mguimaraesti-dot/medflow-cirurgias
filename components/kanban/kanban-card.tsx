@@ -17,10 +17,10 @@ const PRIORITY_LABEL: Record<SurgeryListItem["priority"], string> = {
 };
 
 const PRIORITY_CLASS: Record<SurgeryListItem["priority"], string> = {
-  low: "bg-slate-100 text-slate-600 border-slate-200",
-  normal: "bg-slate-100 text-slate-600 border-slate-200",
-  high: "bg-amber-100 text-amber-700 border-amber-200",
-  urgent: "bg-red-100 text-red-700 border-red-200",
+  low: "bg-muted text-muted-foreground border-border",
+  normal: "bg-muted text-muted-foreground border-border",
+  high: "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900",
+  urgent: "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900",
 };
 
 function formatDate(value: string | null) {
@@ -32,9 +32,9 @@ function materialsStatus(requirements: SurgeryListItem["requirements"]) {
   const materials = requirements.find((r) => r.requirement_key === "materials");
   if (!materials || materials.waived) return null;
   if (materials.is_satisfied) {
-    return { label: "Materiais OK", icon: PackageCheck, className: "text-emerald-600" };
+    return { label: "Materiais OK", icon: PackageCheck, className: "text-emerald-600 dark:text-emerald-400" };
   }
-  return { label: "Materiais pendentes", icon: PackageX, className: "text-red-600" };
+  return { label: "Materiais pendentes", icon: PackageX, className: "text-red-600 dark:text-red-400" };
 }
 
 export function KanbanCard({
@@ -71,25 +71,25 @@ export function KanbanCard({
         if (!isDragging) router.push(`/surgeries/${surgery.id}`);
       }}
       className={cn(
-        "cursor-grab rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm hover:border-slate-300 active:cursor-grabbing",
+        "cursor-grab rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-ring active:cursor-grabbing",
         isDragging && "opacity-50"
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-slate-900">{surgery.code}</span>
+        <span className="font-medium text-foreground">{surgery.code}</span>
         <Badge className={cn("border", PRIORITY_CLASS[surgery.priority])} variant="outline">
           {PRIORITY_LABEL[surgery.priority]}
         </Badge>
       </div>
-      <p className="mt-1 truncate text-slate-700">{surgery.patient?.full_name ?? "—"}</p>
-      <p className="mt-0.5 truncate text-xs text-slate-500">
+      <p className="mt-1 truncate text-foreground">{surgery.patient?.full_name ?? "—"}</p>
+      <p className="mt-0.5 truncate text-xs text-muted-foreground">
         {surgery.hospital?.name ?? "—"} · {surgery.primary_procedure?.name ?? "—"}
       </p>
-      <p className="mt-0.5 truncate text-xs text-slate-400">{attendanceLabel}</p>
+      <p className="mt-0.5 truncate text-xs text-muted-foreground">{attendanceLabel}</p>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {date ? (
-          <span className="flex items-center gap-1 text-xs text-slate-400">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             {date}
           </span>
@@ -101,7 +101,7 @@ export function KanbanCard({
           </span>
         ) : null}
         {openTasksCount > 0 ? (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
             <ListChecks className="h-3 w-3" />
             {openTasksCount} pendência{openTasksCount === 1 ? "" : "s"}
           </span>

@@ -40,8 +40,8 @@ export default async function SurgeriesPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Cirurgias</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Cirurgias</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Todas as cirurgias cadastradas, incluindo realizadas e canceladas.
           </p>
         </div>
@@ -63,14 +63,14 @@ export default async function SurgeriesPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por código (ex: CIR-2026-0001)..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {surgeries.length} cirurgia{surgeries.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Código</th>
               <th className="px-4 py-3">Paciente</th>
@@ -80,7 +80,7 @@ export default async function SurgeriesPage({
               <th className="px-4 py-3">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {surgeries.length === 0 ? (
               <EmptyRow
                 colSpan={6}
@@ -92,21 +92,21 @@ export default async function SurgeriesPage({
               />
             ) : (
               surgeries.map((surgery) => (
-                <tr key={surgery.id} className="hover:bg-slate-50">
+                <tr key={surgery.id} className="hover:bg-muted">
                   <td className="px-4 py-3">
                     <Link
                       href={`/surgeries/${surgery.id}`}
-                      className="font-medium text-slate-900 hover:underline"
+                      className="font-medium text-foreground hover:underline"
                     >
                       {surgery.code}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{surgery.patient?.full_name ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{surgery.hospital?.name ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">{surgery.patient?.full_name ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{surgery.hospital?.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
                     {surgery.primary_procedure?.name ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
                   </td>
                   <td className="px-4 py-3">

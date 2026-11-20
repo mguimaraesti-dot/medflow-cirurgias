@@ -34,7 +34,7 @@ export function ProtocolItemForm({
         await formAction(formData);
         formRef.current?.reset();
       }}
-      className="flex flex-col gap-2 border-t border-slate-100 pt-4"
+      className="flex flex-col gap-2 border-t border-border pt-4"
     >
       <div className="grid grid-cols-4 gap-2">
         <div className="col-span-2">
@@ -70,7 +70,7 @@ export function ProtocolItemForm({
         <Input name="specs" placeholder="Especificações" />
       </div>
       {state.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       ) : null}

@@ -44,8 +44,8 @@ export default async function PendingTasksPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Pendências</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Pendências</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Tarefas e alertas por categoria, prioridade e prazo.
           </p>
         </div>
@@ -54,14 +54,14 @@ export default async function PendingTasksPage({
 
       <div className="mt-6 flex items-center justify-between">
         <TaskFilters />
-        <p className="whitespace-nowrap text-sm text-slate-500">
+        <p className="whitespace-nowrap text-sm text-muted-foreground">
           {tasks.length} pendência{tasks.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Título</th>
               <th className="px-4 py-3">Categoria</th>
@@ -72,7 +72,7 @@ export default async function PendingTasksPage({
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {tasks.length === 0 ? (
               <EmptyRow
                 colSpan={7}
@@ -85,14 +85,14 @@ export default async function PendingTasksPage({
             ) : (
               tasks.map((task) => (
                 <tr key={task.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{task.title}</td>
-                  <td className="px-4 py-3 text-slate-600">{CATEGORY_LABEL[task.category]}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{task.title}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{CATEGORY_LABEL[task.category]}</td>
                   <td className="px-4 py-3">
                     <Badge variant={PRIORITY_VARIANT[task.priority]}>
                       {PRIORITY_LABEL[task.priority]}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {task.surgery ? (
                       <Link href={`/surgeries/${task.surgery.id}`} className="hover:underline">
                         {task.surgery.code}
@@ -104,8 +104,8 @@ export default async function PendingTasksPage({
                   <td
                     className={
                       isOverdue(task.due_date, task.status)
-                        ? "px-4 py-3 font-medium text-red-600"
-                        : "px-4 py-3 text-slate-600"
+                        ? "px-4 py-3 font-medium text-red-600 dark:text-red-400"
+                        : "px-4 py-3 text-muted-foreground"
                     }
                   >
                     {formatDate(task.due_date)}

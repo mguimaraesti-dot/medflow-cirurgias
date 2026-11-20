@@ -39,11 +39,11 @@ function ItemRow({ item, surgeryId }: { item: PreoperativeItem; surgeryId: strin
   const [pending, startTransition] = useTransition();
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2">
+    <li className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-slate-900">{item.description}</p>
+        <p className="truncate text-sm text-foreground">{item.description}</p>
         {item.due_date ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Prazo: {new Date(item.due_date + "T00:00:00").toLocaleDateString("pt-BR")}
           </p>
         ) : null}
@@ -103,7 +103,7 @@ export function PreoperativeCard({
   return (
     <div className="flex flex-col gap-4">
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhum item cadastrado ainda.</p>
+        <p className="text-sm text-muted-foreground">Nenhum item cadastrado ainda.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) => (
@@ -118,7 +118,7 @@ export function PreoperativeCard({
           await formAction(formData);
           formRef.current?.reset();
         }}
-        className="flex items-end gap-2 border-t border-slate-100 pt-4"
+        className="flex items-end gap-2 border-t border-border pt-4"
       >
         <div className="flex-1">
           <Input name="description" placeholder="Novo item do checklist" required />
@@ -129,7 +129,7 @@ export function PreoperativeCard({
         </Button>
       </form>
       {state.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       ) : null}

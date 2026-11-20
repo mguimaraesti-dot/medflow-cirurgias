@@ -39,14 +39,14 @@ export default async function ProtocolDetailPage({
     <div className="mx-auto max-w-3xl">
       <Link
         href="/protocols"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Protocolos
       </Link>
 
-      <h1 className="text-lg font-medium text-slate-900">{protocol.name}</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-lg font-medium text-foreground">{protocol.name}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         {protocol.procedure?.name} · {protocol.hospital?.name ?? "Todos os hospitais"}
       </p>
 
@@ -60,12 +60,12 @@ export default async function ProtocolDetailPage({
             {versions.map((version) => (
               <li
                 key={version.id}
-                className="flex items-center justify-between rounded-md border border-slate-200 px-4 py-3"
+                className="flex items-center justify-between rounded-md border border-border px-4 py-3"
               >
                 <div>
                   <Link
                     href={`/protocols/${protocol.id}/versions/${version.id}`}
-                    className="font-medium text-slate-900 hover:underline"
+                    className="font-medium text-foreground hover:underline"
                   >
                     Versão {version.version_number}
                   </Link>

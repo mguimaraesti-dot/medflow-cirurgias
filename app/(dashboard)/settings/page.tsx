@@ -28,8 +28,8 @@ const SECTIONS = [
 export default function SettingsPage() {
   return (
     <div>
-      <h1 className="text-lg font-medium text-slate-900">Configurações</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-lg font-medium text-foreground">Configurações</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         Cadastros administrativos usados em todo o sistema.
       </p>
 
@@ -41,14 +41,14 @@ export default function SettingsPage() {
               className={
                 section.disabled
                   ? "opacity-60"
-                  : "transition-colors hover:border-slate-300"
+                  : "transition-colors hover:border-ring"
               }
             >
               <CardContent className="flex items-start gap-3 pt-5">
-                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{section.title}</p>
-                  <p className="mt-1 text-sm text-slate-500">{section.description}</p>
+                  <p className="text-sm font-medium text-foreground">{section.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{section.description}</p>
                 </div>
               </CardContent>
             </Card>

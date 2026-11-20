@@ -31,7 +31,7 @@ export default async function MaterialDetailPage({
     <div>
       <Link
         href="/catalog/materials"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Catálogo de materiais
@@ -39,8 +39,8 @@ export default async function MaterialDetailPage({
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">{material.name}</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">{material.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {material.internal_code ? `Código ${material.internal_code} · ` : ""}
             {material.category || "Sem categoria"}
           </p>
@@ -54,13 +54,13 @@ export default async function MaterialDetailPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {links.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhum fornecedor vinculado ainda.</p>
+            <p className="text-sm text-muted-foreground">Nenhum fornecedor vinculado ainda.</p>
           ) : (
-            <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+            <ul className="divide-y divide-border rounded-md border border-border">
               {links.map((link) => (
                 <li key={link.id} className="flex items-center justify-between px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-900">
+                    <span className="text-sm text-foreground">
                       {link.supplier?.company_name ?? "Fornecedor removido"}
                     </span>
                     {link.preferred ? <Badge variant="outline">Preferencial</Badge> : null}
@@ -74,7 +74,7 @@ export default async function MaterialDetailPage({
             </ul>
           )}
 
-          <div className="border-t border-slate-100 pt-4">
+          <div className="border-t border-border pt-4">
             <AddMaterialSupplierForm materialId={material.id} availableSuppliers={availableSuppliers} />
           </div>
         </CardContent>

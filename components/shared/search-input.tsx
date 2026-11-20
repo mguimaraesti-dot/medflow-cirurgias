@@ -28,7 +28,7 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
 
   return (
     <div className="relative max-w-sm">
-      <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+      <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
         value={value}
         onChange={(e) => handleChange(e.target.value)}

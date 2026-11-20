@@ -19,8 +19,8 @@ export default async function ProceduresCatalogPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Catálogo de procedimentos</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Catálogo de procedimentos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Procedimentos reutilizáveis, com protocolos de materiais associados.
           </p>
         </div>
@@ -29,14 +29,14 @@ export default async function ProceduresCatalogPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por nome..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {procedures.length} procedimento{procedures.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Código</th>
@@ -45,7 +45,7 @@ export default async function ProceduresCatalogPage({
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {procedures.length === 0 ? (
               <EmptyRow
                 colSpan={5}
@@ -58,9 +58,9 @@ export default async function ProceduresCatalogPage({
             ) : (
               procedures.map((procedure) => (
                 <tr key={procedure.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{procedure.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{procedure.internal_code || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{procedure.specialty || "—"}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{procedure.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{procedure.internal_code || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{procedure.specialty || "—"}</td>
                   <td className="px-4 py-3">
                     <ActiveBadge active={procedure.active} />
                   </td>

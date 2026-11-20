@@ -26,8 +26,8 @@ export default async function PatientsPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Pacientes</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Pacientes</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Um paciente pode ter várias cirurgias ao longo do tempo.
           </p>
         </div>
@@ -36,14 +36,14 @@ export default async function PatientsPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por nome, CPF ou telefone..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {patients.length} paciente{patients.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">CPF</th>
@@ -53,7 +53,7 @@ export default async function PatientsPage({
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {patients.length === 0 ? (
               <EmptyRow
                 colSpan={6}
@@ -66,15 +66,15 @@ export default async function PatientsPage({
             ) : (
               patients.map((patient) => (
                 <tr key={patient.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{patient.full_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{patient.cpf || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 font-medium text-foreground">{patient.full_name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{patient.cpf || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
                     {patient.phone || patient.whatsapp || "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {patient.insurance_provider?.name || "Particular"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{formatDate(patient.birth_date)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDate(patient.birth_date)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end">
                       <PatientFormDialog patient={patient} insuranceProviders={insuranceProviders} />

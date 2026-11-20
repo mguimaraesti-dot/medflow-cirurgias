@@ -38,14 +38,14 @@ function ItemRow({ item, surgeryId }: { item: SurgeryMaterialItem; surgeryId: st
   const [pending, startTransition] = useTransition();
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2">
+    <li className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-slate-900">
+        <p className="truncate text-sm text-foreground">
           {item.material?.name ?? "Material removido"}{" "}
-          <span className="text-slate-400">× {item.quantity}</span>
+          <span className="text-muted-foreground">× {item.quantity}</span>
         </p>
         {item.supplier ? (
-          <p className="text-xs text-slate-500">Fornecedor: {item.supplier.company_name}</p>
+          <p className="text-xs text-muted-foreground">Fornecedor: {item.supplier.company_name}</p>
         ) : null}
       </div>
       <Select
@@ -104,8 +104,8 @@ export function SurgeryMaterialsCard({
   return (
     <div className="flex flex-col gap-4">
       {importableVersions.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-          <p className="text-sm text-slate-600">Importar itens de um protocolo aprovado:</p>
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted p-3">
+          <p className="text-sm text-muted-foreground">Importar itens de um protocolo aprovado:</p>
           {importableVersions.map((version) => (
             <Button
               key={version.id}
@@ -123,7 +123,7 @@ export function SurgeryMaterialsCard({
       ) : null}
 
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhum material adicionado ainda.</p>
+        <p className="text-sm text-muted-foreground">Nenhum material adicionado ainda.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) => (
@@ -138,7 +138,7 @@ export function SurgeryMaterialsCard({
           await formAction(formData);
           formRef.current?.reset();
         }}
-        className="flex flex-col gap-2 border-t border-slate-100 pt-4"
+        className="flex flex-col gap-2 border-t border-border pt-4"
       >
         <div className="grid grid-cols-4 gap-2">
           <div className="col-span-2">
@@ -174,7 +174,7 @@ export function SurgeryMaterialsCard({
         </Button>
       </form>
       {state.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       ) : null}

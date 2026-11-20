@@ -22,7 +22,7 @@ export default async function HospitalsPage({
     <div>
       <Link
         href="/settings"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Configurações
@@ -30,8 +30,8 @@ export default async function HospitalsPage({
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Hospitais</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Hospitais</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Toda cirurgia precisa estar vinculada a um hospital.
           </p>
         </div>
@@ -40,14 +40,14 @@ export default async function HospitalsPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por nome..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {hospitals.length} hospital{hospitals.length === 1 ? "" : "is"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Telefone</th>
@@ -56,7 +56,7 @@ export default async function HospitalsPage({
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {hospitals.length === 0 ? (
               <EmptyRow
                 colSpan={5}
@@ -69,9 +69,9 @@ export default async function HospitalsPage({
             ) : (
               hospitals.map((hospital) => (
                 <tr key={hospital.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{hospital.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{hospital.phone || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{hospital.email || "—"}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{hospital.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{hospital.phone || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{hospital.email || "—"}</td>
                   <td className="px-4 py-3">
                     <ActiveBadge active={hospital.active} />
                   </td>

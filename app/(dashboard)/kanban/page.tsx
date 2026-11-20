@@ -70,8 +70,8 @@ export default async function KanbanPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Mapa Cirúrgico</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Mapa Cirúrgico</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Acompanhe todo o ciclo da cirurgia, da indicação ao faturamento.
           </p>
         </div>
@@ -100,7 +100,7 @@ export default async function KanbanPage({
         {isListView ? (
           <MapListTable surgeries={surgeries} openTasksBySurgery={openTasksBySurgery} />
         ) : activeSurgeries.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <p className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Nenhuma cirurgia ativa para esse filtro.
           </p>
         ) : (

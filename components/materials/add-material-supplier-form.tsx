@@ -32,7 +32,7 @@ export function AddMaterialSupplierForm({
 
   if (availableSuppliers.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted-foreground">
         Todos os fornecedores ativos já estão vinculados a este material (ou não há
         fornecedores ativos cadastrados).
       </p>
@@ -60,12 +60,12 @@ export function AddMaterialSupplierForm({
           {pending ? "Vinculando..." : "Vincular"}
         </Button>
       </div>
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox name="preferred" value="on" />
         Fornecedor preferencial
       </label>
       {state.error ? (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       ) : null}

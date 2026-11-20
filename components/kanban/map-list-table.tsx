@@ -39,9 +39,9 @@ export function MapListTable({
   openTasksBySurgery: Record<string, number>;
 }) {
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
       <table className="w-full text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+        <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3">Código</th>
             <th className="px-4 py-3">Paciente</th>
@@ -54,7 +54,7 @@ export function MapListTable({
             <th className="px-4 py-3">Situação</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-border">
           {surgeries.length === 0 ? (
             <EmptyRow colSpan={9} message="Nenhuma cirurgia encontrada para esse filtro." />
           ) : (
@@ -69,40 +69,40 @@ export function MapListTable({
                 surgery.expected_date < today;
 
               return (
-                <tr key={surgery.id} className="hover:bg-slate-50">
+                <tr key={surgery.id} className="hover:bg-muted">
                   <td className="px-4 py-3">
                     <Link
                       href={`/surgeries/${surgery.id}`}
-                      className="font-medium text-slate-900 hover:underline"
+                      className="font-medium text-foreground hover:underline"
                     >
                       {surgery.code}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{surgery.patient?.full_name ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">{surgery.patient?.full_name ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
                     <p>{surgery.hospital?.name ?? "—"}</p>
-                    <p className="text-xs text-slate-400">{surgery.primary_procedure?.name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{surgery.primary_procedure?.name ?? "—"}</p>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {surgery.attendance_type === "particular"
                       ? "Particular"
                       : surgery.insurance_provider?.name ?? "Convênio"}
                   </td>
-                  <td className={cn("px-4 py-3", isOverdue ? "font-medium text-red-600" : "text-slate-600")}>
+                  <td className={cn("px-4 py-3", isOverdue ? "font-medium text-red-600 dark:text-red-400" : "text-muted-foreground")}>
                     {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
                     {isOverdue ? " (atrasada)" : ""}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{PRIORITY_LABEL[surgery.priority]}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{PRIORITY_LABEL[surgery.priority]}</td>
                   <td className="px-4 py-3">
                     {!materials || materials.waived ? (
-                      <span className="text-xs text-slate-400">—</span>
+                      <span className="text-xs text-muted-foreground">—</span>
                     ) : materials.is_satisfied ? (
-                      <span className="text-xs text-emerald-600">OK</span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400">OK</span>
                     ) : (
-                      <span className="text-xs text-red-600">Pendente</span>
+                      <span className="text-xs text-red-600 dark:text-red-400">Pendente</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{openTasks || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{openTasks || "—"}</td>
                   <td className="px-4 py-3">
                     <Badge variant={STATUS_VARIANT[surgery.status] ?? "outline"}>
                       {STATUS_LABEL[surgery.status] ?? surgery.status}

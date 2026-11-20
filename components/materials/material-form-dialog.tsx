@@ -66,7 +66,7 @@ export function MaterialFormDialog({ material }: { material?: Material }) {
             {material ? (
               <div className="flex flex-col gap-1.5">
                 <Label>Código interno</Label>
-                <p className="flex h-9 items-center text-sm text-slate-500">
+                <p className="flex h-9 items-center text-sm text-muted-foreground">
                   {material.internal_code}
                 </p>
                 <input type="hidden" name="internal_code" value={material.internal_code ?? ""} />
@@ -110,13 +110,13 @@ export function MaterialFormDialog({ material }: { material?: Material }) {
             <Textarea id="notes" name="notes" defaultValue={material?.notes ?? ""} />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <Checkbox name="active" value="on" defaultChecked={material ? material.active : true} />
             Material ativo
           </label>
 
           {state.error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
               {state.error}
             </p>
           ) : null}

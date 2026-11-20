@@ -21,21 +21,21 @@ export default async function NewSurgeryPage() {
     <div className="mx-auto max-w-2xl">
       <Link
         href="/kanban"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Mapa Cirúrgico
       </Link>
 
-      <h1 className="text-lg font-medium text-slate-900">Nova cirurgia</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-lg font-medium text-foreground">Nova cirurgia</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
         A cirurgia entra automaticamente na etapa &quot;Nova indicação&quot;. O código
         (CIR-AAAA-NNNN) é gerado pelo sistema.
       </p>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+      <div className="mt-6 rounded-xl border border-border bg-card p-6">
         {patients.length === 0 || hospitals.length === 0 || procedures.length === 0 ? (
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
             Cadastre ao menos um paciente, um hospital e um procedimento ativos antes de criar uma
             cirurgia.
           </p>

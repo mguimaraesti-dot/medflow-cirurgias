@@ -70,7 +70,7 @@ export function InsuranceProviderFormDialog({ provider }: { provider?: Insurance
             {provider ? (
               <div className="flex flex-col gap-1.5">
                 <Label>Código/identificação</Label>
-                <p className="flex h-9 items-center text-sm text-slate-500">{provider.code}</p>
+                <p className="flex h-9 items-center text-sm text-muted-foreground">{provider.code}</p>
                 <input type="hidden" name="code" value={provider.code ?? ""} />
               </div>
             ) : null}
@@ -120,13 +120,13 @@ export function InsuranceProviderFormDialog({ provider }: { provider?: Insurance
             <Textarea id="admin_rules" name="admin_rules" defaultValue={provider?.admin_rules ?? ""} />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <Checkbox name="active" value="on" defaultChecked={provider ? provider.active : true} />
             Operadora ativa
           </label>
 
           {state.error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
               {state.error}
             </p>
           ) : null}

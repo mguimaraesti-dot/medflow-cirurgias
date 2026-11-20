@@ -152,7 +152,7 @@ export function MapFilters({
           value={searchParams.get("from") ?? ""}
           onChange={(e) => setParam("from", e.target.value)}
         />
-        <span className="text-xs text-slate-400">até</span>
+        <span className="text-xs text-muted-foreground">até</span>
         <Input
           type="date"
           className="w-[150px]"

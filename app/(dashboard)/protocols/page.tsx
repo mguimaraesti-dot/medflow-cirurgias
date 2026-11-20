@@ -25,8 +25,8 @@ export default async function ProtocolsPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Protocolos de materiais</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Protocolos de materiais</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Lista de materiais padrão por procedimento (e, opcionalmente, por hospital), com
             versionamento e aprovação.
           </p>
@@ -36,21 +36,21 @@ export default async function ProtocolsPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por nome do protocolo..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {protocols.length} protocolo{protocols.length === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Procedimento</th>
               <th className="px-4 py-3">Hospital</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {protocols.length === 0 ? (
               <EmptyRow
                 colSpan={3}
@@ -60,17 +60,17 @@ export default async function ProtocolsPage({
               />
             ) : (
               protocols.map((protocol) => (
-                <tr key={protocol.id} className="hover:bg-slate-50">
+                <tr key={protocol.id} className="hover:bg-muted">
                   <td className="px-4 py-3">
                     <Link
                       href={`/protocols/${protocol.id}`}
-                      className="font-medium text-slate-900 hover:underline"
+                      className="font-medium text-foreground hover:underline"
                     >
                       {protocol.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{protocol.procedure?.name ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-muted-foreground">{protocol.procedure?.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
                     {protocol.hospital?.name ?? "Todos os hospitais"}
                   </td>
                 </tr>

@@ -19,8 +19,8 @@ export default async function SuppliersPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Fornecedores</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Fornecedores</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Fornecedores de materiais e OPME. Fornecedores inativos não podem ser
             selecionados em novas solicitações.
           </p>
@@ -30,14 +30,14 @@ export default async function SuppliersPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por razão social ou nome fantasia..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {suppliers.length} fornecedor{suppliers.length === 1 ? "" : "es"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Razão social</th>
               <th className="px-4 py-3">Nome fantasia</th>
@@ -46,7 +46,7 @@ export default async function SuppliersPage({
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {suppliers.length === 0 ? (
               <EmptyRow
                 colSpan={5}
@@ -59,9 +59,9 @@ export default async function SuppliersPage({
             ) : (
               suppliers.map((supplier) => (
                 <tr key={supplier.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{supplier.company_name}</td>
-                  <td className="px-4 py-3 text-slate-600">{supplier.trade_name || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 font-medium text-foreground">{supplier.company_name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{supplier.trade_name || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
                     {supplier.contact_name || supplier.phone || "—"}
                   </td>
                   <td className="px-4 py-3">

@@ -22,8 +22,8 @@ export default async function MaterialsCatalogPage({
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Catálogo de materiais</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-medium text-foreground">Catálogo de materiais</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Materiais e OPME. Um material pode ter vários fornecedores.
           </p>
         </div>
@@ -32,14 +32,14 @@ export default async function MaterialsCatalogPage({
 
       <div className="mt-6 flex items-center justify-between">
         <SearchInput placeholder="Buscar por nome..." />
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {materials.length} material{materials.length === 1 ? "" : "is"}
         </p>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Código</th>
@@ -48,7 +48,7 @@ export default async function MaterialsCatalogPage({
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {materials.length === 0 ? (
               <EmptyRow
                 colSpan={5}
@@ -61,9 +61,9 @@ export default async function MaterialsCatalogPage({
             ) : (
               materials.map((material) => (
                 <tr key={material.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{material.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{material.internal_code || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{material.category || "—"}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{material.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{material.internal_code || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{material.category || "—"}</td>
                   <td className="px-4 py-3">
                     <ActiveBadge active={material.active} />
                   </td>
@@ -71,7 +71,7 @@ export default async function MaterialsCatalogPage({
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={`/catalog/materials/${material.id}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                        className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
                       >
                         <Truck className="h-3.5 w-3.5" />
                         Fornecedores

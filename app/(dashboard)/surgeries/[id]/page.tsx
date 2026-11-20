@@ -91,7 +91,7 @@ export default async function SurgeryDetailPage({
     <div className="mx-auto max-w-3xl">
       <Link
         href="/kanban"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Mapa Cirúrgico
@@ -100,13 +100,13 @@ export default async function SurgeryDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-medium text-slate-900">{surgery.code}</h1>
+            <h1 className="text-lg font-medium text-foreground">{surgery.code}</h1>
             <Badge variant={surgery.status === "cancelled" ? "destructive" : "secondary"}>
               {STATUS_LABEL[surgery.status] ?? surgery.status}
             </Badge>
             <Badge variant="outline">{PRIORITY_LABEL[surgery.priority]}</Badge>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {surgery.patient?.full_name} · {surgery.hospital?.name} ·{" "}
             {surgery.primary_procedure?.name}
           </p>
@@ -126,42 +126,42 @@ export default async function SurgeryDetailPage({
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div>
-              <dt className="text-slate-500">Atendimento</dt>
-              <dd className="text-slate-900">
+              <dt className="text-muted-foreground">Atendimento</dt>
+              <dd className="text-foreground">
                 {surgery.attendance_type === "particular" ? "Particular" : "Convênio"}
                 {surgery.insurance_provider ? ` — ${surgery.insurance_provider.name}` : ""}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Data da indicação</dt>
-              <dd className="text-slate-900">{formatDate(surgery.indication_date)}</dd>
+              <dt className="text-muted-foreground">Data da indicação</dt>
+              <dd className="text-foreground">{formatDate(surgery.indication_date)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Data prevista</dt>
-              <dd className="text-slate-900">{formatDate(surgery.expected_date)}</dd>
+              <dt className="text-muted-foreground">Data prevista</dt>
+              <dd className="text-foreground">{formatDate(surgery.expected_date)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Data confirmada</dt>
-              <dd className="text-slate-900">
+              <dt className="text-muted-foreground">Data confirmada</dt>
+              <dd className="text-foreground">
                 {formatDate(surgery.confirmed_date)}
                 {surgery.confirmed_time ? ` às ${surgery.confirmed_time.slice(0, 5)}` : ""}
               </dd>
             </div>
             {surgery.admin_notes ? (
               <div className="col-span-2">
-                <dt className="text-slate-500">Observações</dt>
-                <dd className="whitespace-pre-wrap text-slate-900">{surgery.admin_notes}</dd>
+                <dt className="text-muted-foreground">Observações</dt>
+                <dd className="whitespace-pre-wrap text-foreground">{surgery.admin_notes}</dd>
               </div>
             ) : null}
             {surgery.status === "cancelled" && surgery.cancelled_reason ? (
               <div className="col-span-2">
-                <dt className="text-slate-500">Motivo do cancelamento</dt>
-                <dd className="text-slate-900">{surgery.cancelled_reason}</dd>
+                <dt className="text-muted-foreground">Motivo do cancelamento</dt>
+                <dd className="text-foreground">{surgery.cancelled_reason}</dd>
               </div>
             ) : null}
           </dl>
           {surgery.status === "active" ? (
-            <div className="mt-4 border-t border-slate-100 pt-4">
+            <div className="mt-4 border-t border-border pt-4">
               <CancelSurgeryButton surgeryId={surgery.id} />
             </div>
           ) : null}
@@ -248,20 +248,20 @@ export default async function SurgeryDetailPage({
         </CardHeader>
         <CardContent>
           {history.length === 0 ? (
-            <p className="text-sm text-slate-500">Sem histórico ainda.</p>
+            <p className="text-sm text-muted-foreground">Sem histórico ainda.</p>
           ) : (
-            <ol className="flex flex-col gap-2 border-l border-slate-200 pl-4">
+            <ol className="flex flex-col gap-2 border-l border-border pl-4">
               {history.map((entry) => (
                 <li key={entry.id} className="text-sm">
-                  <span className="text-slate-900">
+                  <span className="text-foreground">
                     {entry.from_stage ? `${entry.from_stage.name} → ` : "Criada em "}
                     {entry.to_stage?.name}
                   </span>
-                  <span className="ml-2 text-xs text-slate-400">
+                  <span className="ml-2 text-xs text-muted-foreground">
                     {formatDateTime(entry.changed_at)}
                   </span>
                   {entry.reason ? (
-                    <p className="text-xs text-slate-500">Motivo: {entry.reason}</p>
+                    <p className="text-xs text-muted-foreground">Motivo: {entry.reason}</p>
                   ) : null}
                 </li>
               ))}

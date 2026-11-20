@@ -31,15 +31,15 @@ export function MapStatsRow({ stats }: { stats: MapStats }) {
       {CARDS.map(({ key, label, icon: Icon, accent, href }) => {
         const content = (
           <>
-            <div className="flex items-center gap-2 text-slate-400">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Icon className="h-4 w-4" />
               <p className="text-xs font-medium">{label}</p>
             </div>
-            <p className="mt-1.5 text-2xl font-semibold text-slate-900">{stats[key]}</p>
+            <p className="mt-1.5 text-2xl font-semibold text-foreground">{stats[key]}</p>
           </>
         );
         const className = cn(
-          "rounded-lg border border-l-4 border-slate-200 bg-white px-4 py-3 shadow-sm",
+          "rounded-lg border border-l-4 border-border bg-card px-4 py-3 shadow-sm",
           accent,
           href && stats[key] > 0 && "transition-shadow hover:shadow-md"
         );

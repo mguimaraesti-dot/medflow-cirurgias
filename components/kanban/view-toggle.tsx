@@ -20,12 +20,12 @@ export function ViewToggle() {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+    <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setView("kanban")}
-        className={cn(view === "kanban" && "bg-slate-900 text-slate-50 hover:bg-slate-900 hover:text-slate-50")}
+        className={cn(view === "kanban" && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground")}
       >
         <KanbanSquare className="h-4 w-4" />
         Kanban
@@ -34,7 +34,7 @@ export function ViewToggle() {
         variant="ghost"
         size="sm"
         onClick={() => setView("lista")}
-        className={cn(view === "lista" && "bg-slate-900 text-slate-50 hover:bg-slate-900 hover:text-slate-50")}
+        className={cn(view === "lista" && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground")}
       >
         <List className="h-4 w-4" />
         Lista
