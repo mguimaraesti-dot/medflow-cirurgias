@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Users, LayoutGrid } from "lucide-react";
+import { Plus, LayoutGrid } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { listSurgeries } from "@/lib/data/surgeries";
@@ -46,12 +46,6 @@ export default async function SurgeriesPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/surgeries/patients">
-            <Button variant="outline" size="sm">
-              <Users className="h-4 w-4" />
-              Pacientes
-            </Button>
-          </Link>
           <Link href="/kanban">
             <Button variant="outline" size="sm">
               <LayoutGrid className="h-4 w-4" />

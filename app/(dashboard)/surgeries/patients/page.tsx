@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-
 import { createClient } from "@/lib/supabase/server";
 import { listPatients } from "@/lib/data/patients";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
@@ -27,14 +24,6 @@ export default async function PatientsPage({
 
   return (
     <div>
-      <Link
-        href="/surgeries"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" />
-        Cirurgias
-      </Link>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-medium text-slate-900">Pacientes</h1>
