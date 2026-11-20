@@ -28,12 +28,12 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
-    // TODO(temporário): expor o erro real do Supabase enquanto
-    // diagnosticamos o problema de login em produção. Reverter para a
-    // mensagem genérica assim que resolvido — não deixar detalhe de erro
-    // de autenticação visível em produção a longo prazo.
+    // Log server-side para investigação (Vercel Runtime Logs), mas nunca
+    // expõe o detalhe do erro de autenticação para quem está tentando
+    // logar — evita dar pistas a quem estiver tentando adivinhar
+    // credenciais.
     console.error("[login] supabase signInWithPassword error:", error.status, error.message);
-    return { error: `E-mail ou senha incorretos. (debug: ${error.status} ${error.message})` };
+    return { error: "E-mail ou senha incorretos." };
   }
 
   redirect("/dashboard");
