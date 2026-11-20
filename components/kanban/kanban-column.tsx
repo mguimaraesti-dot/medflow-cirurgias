@@ -18,7 +18,7 @@ export function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl bg-slate-50">
+    <div className="flex min-w-0 flex-col rounded-xl bg-slate-50">
       <div className="flex items-center justify-between px-3 py-2.5">
         <p className="text-sm font-medium text-slate-700">{stage.name}</p>
         <span className="text-xs text-slate-400">{surgeries.length}</span>
