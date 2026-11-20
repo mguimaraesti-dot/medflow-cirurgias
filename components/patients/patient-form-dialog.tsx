@@ -82,11 +82,11 @@ export function PatientFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone">Celular</Label>
               <Input id="phone" name="phone" defaultValue={patient?.phone ?? ""} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="whatsapp">WhatsApp</Label>
+              <Label htmlFor="whatsapp">Telefone de contato</Label>
               <Input id="whatsapp" name="whatsapp" defaultValue={patient?.whatsapp ?? ""} />
             </div>
           </div>
