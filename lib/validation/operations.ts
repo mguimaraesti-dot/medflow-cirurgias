@@ -1,17 +1,21 @@
 import { z } from "zod";
 
+// Campos que podem não existir no formulário (ex: só renderizados
+// condicionalmente conforme o status) chegam como `null` via FormData.get(),
+// não como string vazia — por isso tratamos qualquer valor que não seja uma
+// string não-vazia como ausente.
 const optionalText = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
 );
 
 const optionalDate = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
 );
 
 const optionalTime = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
 );
 
@@ -97,7 +101,7 @@ export type PreoperativeItemInput = z.infer<typeof preoperativeItemSchema>;
 export const surgeryMaterialItemSchema = z.object({
   material_id: z.string().uuid("Selecione um material."),
   supplier_id: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
     z.string().uuid().optional()
   ),
   quantity: z.preprocess((v) => Number(v), z.number().positive().default(1)),
