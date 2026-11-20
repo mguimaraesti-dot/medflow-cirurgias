@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 
 import {
   createProcedureAction,
@@ -25,7 +25,13 @@ import {
 
 const initialState: ProcedureFormState = {};
 
-export function ProcedureFormDialog({ procedure }: { procedure?: Procedure }) {
+export function ProcedureFormDialog({
+  procedure,
+  trigger,
+}: {
+  procedure?: Procedure;
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const action = procedure
     ? updateProcedureAction.bind(null, procedure.id)
@@ -42,9 +48,11 @@ export function ProcedureFormDialog({ procedure }: { procedure?: Procedure }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={procedure ? "outline" : "default"} size={procedure ? "sm" : "default"}>
-          {procedure ? "Editar" : "Novo procedimento"}
-        </Button>
+        {trigger ?? (
+          <Button variant={procedure ? "outline" : "default"} size={procedure ? "sm" : "default"}>
+            {procedure ? "Editar" : "Novo procedimento"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

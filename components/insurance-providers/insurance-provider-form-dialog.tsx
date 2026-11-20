@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 
 import {
   createInsuranceProviderAction,
@@ -25,7 +25,13 @@ import {
 
 const initialState: InsuranceProviderFormState = {};
 
-export function InsuranceProviderFormDialog({ provider }: { provider?: InsuranceProvider }) {
+export function InsuranceProviderFormDialog({
+  provider,
+  trigger,
+}: {
+  provider?: InsuranceProvider;
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const action = provider
     ? updateInsuranceProviderAction.bind(null, provider.id)
@@ -42,9 +48,11 @@ export function InsuranceProviderFormDialog({ provider }: { provider?: Insurance
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={provider ? "outline" : "default"} size={provider ? "sm" : "default"}>
-          {provider ? "Editar" : "Nova operadora"}
-        </Button>
+        {trigger ?? (
+          <Button variant={provider ? "outline" : "default"} size={provider ? "sm" : "default"}>
+            {provider ? "Editar" : "Nova operadora"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

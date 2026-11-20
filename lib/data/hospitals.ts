@@ -65,3 +65,8 @@ export async function setHospitalActive(supabase: SupabaseClient, id: string, ac
   const { error } = await supabase.from("hospitals").update({ active }).eq("id", id);
   if (error) throw error;
 }
+
+export async function deleteHospital(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase.from("hospitals").delete().eq("id", id);
+  if (error) throw error;
+}

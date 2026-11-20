@@ -7,8 +7,10 @@ import {
   createInsuranceProvider,
   updateInsuranceProvider,
   setInsuranceProviderActive,
+  deleteInsuranceProvider,
 } from "@/lib/data/insurance-providers";
 import { insuranceProviderSchema } from "@/lib/validation/insurance-providers";
+import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type InsuranceProviderFormState = {
   error?: string;
@@ -74,4 +76,17 @@ export async function toggleInsuranceProviderActiveAction(id: string, active: bo
   const supabase = await createClient();
   await setInsuranceProviderActive(supabase, id, active);
   revalidatePath("/settings/insurance-providers");
+}
+
+export async function deleteInsuranceProviderAction(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  try {
+    await deleteInsuranceProvider(supabase, id);
+  } catch (e) {
+    return {
+      error: toDeleteErrorMessage(e, "esta operadora está vinculada a pacientes ou cirurgias cadastradas"),
+    };
+  }
+  revalidatePath("/settings/insurance-providers");
+  return {};
 }

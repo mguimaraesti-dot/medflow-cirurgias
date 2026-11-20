@@ -7,10 +7,12 @@ import {
   createMaterial,
   updateMaterial,
   setMaterialActive,
+  deleteMaterial,
   addMaterialSupplier,
   removeMaterialSupplier,
 } from "@/lib/data/materials";
 import { materialSchema, materialSupplierSchema } from "@/lib/validation/materials";
+import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type MaterialFormState = {
   error?: string;
@@ -82,6 +84,19 @@ export async function toggleMaterialActiveAction(id: string, active: boolean) {
   const supabase = await createClient();
   await setMaterialActive(supabase, id, active);
   revalidatePath("/catalog/materials");
+}
+
+export async function deleteMaterialAction(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  try {
+    await deleteMaterial(supabase, id);
+  } catch (e) {
+    return {
+      error: toDeleteErrorMessage(e, "este material está vinculado a cirurgias ou protocolos cadastrados"),
+    };
+  }
+  revalidatePath("/catalog/materials");
+  return {};
 }
 
 export type MaterialSupplierFormState = {

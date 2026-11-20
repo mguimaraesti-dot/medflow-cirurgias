@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { createSupplier, updateSupplier, setSupplierActive } from "@/lib/data/suppliers";
+import {
+  createSupplier,
+  updateSupplier,
+  setSupplierActive,
+  deleteSupplier,
+} from "@/lib/data/suppliers";
 import { supplierSchema } from "@/lib/validation/suppliers";
+import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type SupplierFormState = {
   error?: string;
@@ -69,4 +75,17 @@ export async function toggleSupplierActiveAction(id: string, active: boolean) {
   const supabase = await createClient();
   await setSupplierActive(supabase, id, active);
   revalidatePath("/suppliers");
+}
+
+export async function deleteSupplierAction(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  try {
+    await deleteSupplier(supabase, id);
+  } catch (e) {
+    return {
+      error: toDeleteErrorMessage(e, "este fornecedor está vinculado a materiais cadastrados"),
+    };
+  }
+  revalidatePath("/suppliers");
+  return {};
 }

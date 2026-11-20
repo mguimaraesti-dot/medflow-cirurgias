@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { createHospital, updateHospital, setHospitalActive } from "@/lib/data/hospitals";
+import {
+  createHospital,
+  updateHospital,
+  setHospitalActive,
+  deleteHospital,
+} from "@/lib/data/hospitals";
 import { hospitalSchema } from "@/lib/validation/hospitals";
+import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type HospitalFormState = {
   error?: string;
@@ -70,4 +76,15 @@ export async function toggleHospitalActiveAction(id: string, active: boolean) {
   const supabase = await createClient();
   await setHospitalActive(supabase, id, active);
   revalidatePath("/settings/hospitals");
+}
+
+export async function deleteHospitalAction(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  try {
+    await deleteHospital(supabase, id);
+  } catch (e) {
+    return { error: toDeleteErrorMessage(e, "este hospital está vinculado a cirurgias cadastradas") };
+  }
+  revalidatePath("/settings/hospitals");
+  return {};
 }

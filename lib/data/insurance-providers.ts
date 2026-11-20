@@ -69,3 +69,8 @@ export async function setInsuranceProviderActive(
   const { error } = await supabase.from("insurance_providers").update({ active }).eq("id", id);
   if (error) throw error;
 }
+
+export async function deleteInsuranceProvider(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase.from("insurance_providers").delete().eq("id", id);
+  if (error) throw error;
+}

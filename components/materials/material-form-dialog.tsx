@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 
 import {
   createMaterialAction,
@@ -27,7 +27,13 @@ import { MATERIAL_UNITS } from "@/lib/constants/units";
 
 const initialState: MaterialFormState = {};
 
-export function MaterialFormDialog({ material }: { material?: Material }) {
+export function MaterialFormDialog({
+  material,
+  trigger,
+}: {
+  material?: Material;
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const action = material ? updateMaterialAction.bind(null, material.id) : createMaterialAction;
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -42,9 +48,11 @@ export function MaterialFormDialog({ material }: { material?: Material }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={material ? "outline" : "default"} size={material ? "sm" : "default"}>
-          {material ? "Editar" : "Novo material"}
-        </Button>
+        {trigger ?? (
+          <Button variant={material ? "outline" : "default"} size={material ? "sm" : "default"}>
+            {material ? "Editar" : "Novo material"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

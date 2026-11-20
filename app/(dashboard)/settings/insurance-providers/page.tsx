@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
 import { InsuranceProviderFormDialog } from "@/components/insurance-providers/insurance-provider-form-dialog";
-import { InsuranceProviderActiveToggle } from "@/components/insurance-providers/insurance-provider-active-toggle";
+import { InsuranceProviderRowActions } from "@/components/insurance-providers/insurance-provider-row-actions";
 
 export default async function InsuranceProvidersPage({
   searchParams,
@@ -68,20 +68,23 @@ export default async function InsuranceProvidersPage({
               />
             ) : (
               providers.map((provider) => (
-                <tr key={provider.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{provider.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{provider.code || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{provider.phone || "—"}</td>
-                  <td className="px-4 py-3">
-                    <ActiveBadge active={provider.active} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <InsuranceProviderFormDialog provider={provider} />
-                      <InsuranceProviderActiveToggle id={provider.id} active={provider.active} />
-                    </div>
-                  </td>
-                </tr>
+                <InsuranceProviderFormDialog
+                  key={provider.id}
+                  provider={provider}
+                  trigger={
+                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
+                      <td className="px-4 py-3 font-medium text-foreground">{provider.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{provider.code || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{provider.phone || "—"}</td>
+                      <td className="px-4 py-3">
+                        <ActiveBadge active={provider.active} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <InsuranceProviderRowActions provider={provider} />
+                      </td>
+                    </tr>
+                  }
+                />
               ))
             )}
           </tbody>

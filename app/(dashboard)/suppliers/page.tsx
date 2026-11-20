@@ -4,7 +4,7 @@ import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
-import { SupplierActiveToggle } from "@/components/suppliers/supplier-active-toggle";
+import { SupplierRowActions } from "@/components/suppliers/supplier-row-actions";
 
 export default async function SuppliersPage({
   searchParams,
@@ -58,22 +58,29 @@ export default async function SuppliersPage({
               />
             ) : (
               suppliers.map((supplier) => (
-                <tr key={supplier.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{supplier.company_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{supplier.trade_name || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {supplier.contact_name || supplier.phone || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <ActiveBadge active={supplier.active} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <SupplierFormDialog supplier={supplier} />
-                      <SupplierActiveToggle id={supplier.id} active={supplier.active} />
-                    </div>
-                  </td>
-                </tr>
+                <SupplierFormDialog
+                  key={supplier.id}
+                  supplier={supplier}
+                  trigger={
+                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {supplier.company_name}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {supplier.trade_name || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {supplier.contact_name || supplier.phone || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ActiveBadge active={supplier.active} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <SupplierRowActions supplier={supplier} />
+                      </td>
+                    </tr>
+                  }
+                />
               ))
             )}
           </tbody>

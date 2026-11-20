@@ -58,3 +58,8 @@ export async function setSupplierActive(supabase: SupabaseClient, id: string, ac
   const { error } = await supabase.from("suppliers").update({ active }).eq("id", id);
   if (error) throw error;
 }
+
+export async function deleteSupplier(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase.from("suppliers").delete().eq("id", id);
+  if (error) throw error;
+}

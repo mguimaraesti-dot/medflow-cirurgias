@@ -13,7 +13,10 @@ export function ProcedureActiveToggle({ id, active }: { id: string; active: bool
       variant="ghost"
       size="sm"
       disabled={pending}
-      onClick={() => startTransition(() => toggleProcedureActiveAction(id, !active))}
+      onClick={(e) => {
+        e.stopPropagation();
+        startTransition(() => toggleProcedureActiveAction(id, !active));
+      }}
     >
       {active ? "Inativar" : "Reativar"}
     </Button>

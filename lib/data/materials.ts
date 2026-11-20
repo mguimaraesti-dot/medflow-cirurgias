@@ -73,6 +73,11 @@ export async function setMaterialActive(supabase: SupabaseClient, id: string, ac
   if (error) throw error;
 }
 
+export async function deleteMaterial(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase.from("materials_catalog").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function listMaterialSuppliers(supabase: SupabaseClient, materialId: string) {
   const { data, error } = await supabase
     .from("material_suppliers")

@@ -1,13 +1,10 @@
-import Link from "next/link";
-import { Truck } from "lucide-react";
-
 import { createClient } from "@/lib/supabase/server";
 import { listMaterials } from "@/lib/data/materials";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
 import { MaterialFormDialog } from "@/components/materials/material-form-dialog";
-import { MaterialActiveToggle } from "@/components/materials/material-active-toggle";
+import { MaterialRowActions } from "@/components/materials/material-row-actions";
 
 export default async function MaterialsCatalogPage({
   searchParams,
@@ -60,27 +57,27 @@ export default async function MaterialsCatalogPage({
               />
             ) : (
               materials.map((material) => (
-                <tr key={material.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{material.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{material.internal_code || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{material.category || "—"}</td>
-                  <td className="px-4 py-3">
-                    <ActiveBadge active={material.active} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/catalog/materials/${material.id}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-                      >
-                        <Truck className="h-3.5 w-3.5" />
-                        Fornecedores
-                      </Link>
-                      <MaterialFormDialog material={material} />
-                      <MaterialActiveToggle id={material.id} active={material.active} />
-                    </div>
-                  </td>
-                </tr>
+                <MaterialFormDialog
+                  key={material.id}
+                  material={material}
+                  trigger={
+                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
+                      <td className="px-4 py-3 font-medium text-foreground">{material.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {material.internal_code || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {material.category || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ActiveBadge active={material.active} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <MaterialRowActions material={material} />
+                      </td>
+                    </tr>
+                  }
+                />
               ))
             )}
           </tbody>

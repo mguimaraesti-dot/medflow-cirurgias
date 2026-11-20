@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 
 import {
   createSupplierAction,
@@ -25,7 +25,13 @@ import {
 
 const initialState: SupplierFormState = {};
 
-export function SupplierFormDialog({ supplier }: { supplier?: Supplier }) {
+export function SupplierFormDialog({
+  supplier,
+  trigger,
+}: {
+  supplier?: Supplier;
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const action = supplier ? updateSupplierAction.bind(null, supplier.id) : createSupplierAction;
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -40,9 +46,11 @@ export function SupplierFormDialog({ supplier }: { supplier?: Supplier }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={supplier ? "outline" : "default"} size={supplier ? "sm" : "default"}>
-          {supplier ? "Editar" : "Novo fornecedor"}
-        </Button>
+        {trigger ?? (
+          <Button variant={supplier ? "outline" : "default"} size={supplier ? "sm" : "default"}>
+            {supplier ? "Editar" : "Novo fornecedor"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

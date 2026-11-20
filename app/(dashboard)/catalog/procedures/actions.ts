@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { createProcedure, updateProcedure, setProcedureActive } from "@/lib/data/procedures";
+import {
+  createProcedure,
+  updateProcedure,
+  setProcedureActive,
+  deleteProcedure,
+  hasProcedureProtocols,
+} from "@/lib/data/procedures";
 import { procedureSchema } from "@/lib/validation/procedures";
+import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type ProcedureFormState = {
   error?: string;
@@ -74,4 +81,24 @@ export async function toggleProcedureActiveAction(id: string, active: boolean) {
   const supabase = await createClient();
   await setProcedureActive(supabase, id, active);
   revalidatePath("/catalog/procedures");
+}
+
+export async function deleteProcedureAction(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+
+  if (await hasProcedureProtocols(supabase, id)) {
+    return {
+      error:
+        "Não é possível excluir: existem protocolos de materiais cadastrados para este procedimento. Você pode inativar em vez de excluir.",
+    };
+  }
+
+  try {
+    await deleteProcedure(supabase, id);
+  } catch (e) {
+    return { error: toDeleteErrorMessage(e, "este procedimento está vinculado a cirurgias cadastradas") };
+  }
+
+  revalidatePath("/catalog/procedures");
+  return {};
 }

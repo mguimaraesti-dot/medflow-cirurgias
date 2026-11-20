@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 
 import {
   createHospitalAction,
@@ -25,7 +25,13 @@ import {
 
 const initialState: HospitalFormState = {};
 
-export function HospitalFormDialog({ hospital }: { hospital?: Hospital }) {
+export function HospitalFormDialog({
+  hospital,
+  trigger,
+}: {
+  hospital?: Hospital;
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const action = hospital
     ? updateHospitalAction.bind(null, hospital.id)
@@ -44,9 +50,11 @@ export function HospitalFormDialog({ hospital }: { hospital?: Hospital }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={hospital ? "outline" : "default"} size={hospital ? "sm" : "default"}>
-          {hospital ? "Editar" : "Novo hospital"}
-        </Button>
+        {trigger ?? (
+          <Button variant={hospital ? "outline" : "default"} size={hospital ? "sm" : "default"}>
+            {hospital ? "Editar" : "Novo hospital"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

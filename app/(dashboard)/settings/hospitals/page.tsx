@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
 import { HospitalFormDialog } from "@/components/hospitals/hospital-form-dialog";
-import { HospitalActiveToggle } from "@/components/hospitals/hospital-active-toggle";
+import { HospitalRowActions } from "@/components/hospitals/hospital-row-actions";
 
 export default async function HospitalsPage({
   searchParams,
@@ -68,20 +68,23 @@ export default async function HospitalsPage({
               />
             ) : (
               hospitals.map((hospital) => (
-                <tr key={hospital.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{hospital.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{hospital.phone || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{hospital.email || "—"}</td>
-                  <td className="px-4 py-3">
-                    <ActiveBadge active={hospital.active} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <HospitalFormDialog hospital={hospital} />
-                      <HospitalActiveToggle id={hospital.id} active={hospital.active} />
-                    </div>
-                  </td>
-                </tr>
+                <HospitalFormDialog
+                  key={hospital.id}
+                  hospital={hospital}
+                  trigger={
+                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
+                      <td className="px-4 py-3 font-medium text-foreground">{hospital.name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{hospital.phone || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{hospital.email || "—"}</td>
+                      <td className="px-4 py-3">
+                        <ActiveBadge active={hospital.active} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <HospitalRowActions hospital={hospital} />
+                      </td>
+                    </tr>
+                  }
+                />
               ))
             )}
           </tbody>
