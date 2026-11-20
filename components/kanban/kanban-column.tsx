@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 export function KanbanColumn({
   stage,
   surgeries,
+  openTasksBySurgery,
 }: {
   stage: WorkflowStage;
   surgeries: SurgeryListItem[];
+  openTasksBySurgery: Record<string, number>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
@@ -29,7 +31,11 @@ export function KanbanColumn({
         )}
       >
         {surgeries.map((surgery) => (
-          <KanbanCard key={surgery.id} surgery={surgery} />
+          <KanbanCard
+            key={surgery.id}
+            surgery={surgery}
+            openTasksCount={openTasksBySurgery[surgery.id] ?? 0}
+          />
         ))}
         {surgeries.length === 0 ? (
           <p className="px-2 py-4 text-center text-xs text-slate-400">Nenhuma cirurgia</p>

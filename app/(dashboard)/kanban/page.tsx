@@ -2,24 +2,83 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
-import { listWorkflowStages, listKanbanSurgeries } from "@/lib/data/surgeries";
+import {
+  listWorkflowStages,
+  listSurgeriesForMap,
+  getMapStats,
+  type SurgeryMapFilters,
+} from "@/lib/data/surgeries";
+import { countOpenTasksBySurgery } from "@/lib/data/tasks";
+import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
+import { listActiveProceduresForSelect } from "@/lib/data/procedures";
+import { listActiveInsuranceProvidersForSelect } from "@/lib/data/insurance-providers";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
+import { MapStatsRow } from "@/components/kanban/map-stats";
+import { MapFilters } from "@/components/kanban/map-filters";
+import { MapListTable } from "@/components/kanban/map-list-table";
+import { ViewToggle } from "@/components/kanban/view-toggle";
+import { StageProgress } from "@/components/kanban/stage-progress";
 import { Button } from "@/components/ui/button";
 
-export default async function KanbanPage() {
+type SearchParams = {
+  view?: string;
+  q?: string;
+  procedure?: string;
+  hospital?: string;
+  attendance?: string;
+  priority?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  overdue?: string;
+};
+
+export default async function KanbanPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
-  const [stages, surgeries] = await Promise.all([
-    listWorkflowStages(supabase),
-    listKanbanSurgeries(supabase),
-  ]);
+
+  const filters: SurgeryMapFilters = {
+    q: params.q,
+    procedureId: params.procedure,
+    hospitalId: params.hospital,
+    attendance: params.attendance,
+    priority: params.priority,
+    status: params.status,
+    from: params.from,
+    to: params.to,
+    overdueOnly: params.overdue === "1",
+  };
+
+  const [stages, surgeries, stats, openTasksBySurgery, hospitals, procedures, insuranceProviders] =
+    await Promise.all([
+      listWorkflowStages(supabase),
+      listSurgeriesForMap(supabase, filters),
+      getMapStats(supabase),
+      countOpenTasksBySurgery(supabase),
+      listActiveHospitalsForSelect(supabase),
+      listActiveProceduresForSelect(supabase),
+      listActiveInsuranceProvidersForSelect(supabase),
+    ]);
+
+  const isListView = params.view === "lista" || !!params.overdue;
+  const activeSurgeries = surgeries.filter((s) => s.status === "active");
+
+  const countByStage: Record<string, number> = {};
+  for (const s of activeSurgeries) {
+    countByStage[s.stage_id] = (countByStage[s.stage_id] ?? 0) + 1;
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-medium text-slate-900">Kanban cirúrgico</h1>
+          <h1 className="text-lg font-medium text-slate-900">Mapa Cirúrgico</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Arraste o cartão para mudar a etapa. Cirurgias canceladas ou encerradas não aparecem aqui.
+            Acompanhe todo o ciclo da cirurgia, da indicação ao faturamento.
           </p>
         </div>
         <Link href="/surgeries/new">
@@ -30,13 +89,34 @@ export default async function KanbanPage() {
         </Link>
       </div>
 
-      <div className="mt-6">
-        {surgeries.length === 0 ? (
+      <div className="mt-4">
+        <MapStatsRow stats={stats} />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <MapFilters
+          procedures={procedures}
+          hospitals={hospitals}
+          insuranceProviders={insuranceProviders}
+        />
+        <ViewToggle />
+      </div>
+
+      <StageProgress
+        stages={stages}
+        countByStage={countByStage}
+        overdueCount={stats.overdue}
+      />
+
+      <div className="mt-4">
+        {isListView ? (
+          <MapListTable surgeries={surgeries} openTasksBySurgery={openTasksBySurgery} />
+        ) : activeSurgeries.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-            Nenhuma cirurgia ativa ainda. Crie a primeira com o botão acima.
+            Nenhuma cirurgia ativa para esse filtro.
           </p>
         ) : (
-          <KanbanBoard stages={stages} surgeries={surgeries} />
+          <KanbanBoard stages={stages} surgeries={activeSurgeries} openTasksBySurgery={openTasksBySurgery} />
         )}
       </div>
     </div>

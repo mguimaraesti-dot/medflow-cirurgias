@@ -94,7 +94,7 @@ export default async function SurgeryDetailPage({
         className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Kanban
+        Mapa Cirúrgico
       </Link>
 
       <div className="flex items-start justify-between gap-4">

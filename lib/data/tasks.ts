@@ -43,6 +43,28 @@ export async function listTasks(supabase: SupabaseClient, filters: TaskFilters =
   return data as unknown as Task[];
 }
 
+/**
+ * Quantidade de pendências ainda abertas (não concluídas/canceladas) por
+ * cirurgia — usado nos cartões do Mapa Cirúrgico.
+ */
+export async function countOpenTasksBySurgery(
+  supabase: SupabaseClient
+): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("surgery_id")
+    .not("surgery_id", "is", null)
+    .not("status", "in", "(done,cancelled)");
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (!row.surgery_id) continue;
+    counts[row.surgery_id] = (counts[row.surgery_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function createTask(supabase: SupabaseClient, input: TaskInput) {
   const { error } = await supabase.from("tasks").insert(input);
   if (error) throw error;

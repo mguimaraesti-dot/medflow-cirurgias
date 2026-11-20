@@ -24,7 +24,7 @@ export default async function NewSurgeryPage() {
         className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Kanban
+        Mapa Cirúrgico
       </Link>
 
       <h1 className="text-lg font-medium text-slate-900">Nova cirurgia</h1>

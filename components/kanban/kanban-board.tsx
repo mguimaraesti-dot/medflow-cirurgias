@@ -10,9 +10,11 @@ import { KanbanColumn } from "@/components/kanban/kanban-column";
 export function KanbanBoard({
   stages,
   surgeries,
+  openTasksBySurgery,
 }: {
   stages: WorkflowStage[];
   surgeries: SurgeryListItem[];
+  openTasksBySurgery: Record<string, number>;
 }) {
   const [items, setItems] = useState(surgeries);
   const [, startTransition] = useTransition();
@@ -54,6 +56,7 @@ export function KanbanBoard({
             key={stage.id}
             stage={stage}
             surgeries={items.filter((s) => s.stage_id === stage.id)}
+            openTasksBySurgery={openTasksBySurgery}
           />
         ))}
       </div>

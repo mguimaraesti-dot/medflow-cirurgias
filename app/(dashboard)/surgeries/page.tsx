@@ -49,7 +49,7 @@ export default async function SurgeriesPage({
           <Link href="/kanban">
             <Button variant="outline" size="sm">
               <LayoutGrid className="h-4 w-4" />
-              Kanban
+              Mapa Cirúrgico
             </Button>
           </Link>
           <Link href="/surgeries/new">

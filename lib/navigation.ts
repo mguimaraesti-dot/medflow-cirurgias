@@ -28,7 +28,7 @@ export type NavItem = {
  */
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Kanban cirúrgico", href: "/kanban", icon: KanbanSquare },
+  { label: "Mapa Cirúrgico", href: "/kanban", icon: KanbanSquare },
   { label: "Cirurgias", href: "/surgeries", icon: Stethoscope },
   { label: "Pacientes", href: "/surgeries/patients", icon: Users },
   { label: "Agenda", href: "/schedule", icon: CalendarDays },

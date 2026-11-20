@@ -21,6 +21,31 @@ export type SurgeryListItem = {
   patient: { id: string; full_name: string } | null;
   hospital: { id: string; name: string } | null;
   primary_procedure: { id: string; name: string } | null;
+  insurance_provider: { id: string; name: string } | null;
+  requirements: { requirement_key: string; is_satisfied: boolean; waived: boolean }[];
+};
+
+export type SurgeryMapFilters = {
+  q?: string;
+  procedureId?: string;
+  hospitalId?: string;
+  /** id da operadora, ou "particular" para filtrar atendimento particular */
+  attendance?: string;
+  priority?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  /** só cirurgias ativas com data prevista vencida e ainda não confirmadas */
+  overdueOnly?: boolean;
+};
+
+export type MapStats = {
+  inProgress: number;
+  awaitingAuthorization: number;
+  materialsPending: number;
+  scheduled: number;
+  overdue: number;
+  completed: number;
 };
 
 export type Surgery = SurgeryListItem & {
@@ -59,11 +84,13 @@ export type StageHistoryEntry = {
 
 const LIST_COLUMNS =
   "id,code,stage_id,attendance_type,priority,expected_date,confirmed_date,status," +
-  "patient:patients(id,full_name),hospital:hospitals(id,name),primary_procedure:procedures(id,name)";
+  "patient:patients(id,full_name),hospital:hospitals(id,name),primary_procedure:procedures(id,name)," +
+  "insurance_provider:insurance_providers(id,name)," +
+  "requirements:surgery_requirements(requirement_key,is_satisfied,waived)";
 
 const DETAIL_COLUMNS =
   LIST_COLUMNS +
-  ",patient_id,hospital_id,insurance_provider_id,insurance_provider:insurance_providers(id,name)," +
+  ",patient_id,hospital_id,insurance_provider_id," +
   "primary_procedure_id,indication_date,confirmed_time,admin_notes,cancelled_reason,created_at";
 
 export async function listWorkflowStages(supabase: SupabaseClient) {
@@ -75,15 +102,95 @@ export async function listWorkflowStages(supabase: SupabaseClient) {
   return data as WorkflowStage[];
 }
 
-export async function listKanbanSurgeries(supabase: SupabaseClient) {
-  const { data, error } = await supabase
+/**
+ * Lista usada pelo Mapa Cirúrgico (Kanban + Lista), com os filtros da
+ * barra de busca. Sem filtro de status, traz todas as cirurgias (ativas,
+ * reagendadas, canceladas e realizadas) — quem decide o que mostrar nas
+ * colunas do Kanban (só ativas) é quem consome o resultado.
+ */
+export async function listSurgeriesForMap(
+  supabase: SupabaseClient,
+  filters: SurgeryMapFilters = {}
+) {
+  let query = supabase
     .from("surgeries")
     .select(LIST_COLUMNS)
-    .eq("status", "active")
     .order("priority", { ascending: false })
     .order("expected_date", { ascending: true, nullsFirst: false });
+
+  if (filters.q) query = query.ilike("code", `%${filters.q}%`);
+  if (filters.procedureId) query = query.eq("primary_procedure_id", filters.procedureId);
+  if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
+  if (filters.priority) query = query.eq("priority", filters.priority);
+  if (filters.status) query = query.eq("status", filters.status);
+  if (filters.from) query = query.gte("expected_date", filters.from);
+  if (filters.to) query = query.lte("expected_date", filters.to);
+  if (filters.attendance === "particular") {
+    query = query.eq("attendance_type", "particular");
+  } else if (filters.attendance) {
+    query = query.eq("insurance_provider_id", filters.attendance);
+  }
+  if (filters.overdueOnly) {
+    const today = new Date().toISOString().slice(0, 10);
+    query = query.eq("status", "active").lt("expected_date", today).is("confirmed_date", null);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data as unknown as SurgeryListItem[];
+}
+
+/**
+ * Números dos cards do topo do Mapa Cirúrgico. Calculados separadamente
+ * dos filtros da barra de busca (são a visão geral, não dependem do que
+ * está filtrado na tela).
+ */
+export async function getMapStats(supabase: SupabaseClient): Promise<MapStats> {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [{ data: activeRows, error: activeError }, { count: completed, error: completedError }] =
+    await Promise.all([
+      supabase.from("surgeries").select("id,expected_date,confirmed_date").eq("status", "active"),
+      supabase
+        .from("surgeries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "completed"),
+    ]);
+  if (activeError) throw activeError;
+  if (completedError) throw completedError;
+
+  const active = activeRows ?? [];
+  const scheduled = active.filter((s) => s.confirmed_date && s.confirmed_date >= today).length;
+  const overdue = active.filter(
+    (s) => s.expected_date && s.expected_date < today && !s.confirmed_date
+  ).length;
+
+  let awaitingAuthorization = 0;
+  let materialsPending = 0;
+  const activeIds = active.map((s) => s.id);
+  if (activeIds.length > 0) {
+    const { data: reqRows, error: reqError } = await supabase
+      .from("surgery_requirements")
+      .select("requirement_key,surgery_id")
+      .in("surgery_id", activeIds)
+      .in("requirement_key", ["authorization", "materials"])
+      .eq("is_satisfied", false)
+      .eq("waived", false);
+    if (reqError) throw reqError;
+    awaitingAuthorization = (reqRows ?? []).filter(
+      (r) => r.requirement_key === "authorization"
+    ).length;
+    materialsPending = (reqRows ?? []).filter((r) => r.requirement_key === "materials").length;
+  }
+
+  return {
+    inProgress: active.length,
+    awaitingAuthorization,
+    materialsPending,
+    scheduled,
+    overdue,
+    completed: completed ?? 0,
+  };
 }
 
 export async function listSurgeriesForSelect(supabase: SupabaseClient) {
