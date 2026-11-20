@@ -51,15 +51,17 @@ export function KanbanBoard({
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div
-        className="grid gap-3 pb-4"
+        className="grid gap-4 pb-4"
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
       >
-        {stages.map((stage) => (
+        {stages.map((stage, index) => (
           <KanbanColumn
             key={stage.id}
             stage={stage}
             surgeries={items.filter((s) => s.stage_id === stage.id)}
             openTasksBySurgery={openTasksBySurgery}
+            index={index}
+            total={stages.length}
           />
         ))}
       </div>

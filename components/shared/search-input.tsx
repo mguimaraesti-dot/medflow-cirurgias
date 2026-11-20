@@ -5,8 +5,15 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
-export function SearchInput({ placeholder }: { placeholder: string }) {
+export function SearchInput({
+  placeholder,
+  className,
+}: {
+  placeholder: string;
+  className?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -27,7 +34,7 @@ export function SearchInput({ placeholder }: { placeholder: string }) {
   }
 
   return (
-    <div className="relative max-w-sm">
+    <div className={cn("relative w-full min-w-[220px] max-w-sm shrink-0", className)}>
       <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
         value={value}

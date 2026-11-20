@@ -59,14 +59,14 @@ export function MapFilters({
     searchParams.get("q");
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <SearchInput placeholder="Buscar por código da cirurgia..." />
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
+      <SearchInput placeholder="Buscar por código..." className="min-w-[200px] max-w-[260px]" />
 
       <Select
         value={searchParams.get("procedure") ?? "all"}
         onValueChange={(v) => setParam("procedure", v)}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[200px] shrink-0">
           <SelectValue placeholder="Procedimento" />
         </SelectTrigger>
         <SelectContent>
@@ -83,7 +83,7 @@ export function MapFilters({
         value={searchParams.get("hospital") ?? "all"}
         onValueChange={(v) => setParam("hospital", v)}
       >
-        <SelectTrigger className="w-[170px]">
+        <SelectTrigger className="w-[190px] shrink-0">
           <SelectValue placeholder="Hospital" />
         </SelectTrigger>
         <SelectContent>
@@ -100,7 +100,7 @@ export function MapFilters({
         value={searchParams.get("attendance") ?? "all"}
         onValueChange={(v) => setParam("attendance", v)}
       >
-        <SelectTrigger className="w-[170px]">
+        <SelectTrigger className="w-[190px] shrink-0">
           <SelectValue placeholder="Convênio" />
         </SelectTrigger>
         <SelectContent>
@@ -118,7 +118,7 @@ export function MapFilters({
         value={searchParams.get("priority") ?? "all"}
         onValueChange={(v) => setParam("priority", v)}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-[160px] shrink-0">
           <SelectValue placeholder="Prioridade" />
         </SelectTrigger>
         <SelectContent>
@@ -132,7 +132,7 @@ export function MapFilters({
       </Select>
 
       <Select value={searchParams.get("status") ?? "all"} onValueChange={(v) => setParam("status", v)}>
-        <SelectTrigger className="w-[150px]">
+        <SelectTrigger className="w-[160px] shrink-0">
           <SelectValue placeholder="Situação" />
         </SelectTrigger>
         <SelectContent>
@@ -145,17 +145,17 @@ export function MapFilters({
         </SelectContent>
       </Select>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <Input
           type="date"
-          className="w-[150px]"
+          className="w-[150px] shrink-0"
           value={searchParams.get("from") ?? ""}
           onChange={(e) => setParam("from", e.target.value)}
         />
-        <span className="text-xs text-muted-foreground">até</span>
+        <span className="shrink-0 text-xs text-muted-foreground">até</span>
         <Input
           type="date"
-          className="w-[150px]"
+          className="w-[150px] shrink-0"
           value={searchParams.get("to") ?? ""}
           onChange={(e) => setParam("to", e.target.value)}
         />
@@ -165,6 +165,7 @@ export function MapFilters({
         <Button
           variant="ghost"
           size="sm"
+          className="shrink-0"
           onClick={() => {
             const params = new URLSearchParams(searchParams.toString());
             params.delete("procedure");
