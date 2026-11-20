@@ -33,6 +33,11 @@ export type AuthorizationHistoryEntry = {
   changed_at: string;
 };
 
+export type AuthorizationHistoryWithContext = AuthorizationHistoryEntry & {
+  authorization_id: string;
+  changed_by: string | null;
+};
+
 export async function getAuthorizationRequest(supabase: SupabaseClient, surgeryId: string) {
   const { data, error } = await supabase
     .from("authorization_requests")
@@ -53,6 +58,32 @@ export async function listAuthorizationHistory(supabase: SupabaseClient, authori
     .order("changed_at", { ascending: true });
   if (error) throw error;
   return data as AuthorizationHistoryEntry[];
+}
+
+/**
+ * Todo o histórico de status de autorização da cirurgia (pode abranger mais
+ * de uma solicitação, caso tenha sido reenviada após negativa).
+ */
+export async function listAuthorizationHistoryForSurgery(
+  supabase: SupabaseClient,
+  surgeryId: string
+) {
+  const { data: requests, error: requestsError } = await supabase
+    .from("authorization_requests")
+    .select("id")
+    .eq("surgery_id", surgeryId);
+  if (requestsError) throw requestsError;
+
+  const ids = (requests ?? []).map((r) => r.id as string);
+  if (ids.length === 0) return [] as AuthorizationHistoryWithContext[];
+
+  const { data, error } = await supabase
+    .from("authorization_history")
+    .select("id,authorization_id,status,notes,changed_by,changed_at")
+    .in("authorization_id", ids)
+    .order("changed_at", { ascending: true });
+  if (error) throw error;
+  return data as AuthorizationHistoryWithContext[];
 }
 
 export async function createAuthorizationRequest(

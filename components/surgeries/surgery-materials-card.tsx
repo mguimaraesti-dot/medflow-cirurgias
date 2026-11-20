@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useTransition } from "react";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   addSurgeryMaterialItemAction,
@@ -12,6 +13,7 @@ import {
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { SurgeryMaterialItem } from "@/lib/data/operations";
 import type { ImportableProtocolVersion } from "@/lib/data/protocols";
+import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +54,10 @@ function ItemRow({ item, surgeryId }: { item: SurgeryMaterialItem; surgeryId: st
         value={item.status}
         disabled={pending}
         onValueChange={(status) =>
-          startTransition(() => setSurgeryMaterialItemStatusAction(item.id, surgeryId, status))
+          startTransition(async () => {
+            await setSurgeryMaterialItemStatusAction(item.id, surgeryId, status);
+            toast.success("Status atualizado.");
+          })
         }
       >
         <SelectTrigger className="h-8 w-[150px] text-xs">
@@ -72,7 +77,12 @@ function ItemRow({ item, surgeryId }: { item: SurgeryMaterialItem; surgeryId: st
         variant="ghost"
         size="icon"
         disabled={pending}
-        onClick={() => startTransition(() => removeSurgeryMaterialItemAction(item.id, surgeryId))}
+        onClick={() =>
+          startTransition(async () => {
+            await removeSurgeryMaterialItemAction(item.id, surgeryId);
+            toast.success("Material removido.");
+          })
+        }
         aria-label="Remover material"
       >
         <X className="h-4 w-4" />
@@ -100,6 +110,7 @@ export function SurgeryMaterialsCard({
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const [importPending, startImport] = useTransition();
+  useActionToast(state, "Material adicionado.");
 
   return (
     <div className="flex flex-col gap-4">
@@ -113,7 +124,10 @@ export function SurgeryMaterialsCard({
               size="sm"
               disabled={importPending}
               onClick={() =>
-                startImport(() => importProtocolVersionItemsAction(surgeryId, version.id))
+                startImport(async () => {
+                  await importProtocolVersionItemsAction(surgeryId, version.id);
+                  toast.success("Itens do protocolo importados.");
+                })
               }
             >
               {version.protocol_name} (v{version.version_number})

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { cancelSurgeryAction } from "@/app/(dashboard)/surgeries/actions";
 import { Button } from "@/components/ui/button";
@@ -33,9 +34,10 @@ export function CancelSurgeryButton({ surgeryId }: { surgeryId: string }) {
           size="sm"
           disabled={pending || reason.trim().length === 0}
           onClick={() =>
-            startTransition(() => {
-              cancelSurgeryAction(surgeryId, reason.trim());
+            startTransition(async () => {
+              await cancelSurgeryAction(surgeryId, reason.trim());
               setOpen(false);
+              toast.success("Cirurgia cancelada.");
             })
           }
         >

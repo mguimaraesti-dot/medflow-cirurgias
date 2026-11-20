@@ -7,49 +7,37 @@ import {
   type RequirementFormState,
 } from "@/app/(dashboard)/surgeries/actions";
 import type { SurgeryRequirement } from "@/lib/data/surgeries";
+import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-
-const LABELS: Record<SurgeryRequirement["requirement_key"], string> = {
-  authorization: "Autorização",
-  materials: "Materiais/OPME",
-  or_reservation: "Reserva do centro cirúrgico",
-  preoperative: "Pré-operatório",
-};
 
 const initialState: RequirementFormState = {};
 
+/**
+ * Controle manual do requisito ("gate" de liberação). Na prática, o status
+ * "Satisfeito" já é recalculado automaticamente a partir dos dados reais
+ * (autorização aprovada, reserva confirmada, checklist/materiais completos —
+ * ver migration 0005) sempre que o formulário específico é preenchido; os
+ * controles abaixo seguem disponíveis para marcar manualmente ou dispensar
+ * o requisito com justificativa, nos casos em que o fluxo normal não se
+ * aplica.
+ */
 export function RequirementItem({ requirement }: { requirement: SurgeryRequirement }) {
   const action = updateRequirementAction.bind(null, requirement.id, requirement.surgery_id);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [waived, setWaived] = useState(requirement.waived);
-
-  const status = requirement.waived
-    ? "Dispensado"
-    : requirement.is_satisfied
-      ? "Satisfeito"
-      : "Pendente";
-  const statusVariant = requirement.waived
-    ? "secondary"
-    : requirement.is_satisfied
-      ? "default"
-      : "outline";
+  useActionToast(state, "Controle manual salvo.");
 
   return (
-    <form
-      action={formAction}
-      className="flex flex-col gap-3 rounded-lg border border-border p-4"
-    >
-      <div className="flex items-center justify-between">
-        <p className="font-medium text-foreground">{LABELS[requirement.requirement_key]}</p>
-        <Badge variant={statusVariant}>{status}</Badge>
-      </div>
+    <form action={formAction} className="flex flex-col gap-3 border-t border-border pt-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Controle manual
+      </p>
 
       <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox name="is_satisfied" value="on" defaultChecked={requirement.is_satisfied} />
-        Satisfeito
+        Marcar como satisfeito manualmente
       </label>
 
       <label className="flex items-center gap-2 text-sm text-foreground">

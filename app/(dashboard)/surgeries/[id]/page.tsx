@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getSurgery,
   listRequirements,
-  listStageHistory,
+  listWorkflowStages,
+  getSurgeryHistoryTimeline,
   getFinancialRecord,
 } from "@/lib/data/surgeries";
 import {
@@ -18,16 +19,14 @@ import {
 import { listActiveMaterialsForSelect } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { listApprovedProtocolVersionsForSurgery } from "@/lib/data/protocols";
+import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RequirementItem } from "@/components/surgeries/requirement-item";
+import { SurgeryProgressBar } from "@/components/surgeries/surgery-progress-bar";
+import { SurgeryRequirementsPanel } from "@/components/surgeries/surgery-requirements-panel";
 import { FinancialForm } from "@/components/surgeries/financial-form";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
-import { AuthorizationCard } from "@/components/surgeries/authorization-card";
-import { OrReservationCard } from "@/components/surgeries/or-reservation-card";
-import { PreoperativeCard } from "@/components/surgeries/preoperative-card";
-import { SurgeryMaterialsCard } from "@/components/surgeries/surgery-materials-card";
 
 const PRIORITY_LABEL: Record<string, string> = {
   low: "Baixa",
@@ -59,10 +58,11 @@ export default async function SurgeryDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [surgery, requirements, history, financialRecord] = await Promise.all([
+  const [surgery, requirements, stages, history, financialRecord] = await Promise.all([
     getSurgery(supabase, id),
     listRequirements(supabase, id),
-    listStageHistory(supabase, id),
+    listWorkflowStages(supabase),
+    getSurgeryHistoryTimeline(supabase, id),
     getFinancialRecord(supabase, id),
   ]);
 
@@ -87,19 +87,22 @@ export default async function SurgeryDetailPage({
     listSurgeryMaterialItems(supabase, id),
   ]);
 
+  const progressSteps = computeSurgeryProgressSteps(stages, surgery);
+
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-5xl">
       <Link
         href="/kanban"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Mapa Cirúrgico
       </Link>
 
+      {/* Cabeçalho compacto */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-medium text-foreground">{surgery.code}</h1>
             <Badge variant={surgery.status === "cancelled" ? "destructive" : "secondary"}>
               {STATUS_LABEL[surgery.status] ?? surgery.status}
@@ -119,12 +122,18 @@ export default async function SurgeryDetailPage({
         </Link>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Dados da cirurgia</CardTitle>
+      {/* Indicador visual de andamento */}
+      <div className="mt-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <SurgeryProgressBar steps={progressSteps} />
+      </div>
+
+      {/* Resumo da cirurgia */}
+      <Card className="mt-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Dados da cirurgia</CardTitle>
         </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <CardContent className="pt-0">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4">
             <div>
               <dt className="text-muted-foreground">Atendimento</dt>
               <dd className="text-foreground">
@@ -148,120 +157,75 @@ export default async function SurgeryDetailPage({
               </dd>
             </div>
             {surgery.admin_notes ? (
-              <div className="col-span-2">
+              <div className="col-span-2 md:col-span-4">
                 <dt className="text-muted-foreground">Observações</dt>
                 <dd className="whitespace-pre-wrap text-foreground">{surgery.admin_notes}</dd>
               </div>
             ) : null}
             {surgery.status === "cancelled" && surgery.cancelled_reason ? (
-              <div className="col-span-2">
+              <div className="col-span-2 md:col-span-4">
                 <dt className="text-muted-foreground">Motivo do cancelamento</dt>
                 <dd className="text-foreground">{surgery.cancelled_reason}</dd>
               </div>
             ) : null}
           </dl>
           {surgery.status === "active" ? (
-            <div className="mt-4 border-t border-border pt-4">
+            <div className="mt-3 border-t border-border pt-3">
               <CancelSurgeryButton surgeryId={surgery.id} />
             </div>
           ) : null}
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Requisitos para liberação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            {requirements.map((requirement) => (
-              <RequirementItem key={requirement.id} requirement={requirement} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Autorização</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AuthorizationCard
-            surgeryId={surgery.id}
-            insuranceProviderId={surgery.insurance_provider_id}
-            authorization={authorization}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Reserva do centro cirúrgico</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <OrReservationCard
-            surgeryId={surgery.id}
-            hospitalId={surgery.hospital_id}
-            reservation={orReservation}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Checklist pré-operatório</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PreoperativeCard surgeryId={surgery.id} items={preoperativeItems} />
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Materiais da cirurgia</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SurgeryMaterialsCard
-            surgeryId={surgery.id}
-            items={materialItems}
-            materials={materials}
-            suppliers={suppliers}
-            importableVersions={importableVersions}
-          />
-        </CardContent>
-      </Card>
+      {/* Cards de requisitos para liberação — expansíveis, um por vez */}
+      <div className="mt-6">
+        <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
+        <SurgeryRequirementsPanel
+          surgeryId={surgery.id}
+          hospitalId={surgery.hospital_id}
+          insuranceProviderId={surgery.insurance_provider_id}
+          requirements={requirements}
+          authorization={authorization}
+          orReservation={orReservation}
+          preoperativeItems={preoperativeItems}
+          materialItems={materialItems}
+          materials={materials}
+          suppliers={suppliers}
+          importableVersions={importableVersions}
+        />
+      </div>
 
       {surgery.attendance_type === "particular" ? (
         <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Valores (particular)</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Valores (particular)</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <FinancialForm surgeryId={surgery.id} record={financialRecord} />
           </CardContent>
         </Card>
       ) : null}
 
+      {/* Histórico compacto */}
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Histórico de etapas</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Histórico da cirurgia</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {history.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sem histórico ainda.</p>
           ) : (
-            <ol className="flex flex-col gap-2 border-l border-border pl-4">
+            <ol className="flex flex-col gap-2.5 border-l border-border pl-4">
               {history.map((entry) => (
                 <li key={entry.id} className="text-sm">
-                  <span className="text-foreground">
-                    {entry.from_stage ? `${entry.from_stage.name} → ` : "Criada em "}
-                    {entry.to_stage?.name}
-                  </span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {formatDateTime(entry.changed_at)}
-                  </span>
-                  {entry.reason ? (
-                    <p className="text-xs text-muted-foreground">Motivo: {entry.reason}</p>
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-foreground">{entry.description}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateTime(entry.changedAt)}
+                    </span>
+                  </div>
+                  {entry.changedByName ? (
+                    <p className="text-xs text-muted-foreground">Por {entry.changedByName}</p>
                   ) : null}
                 </li>
               ))}

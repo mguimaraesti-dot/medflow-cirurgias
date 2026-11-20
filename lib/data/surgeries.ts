@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { SurgeryInput } from "@/lib/validation/surgeries";
+import { listAuthorizationHistoryForSurgery } from "@/lib/data/operations";
 
 export type WorkflowStage = {
   id: string;
@@ -76,10 +77,34 @@ export type StageHistoryEntry = {
   id: string;
   from_stage_id: string | null;
   to_stage_id: string;
+  changed_by: string | null;
   reason: string | null;
   changed_at: string;
   from_stage: { name: string } | null;
   to_stage: { name: string } | null;
+};
+
+/** Linha normalizada do histórico combinado (etapas + autorização). */
+export type SurgeryHistoryEntry = {
+  id: string;
+  kind: "stage" | "authorization";
+  description: string;
+  previousStatus: string | null;
+  newStatus: string | null;
+  changedAt: string;
+  changedByName: string | null;
+};
+
+const AUTHORIZATION_STATUS_LABEL: Record<string, string> = {
+  not_requested: "Não solicitada",
+  sent: "Enviada",
+  in_review: "Em análise",
+  pending_docs: "Pendente de documentos",
+  approved: "Aprovada",
+  partially_approved: "Parcialmente aprovada",
+  denied: "Negada",
+  expired: "Expirada",
+  cancelled: "Cancelada",
 };
 
 const LIST_COLUMNS =
@@ -270,11 +295,80 @@ export async function cancelSurgery(supabase: SupabaseClient, id: string, reason
 export async function listStageHistory(supabase: SupabaseClient, surgeryId: string) {
   const { data, error } = await supabase
     .from("surgery_stage_history")
-    .select("id,from_stage_id,to_stage_id,reason,changed_at,from_stage:workflow_stages!from_stage_id(name),to_stage:workflow_stages!to_stage_id(name)")
+    .select(
+      "id,from_stage_id,to_stage_id,changed_by,reason,changed_at,from_stage:workflow_stages!from_stage_id(name),to_stage:workflow_stages!to_stage_id(name)"
+    )
     .eq("surgery_id", surgeryId)
     .order("changed_at", { ascending: true });
   if (error) throw error;
   return data as unknown as StageHistoryEntry[];
+}
+
+/**
+ * Histórico combinado da cirurgia (mudanças de etapa + mudanças de status
+ * de autorização), com o nome do responsável resolvido via `profiles`
+ * quando disponível. Reaproveita as estruturas de auditoria que já existem
+ * no banco (surgery_stage_history, authorization_history) — nenhuma tabela
+ * nova foi criada para isso.
+ */
+export async function getSurgeryHistoryTimeline(
+  supabase: SupabaseClient,
+  surgeryId: string
+): Promise<SurgeryHistoryEntry[]> {
+  const [stageHistory, authHistory] = await Promise.all([
+    listStageHistory(supabase, surgeryId),
+    listAuthorizationHistoryForSurgery(supabase, surgeryId),
+  ]);
+
+  const userIds = Array.from(
+    new Set(
+      [...stageHistory.map((e) => e.changed_by), ...authHistory.map((e) => e.changed_by)].filter(
+        (id): id is string => Boolean(id)
+      )
+    )
+  );
+
+  let namesById: Record<string, string> = {};
+  if (userIds.length > 0) {
+    const { data: profiles, error } = await supabase
+      .from("profiles")
+      .select("id,full_name")
+      .in("id", userIds);
+    if (error) throw error;
+    namesById = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.full_name as string]));
+  }
+
+  const stageEntries: SurgeryHistoryEntry[] = stageHistory.map((entry) => ({
+    id: `stage-${entry.id}`,
+    kind: "stage",
+    description: entry.from_stage
+      ? `Etapa alterada: ${entry.from_stage.name} → ${entry.to_stage?.name ?? "—"}`
+      : `Cirurgia criada na etapa ${entry.to_stage?.name ?? "—"}`,
+    previousStatus: entry.from_stage?.name ?? null,
+    newStatus: entry.to_stage?.name ?? null,
+    changedAt: entry.changed_at,
+    changedByName: entry.changed_by ? namesById[entry.changed_by] ?? null : null,
+  }));
+
+  const authEntries: SurgeryHistoryEntry[] = authHistory.map((entry, index, all) => {
+    const previous = [...all]
+      .slice(0, index)
+      .reverse()
+      .find((e) => e.authorization_id === entry.authorization_id);
+    return {
+      id: `auth-${entry.id}`,
+      kind: "authorization",
+      description: "Status da autorização atualizado",
+      previousStatus: previous ? AUTHORIZATION_STATUS_LABEL[previous.status] ?? previous.status : null,
+      newStatus: AUTHORIZATION_STATUS_LABEL[entry.status] ?? entry.status,
+      changedAt: entry.changed_at,
+      changedByName: entry.changed_by ? namesById[entry.changed_by] ?? null : null,
+    };
+  });
+
+  return [...stageEntries, ...authEntries].sort(
+    (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime()
+  );
 }
 
 export async function listRequirements(supabase: SupabaseClient, surgeryId: string) {

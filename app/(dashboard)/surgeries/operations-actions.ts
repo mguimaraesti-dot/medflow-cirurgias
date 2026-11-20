@@ -56,7 +56,9 @@ export async function createAuthorizationAction(
   formData: FormData
 ): Promise<AuthorizationFormState> {
   const parsed = parseAuthorizationForm(formData);
-  if (!parsed.success) return { error: "Dados inválidos." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
 
   const supabase = await createClient();
   try {
@@ -75,7 +77,9 @@ export async function updateAuthorizationAction(
   formData: FormData
 ): Promise<AuthorizationFormState> {
   const parsed = parseAuthorizationForm(formData);
-  if (!parsed.success) return { error: "Dados inválidos." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
 
   const supabase = await createClient();
   try {
@@ -112,7 +116,9 @@ export async function createOrReservationAction(
   formData: FormData
 ): Promise<OrReservationFormState> {
   const parsed = parseOrReservationForm(formData);
-  if (!parsed.success) return { error: "Dados inválidos." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
 
   const supabase = await createClient();
   try {
@@ -131,7 +137,9 @@ export async function updateOrReservationAction(
   formData: FormData
 ): Promise<OrReservationFormState> {
   const parsed = parseOrReservationForm(formData);
-  if (!parsed.success) return { error: "Dados inválidos." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
 
   const supabase = await createClient();
   try {

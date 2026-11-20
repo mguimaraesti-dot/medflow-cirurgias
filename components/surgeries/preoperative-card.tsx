@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useTransition } from "react";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   addPreoperativeItemAction,
@@ -10,6 +11,7 @@ import {
   type PreoperativeFormState,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { PreoperativeItem } from "@/lib/data/operations";
+import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,13 +54,14 @@ function ItemRow({ item, surgeryId }: { item: PreoperativeItem; surgeryId: strin
         value={item.status}
         disabled={pending}
         onValueChange={(status) =>
-          startTransition(() =>
-            setPreoperativeItemStatusAction(
+          startTransition(async () => {
+            await setPreoperativeItemStatusAction(
               item.id,
               surgeryId,
               status as PreoperativeItem["status"]
-            )
-          )
+            );
+            toast.success("Status atualizado.");
+          })
         }
       >
         <SelectTrigger className="h-8 w-[160px] text-xs">
@@ -78,7 +81,12 @@ function ItemRow({ item, surgeryId }: { item: PreoperativeItem; surgeryId: strin
         variant="ghost"
         size="icon"
         disabled={pending}
-        onClick={() => startTransition(() => removePreoperativeItemAction(item.id, surgeryId))}
+        onClick={() =>
+          startTransition(async () => {
+            await removePreoperativeItemAction(item.id, surgeryId);
+            toast.success("Item removido.");
+          })
+        }
         aria-label="Remover item"
       >
         <X className="h-4 w-4" />
@@ -99,6 +107,7 @@ export function PreoperativeCard({
   const action = addPreoperativeItemAction.bind(null, surgeryId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  useActionToast(state, "Item adicionado.");
 
   return (
     <div className="flex flex-col gap-4">

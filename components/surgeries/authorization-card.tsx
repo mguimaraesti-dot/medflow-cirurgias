@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   createAuthorizationAction,
@@ -8,6 +8,7 @@ import {
   type AuthorizationFormState,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { AuthorizationRequest } from "@/lib/data/operations";
+import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,13 +42,18 @@ export function AuthorizationCard({
     ? updateAuthorizationAction.bind(null, authorization.id, surgeryId)
     : createAuthorizationAction.bind(null, surgeryId, insuranceProviderId);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [status, setStatus] = useState(authorization?.status ?? "not_requested");
+  useActionToast(state, "Autorização salva.");
+
+  const isDenied = status === "denied";
+  const isApproved = status === "approved" || status === "partially_approved";
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="status">Status</Label>
-          <Select name="status" defaultValue={authorization?.status ?? "not_requested"}>
+          <Select name="status" value={status} onValueChange={setStatus}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -104,14 +110,31 @@ export function AuthorizationCard({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="denial_reason">Motivo da negativa (se houver)</Label>
-        <Textarea
-          id="denial_reason"
-          name="denial_reason"
-          defaultValue={authorization?.denial_reason ?? ""}
-        />
-      </div>
+      {isApproved ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="approved_at">Data de aprovação</Label>
+          <Input
+            id="approved_at"
+            name="approved_at"
+            type="date"
+            defaultValue={authorization?.approved_at ?? ""}
+          />
+        </div>
+      ) : null}
+
+      {isDenied ? (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="denial_reason">
+            Motivo da negativa <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="denial_reason"
+            name="denial_reason"
+            required
+            defaultValue={authorization?.denial_reason ?? ""}
+          />
+        </div>
+      ) : null}
 
       {state.error ? (
         <p className="text-sm text-red-600 dark:text-red-400" role="alert">

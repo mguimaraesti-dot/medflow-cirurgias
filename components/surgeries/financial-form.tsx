@@ -7,6 +7,7 @@ import {
   type FinancialFormState,
 } from "@/app/(dashboard)/surgeries/actions";
 import type { ParticularFinancialRecord } from "@/lib/data/surgeries";
+import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ export function FinancialForm({
 }) {
   const action = saveParticularFinancialAction.bind(null, surgeryId);
   const [state, formAction, pending] = useActionState(action, initialState);
+  useActionToast(state, "Valores salvos.");
 
   return (
     <form action={formAction} className="flex flex-col gap-3">

@@ -15,44 +15,76 @@ const optionalTime = z.preprocess(
   z.string().optional()
 );
 
-export const authorizationSchema = z.object({
-  protocol_number: optionalText,
-  requested_procedure: optionalText,
-  status: z.enum([
-    "not_requested",
-    "sent",
-    "in_review",
-    "pending_docs",
-    "approved",
-    "partially_approved",
-    "denied",
-    "expired",
-    "cancelled",
-  ]),
-  sent_at: optionalDate,
-  returned_at: optionalDate,
-  approved_at: optionalDate,
-  validity_date: optionalDate,
-  denial_reason: optionalText,
-});
+export const authorizationSchema = z
+  .object({
+    protocol_number: optionalText,
+    requested_procedure: optionalText,
+    status: z.enum([
+      "not_requested",
+      "sent",
+      "in_review",
+      "pending_docs",
+      "approved",
+      "partially_approved",
+      "denied",
+      "expired",
+      "cancelled",
+    ]),
+    sent_at: optionalDate,
+    returned_at: optionalDate,
+    approved_at: optionalDate,
+    validity_date: optionalDate,
+    denial_reason: optionalText,
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "denied" && !data.denial_reason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["denial_reason"],
+        message: "Informe o motivo da negativa.",
+      });
+    }
+  });
 export type AuthorizationInput = z.infer<typeof authorizationSchema>;
 
-export const orReservationSchema = z.object({
-  expected_date: optionalDate,
-  requested_date: optionalDate,
-  confirmed_date: optionalDate,
-  confirmed_time: optionalTime,
-  room: optionalText,
-  status: z.enum([
-    "not_requested",
-    "requested",
-    "awaiting_confirmation",
-    "confirmed",
-    "rescheduled",
-    "cancelled",
-  ]),
-  change_reason: optionalText,
-});
+export const orReservationSchema = z
+  .object({
+    expected_date: optionalDate,
+    requested_date: optionalDate,
+    confirmed_date: optionalDate,
+    confirmed_time: optionalTime,
+    room: optionalText,
+    status: z.enum([
+      "not_requested",
+      "requested",
+      "awaiting_confirmation",
+      "confirmed",
+      "rescheduled",
+      "cancelled",
+    ]),
+    change_reason: optionalText,
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "confirmed") {
+      if (!data.room) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["room"], message: "Informe a sala." });
+      }
+      if (!data.confirmed_date) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["confirmed_date"],
+          message: "Informe a data confirmada.",
+        });
+      }
+      if (!data.confirmed_time) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["confirmed_time"],
+          message: "Informe o horário.",
+        });
+      }
+    }
+  });
 export type OrReservationInput = z.infer<typeof orReservationSchema>;
 
 export const preoperativeItemSchema = z.object({

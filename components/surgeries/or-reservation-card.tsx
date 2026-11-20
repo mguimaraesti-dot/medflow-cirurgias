@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   createOrReservationAction,
@@ -8,6 +8,7 @@ import {
   type OrReservationFormState,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { OrReservation } from "@/lib/data/operations";
+import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,13 +39,17 @@ export function OrReservationCard({
     ? updateOrReservationAction.bind(null, reservation.id, surgeryId)
     : createOrReservationAction.bind(null, surgeryId, hospitalId);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [status, setStatus] = useState(reservation?.status ?? "not_requested");
+  useActionToast(state, "Reserva salva.");
+
+  const isConfirmed = status === "confirmed";
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="status">Status</Label>
-          <Select name="status" defaultValue={reservation?.status ?? "not_requested"}>
+          <Select name="status" value={status} onValueChange={setStatus}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -58,8 +63,10 @@ export function OrReservationCard({
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="room">Sala</Label>
-          <Input id="room" name="room" defaultValue={reservation?.room ?? ""} />
+          <Label htmlFor="room">
+            Sala {isConfirmed ? <span className="text-destructive">*</span> : null}
+          </Label>
+          <Input id="room" name="room" required={isConfirmed} defaultValue={reservation?.room ?? ""} />
         </div>
       </div>
 
@@ -74,20 +81,26 @@ export function OrReservationCard({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="confirmed_date">Data confirmada</Label>
+          <Label htmlFor="confirmed_date">
+            Data confirmada {isConfirmed ? <span className="text-destructive">*</span> : null}
+          </Label>
           <Input
             id="confirmed_date"
             name="confirmed_date"
             type="date"
+            required={isConfirmed}
             defaultValue={reservation?.confirmed_date ?? ""}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="confirmed_time">Horário</Label>
+          <Label htmlFor="confirmed_time">
+            Horário {isConfirmed ? <span className="text-destructive">*</span> : null}
+          </Label>
           <Input
             id="confirmed_time"
             name="confirmed_time"
             type="time"
+            required={isConfirmed}
             defaultValue={reservation?.confirmed_time ?? ""}
           />
         </div>
