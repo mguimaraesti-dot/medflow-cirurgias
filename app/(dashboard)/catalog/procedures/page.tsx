@@ -1,12 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { listProcedures } from "@/lib/data/procedures";
-import { deleteProcedureAction } from "@/app/(dashboard)/catalog/procedures/actions";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
-import { DeleteRowButton } from "@/components/shared/delete-row-button";
 import { ProcedureFormDialog } from "@/components/procedures/procedure-form-dialog";
-import { ProcedureActiveToggle } from "@/components/procedures/procedure-active-toggle";
+import { ProcedureRowActions } from "@/components/procedures/procedure-row-actions";
 
 export default async function ProceduresCatalogPage({
   searchParams,
@@ -75,13 +73,7 @@ export default async function ProceduresCatalogPage({
                         <ActiveBadge active={procedure.active} />
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <ProcedureActiveToggle id={procedure.id} active={procedure.active} />
-                          <DeleteRowButton
-                            confirmMessage={`Excluir o procedimento "${procedure.name}"? Essa ação não pode ser desfeita.`}
-                            onDelete={() => deleteProcedureAction(procedure.id)}
-                          />
-                        </div>
+                        <ProcedureRowActions procedure={procedure} />
                       </td>
                     </tr>
                   }
