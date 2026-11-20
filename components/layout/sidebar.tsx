@@ -10,6 +10,7 @@ import { logout } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "medflow-sidebar-collapsed";
 
@@ -89,24 +90,33 @@ export function Sidebar({ userEmail }: { userEmail: string | null }) {
         })}
       </nav>
 
-      <div className="border-t border-border px-2 py-2">
-        <ThemeToggle collapsed={collapsed} />
-      </div>
+      <div className={cn("border-t border-border px-3 py-3", collapsed && "px-2")}>
+        <div className={cn("flex items-center gap-2", collapsed && "flex-col")}>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-medium text-primary">
+              {(userEmail ?? "?").charAt(0).toUpperCase()}
+            </div>
+            {!collapsed ? (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">{userEmail}</p>
+                <p className="text-xs text-muted-foreground">Administrador</p>
+              </div>
+            ) : null}
+          </div>
+          <ThemeToggle />
+        </div>
 
-      <div className={cn("border-t border-border px-4 py-3", collapsed && "px-2")}>
-        {!collapsed ? <p className="truncate text-xs text-muted-foreground">{userEmail}</p> : null}
-        <form action={logout}>
-          <button
+        <form action={logout} className="mt-3">
+          <Button
             type="submit"
+            variant="outline"
+            size="sm"
             title={collapsed ? "Sair" : undefined}
-            className={cn(
-              "mt-2 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground",
-              collapsed && "w-full justify-center"
-            )}
+            className={cn("w-full gap-2 text-muted-foreground", collapsed && "px-0")}
           >
             <LogOut className="h-3.5 w-3.5 shrink-0" />
             {!collapsed ? "Sair" : null}
-          </button>
+          </Button>
         </form>
       </div>
     </aside>

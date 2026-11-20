@@ -5,7 +5,11 @@ import { Moon, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
+/**
+ * Ícone discreto de alternância claro/escuro — sem rótulo, como no
+ * MedFlow Finance (fica ao lado do usuário, não é um botão de texto).
+ */
+export function ThemeToggle({ className }: { className?: string }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -27,13 +31,12 @@ export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <Button
       variant="ghost"
-      size={collapsed ? "icon" : "sm"}
+      size="icon"
       onClick={toggle}
-      className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+      className={className ?? "shrink-0 text-muted-foreground hover:text-foreground"}
       title={isDark ? "Mudar para tema claro" : "Mudar para tema escuro"}
     >
-      {isDark ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
-      {!collapsed ? <span>{isDark ? "Tema claro" : "Tema escuro"}</span> : null}
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </Button>
   );
 }
