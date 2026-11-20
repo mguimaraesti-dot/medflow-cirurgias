@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { createPatient, updatePatient } from "@/lib/data/patients";
+import { createPatient, updatePatient, type PatientUpdateInput } from "@/lib/data/patients";
 import { patientSchema } from "@/lib/validation/patients";
 
 export type PatientFormState = {
@@ -26,6 +26,23 @@ function parseForm(formData: FormData) {
   });
 }
 
+// Quando o tipo de atendimento é "particular", os campos de convênio não
+// são renderizados no formulário — além de não serem enviados, forçamos
+// explicitamente null aqui para o caso de edição (sem isso, um paciente
+// que já era convênio e virou particular manteria os dados antigos, já
+// que campos ausentes no FormData não apagam a coluna, só ficam intocados).
+function clearInsuranceIfParticular(formData: FormData, data: PatientUpdateInput): PatientUpdateInput {
+  if (formData.get("attendance_type") === "particular") {
+    return {
+      ...data,
+      insurance_provider_id: null,
+      insurance_card_number: null,
+      insurance_card_validity: null,
+    };
+  }
+  return data;
+}
+
 function toUserMessage(e: unknown) {
   const message = e instanceof Error ? e.message : "";
   if (message.includes("patients_cpf_key")) {
@@ -45,7 +62,7 @@ export async function createPatientAction(
 
   const supabase = await createClient();
   try {
-    await createPatient(supabase, parsed.data);
+    await createPatient(supabase, clearInsuranceIfParticular(formData, parsed.data));
   } catch (e) {
     return { error: toUserMessage(e) };
   }
@@ -66,7 +83,7 @@ export async function updatePatientAction(
 
   const supabase = await createClient();
   try {
-    await updatePatient(supabase, id, parsed.data);
+    await updatePatient(supabase, id, clearInsuranceIfParticular(formData, parsed.data));
   } catch (e) {
     return { error: toUserMessage(e) };
   }

@@ -56,12 +56,29 @@ export async function getPatient(supabase: SupabaseClient, id: string) {
   return data as unknown as Patient;
 }
 
-export async function createPatient(supabase: SupabaseClient, input: PatientInput) {
+// Mesmos campos de PatientInput, mas os 3 campos de convênio também aceitam
+// `null` explícito — usado para realmente limpar esses dados quando o
+// paciente passa a ser particular (campo ausente no FormData só deixaria a
+// coluna intocada, não apaga o valor antigo).
+export type PatientUpdateInput = Omit<
+  PatientInput,
+  "insurance_provider_id" | "insurance_card_number" | "insurance_card_validity"
+> & {
+  insurance_provider_id?: string | null;
+  insurance_card_number?: string | null;
+  insurance_card_validity?: string | null;
+};
+
+export async function createPatient(supabase: SupabaseClient, input: PatientUpdateInput) {
   const { error } = await supabase.from("patients").insert(input);
   if (error) throw error;
 }
 
-export async function updatePatient(supabase: SupabaseClient, id: string, input: PatientInput) {
+export async function updatePatient(
+  supabase: SupabaseClient,
+  id: string,
+  input: PatientUpdateInput
+) {
   const { error } = await supabase.from("patients").update(input).eq("id", id);
   if (error) throw error;
 }

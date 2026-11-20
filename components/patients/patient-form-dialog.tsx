@@ -33,6 +33,9 @@ export function PatientFormDialog({
   insuranceProviders: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
+  const [attendanceType, setAttendanceType] = useState<"particular" | "convenio">(
+    patient?.insurance_provider_id ? "convenio" : "particular"
+  );
   const action = patient ? updatePatientAction.bind(null, patient.id) : createPatientAction;
   const [state, formAction, pending] = useActionState(action, initialState);
 
@@ -102,43 +105,65 @@ export function PatientFormDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="insurance_provider_id">Operadora de saúde</Label>
+            <Label htmlFor="attendance_type">Tipo de atendimento</Label>
             <Select
-              name="insurance_provider_id"
-              defaultValue={patient?.insurance_provider_id ?? undefined}
+              name="attendance_type"
+              value={attendanceType}
+              onValueChange={(v) => setAttendanceType(v as "particular" | "convenio")}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Particular / sem operadora" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {insuranceProviders.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="particular">Particular</SelectItem>
+                <SelectItem value="convenio">Convênio</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="insurance_card_number">Número da carteirinha</Label>
-              <Input
-                id="insurance_card_number"
-                name="insurance_card_number"
-                defaultValue={patient?.insurance_card_number ?? ""}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="insurance_card_validity">Validade da carteirinha</Label>
-              <Input
-                id="insurance_card_validity"
-                name="insurance_card_validity"
-                type="date"
-                defaultValue={patient?.insurance_card_validity ?? ""}
-              />
-            </div>
-          </div>
+          {attendanceType === "convenio" ? (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="insurance_provider_id">Operadora de saúde *</Label>
+                <Select
+                  name="insurance_provider_id"
+                  defaultValue={patient?.insurance_provider_id ?? undefined}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a operadora" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {insuranceProviders.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="insurance_card_number">Número da carteirinha</Label>
+                  <Input
+                    id="insurance_card_number"
+                    name="insurance_card_number"
+                    defaultValue={patient?.insurance_card_number ?? ""}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="insurance_card_validity">Validade da carteirinha</Label>
+                  <Input
+                    id="insurance_card_validity"
+                    name="insurance_card_validity"
+                    type="date"
+                    defaultValue={patient?.insurance_card_validity ?? ""}
+                  />
+                </div>
+              </div>
+            </>
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="admin_notes">Observações administrativas</Label>
