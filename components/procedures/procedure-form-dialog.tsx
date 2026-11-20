@@ -59,8 +59,8 @@ export function ProcedureFormDialog({
           <DialogTitle>{procedure ? "Editar procedimento" : "Novo procedimento"}</DialogTitle>
           <DialogDescription>
             {procedure
-              ? "Procedimentos reutilizáveis — ao criar uma cirurgia, os materiais de referência do protocolo associado são carregados automaticamente."
-              : "O código interno é gerado automaticamente ao salvar. Ao criar uma cirurgia, os materiais de referência do protocolo associado são carregados automaticamente."}
+              ? "O kit de materiais padrão deste procedimento é gerenciado na própria linha da tabela (\"Materiais padrão\")."
+              : "O código interno é gerado automaticamente ao salvar. Depois de criado, você pode cadastrar o kit de materiais padrão deste procedimento."}
           </DialogDescription>
         </DialogHeader>
 

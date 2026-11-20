@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { AuthorizationRequest, OrReservation, PreoperativeItem, SurgeryMaterialItem } from "@/lib/data/operations";
-import type { ImportableProtocolVersion } from "@/lib/data/protocols";
+import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
 import type { SurgeryRequirement } from "@/lib/data/surgeries";
 import { AuthorizationRequirementCard } from "@/components/surgeries/authorization-requirement-card";
 import { OrReservationRequirementCard } from "@/components/surgeries/or-reservation-requirement-card";
@@ -14,6 +14,7 @@ type RequirementKey = SurgeryRequirement["requirement_key"];
 
 export function SurgeryRequirementsPanel({
   surgeryId,
+  procedureId,
   hospitalId,
   insuranceProviderId,
   requirements,
@@ -23,9 +24,10 @@ export function SurgeryRequirementsPanel({
   materialItems,
   materials,
   suppliers,
-  importableVersions,
+  defaultMaterials,
 }: {
   surgeryId: string;
+  procedureId: string;
   hospitalId: string;
   insuranceProviderId: string | null;
   requirements: SurgeryRequirement[];
@@ -35,7 +37,7 @@ export function SurgeryRequirementsPanel({
   materialItems: SurgeryMaterialItem[];
   materials: { id: string; name: string }[];
   suppliers: { id: string; company_name: string }[];
-  importableVersions: ImportableProtocolVersion[];
+  defaultMaterials: ProcedureDefaultMaterial[];
 }) {
   const [openKey, setOpenKey] = useState<RequirementKey | null>(null);
 
@@ -63,10 +65,11 @@ export function SurgeryRequirementsPanel({
       {materialsReq ? (
         <MaterialsRequirementCard
           surgeryId={surgeryId}
+          procedureId={procedureId}
           items={materialItems}
           materials={materials}
           suppliers={suppliers}
-          importableVersions={importableVersions}
+          defaultMaterials={defaultMaterials}
           requirement={materialsReq}
           open={openKey === "materials"}
           onToggle={() => toggle("materials")}

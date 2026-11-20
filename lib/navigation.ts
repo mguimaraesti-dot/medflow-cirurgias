@@ -9,7 +9,6 @@ import {
   BookMarked,
   Boxes,
   Truck,
-  FileStack,
   Wallet,
   BarChart3,
   Settings,
@@ -22,7 +21,7 @@ export type NavItem = {
 };
 
 /**
- * Os 12 módulos do menu lateral (seção 4 do prompt mestre). Mesma ordem
+ * Os módulos do menu lateral (seção 4 do prompt mestre). Mesma ordem
  * usada lá, exceto o reposicionamento natural do Kanban logo após o
  * Dashboard, já que é a tela operacional de uso diário.
  */
@@ -36,7 +35,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Procedimentos", href: "/catalog/procedures", icon: BookMarked },
   { label: "Materiais", href: "/catalog/materials", icon: Boxes },
   { label: "Fornecedores", href: "/suppliers", icon: Truck },
-  { label: "Protocolos de materiais", href: "/protocols", icon: FileStack },
   { label: "Financeiro", href: "/financial", icon: Wallet },
   { label: "Relatórios", href: "/reports", icon: BarChart3 },
   { label: "Configurações", href: "/settings", icon: Settings },

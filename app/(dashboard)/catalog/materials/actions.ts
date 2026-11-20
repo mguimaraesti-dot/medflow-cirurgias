@@ -92,7 +92,7 @@ export async function deleteMaterialAction(id: string): Promise<{ error?: string
     await deleteMaterial(supabase, id);
   } catch (e) {
     return {
-      error: toDeleteErrorMessage(e, "este material está vinculado a cirurgias ou protocolos cadastrados"),
+      error: toDeleteErrorMessage(e, "este material está vinculado a cirurgias cadastradas"),
     };
   }
   revalidatePath("/catalog/materials");

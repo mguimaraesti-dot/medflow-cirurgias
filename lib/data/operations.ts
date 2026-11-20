@@ -307,21 +307,24 @@ export async function removeSurgeryMaterialItem(supabase: SupabaseClient, id: st
   if (error) throw error;
 }
 
-export async function importProtocolVersionItems(
+/**
+ * Carrega na cirurgia o kit de materiais padrão cadastrado no procedimento
+ * (substitui o antigo "importar de um protocolo aprovado").
+ */
+export async function importProcedureDefaultMaterials(
   supabase: SupabaseClient,
   surgeryId: string,
-  protocolVersionId: string
+  procedureId: string
 ) {
   const { data: items, error } = await supabase
-    .from("protocol_items")
+    .from("procedure_default_materials")
     .select("material_id,quantity,unit,specs,preferred_supplier_id")
-    .eq("protocol_version_id", protocolVersionId);
+    .eq("procedure_id", procedureId);
   if (error) throw error;
   if (!items || items.length === 0) return 0;
 
   const rows = items.map((item) => ({
     surgery_id: surgeryId,
-    source_protocol_version_id: protocolVersionId,
     material_id: item.material_id,
     supplier_id: item.preferred_supplier_id,
     quantity: item.quantity,

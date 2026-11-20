@@ -21,7 +21,7 @@ export default async function ProceduresCatalogPage({
         <div>
           <h1 className="text-lg font-medium text-foreground">Procedimentos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Procedimentos reutilizáveis, com protocolos de materiais associados.
+            Procedimentos reutilizáveis, cada um com seu kit de materiais padrão.
           </p>
         </div>
         <ProcedureFormDialog />

@@ -3,7 +3,7 @@
 import { Package } from "lucide-react";
 
 import type { SurgeryMaterialItem } from "@/lib/data/operations";
-import type { ImportableProtocolVersion } from "@/lib/data/protocols";
+import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
 import type { SurgeryRequirement } from "@/lib/data/surgeries";
 import { SurgeryMaterialsCard } from "@/components/surgeries/surgery-materials-card";
 import { RequirementItem } from "@/components/surgeries/requirement-item";
@@ -11,19 +11,21 @@ import { RequirementCardShell, type RequirementTone } from "@/components/surgeri
 
 export function MaterialsRequirementCard({
   surgeryId,
+  procedureId,
   items,
   materials,
   suppliers,
-  importableVersions,
+  defaultMaterials,
   requirement,
   open,
   onToggle,
 }: {
   surgeryId: string;
+  procedureId: string;
   items: SurgeryMaterialItem[];
   materials: { id: string; name: string }[];
   suppliers: { id: string; company_name: string }[];
-  importableVersions: ImportableProtocolVersion[];
+  defaultMaterials: ProcedureDefaultMaterial[];
   requirement: SurgeryRequirement;
   open: boolean;
   onToggle: () => void;
@@ -62,10 +64,11 @@ export function MaterialsRequirementCard({
     >
       <SurgeryMaterialsCard
         surgeryId={surgeryId}
+        procedureId={procedureId}
         items={items}
         materials={materials}
         suppliers={suppliers}
-        importableVersions={importableVersions}
+        defaultMaterials={defaultMaterials}
       />
       <RequirementItem requirement={requirement} />
     </RequirementCardShell>

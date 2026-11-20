@@ -8,10 +8,11 @@ import {
   updateProcedure,
   setProcedureActive,
   deleteProcedure,
-  hasProcedureProtocols,
 } from "@/lib/data/procedures";
 import { procedureSchema } from "@/lib/validation/procedures";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
+import { addDefaultMaterial, removeDefaultMaterial } from "@/lib/data/procedure-materials";
+import { procedureDefaultMaterialSchema } from "@/lib/validation/procedure-materials";
 
 export type ProcedureFormState = {
   error?: string;
@@ -86,13 +87,6 @@ export async function toggleProcedureActiveAction(id: string, active: boolean) {
 export async function deleteProcedureAction(id: string): Promise<{ error?: string }> {
   const supabase = await createClient();
 
-  if (await hasProcedureProtocols(supabase, id)) {
-    return {
-      error:
-        "Não é possível excluir: existem protocolos de materiais cadastrados para este procedimento. Você pode inativar em vez de excluir.",
-    };
-  }
-
   try {
     await deleteProcedure(supabase, id);
   } catch (e) {
@@ -101,4 +95,45 @@ export async function deleteProcedureAction(id: string): Promise<{ error?: strin
 
   revalidatePath("/catalog/procedures");
   return {};
+}
+
+// ----------------------------------------------------------------------------
+// Materiais padrão do procedimento (kit que o médico costuma usar)
+// ----------------------------------------------------------------------------
+
+export type DefaultMaterialFormState = { error?: string };
+
+export async function addDefaultMaterialAction(
+  procedureId: string,
+  _prevState: DefaultMaterialFormState,
+  formData: FormData
+): Promise<DefaultMaterialFormState> {
+  const parsed = procedureDefaultMaterialSchema.safeParse({
+    material_id: formData.get("material_id"),
+    preferred_supplier_id: formData.get("supplier_id"),
+    quantity: formData.get("quantity") || 1,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  try {
+    await addDefaultMaterial(supabase, procedureId, parsed.data);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "";
+    if (message.includes("procedure_default_materials_procedure_id_material_id_key")) {
+      return { error: "Esse material já está no kit padrão deste procedimento." };
+    }
+    return { error: "Não foi possível adicionar o material." };
+  }
+
+  revalidatePath(`/catalog/procedures/${procedureId}`);
+  return {};
+}
+
+export async function removeDefaultMaterialAction(id: string, procedureId: string) {
+  const supabase = await createClient();
+  await removeDefaultMaterial(supabase, id);
+  revalidatePath(`/catalog/procedures/${procedureId}`);
 }

@@ -8,11 +8,13 @@ import {
   addSurgeryMaterialItemAction,
   setSurgeryMaterialItemStatusAction,
   removeSurgeryMaterialItemAction,
-  importProtocolVersionItemsAction,
+  importProcedureDefaultMaterialsAction,
+  updateProcedureDefaultMaterialsAction,
   type SurgeryMaterialFormState,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { SurgeryMaterialItem } from "@/lib/data/operations";
-import type { ImportableProtocolVersion } from "@/lib/data/protocols";
+import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
+import { materialsDifferFromDefault } from "@/lib/surgery-materials-diff";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,44 +97,75 @@ const initialState: SurgeryMaterialFormState = {};
 
 export function SurgeryMaterialsCard({
   surgeryId,
+  procedureId,
   items,
   materials,
   suppliers,
-  importableVersions,
+  defaultMaterials,
 }: {
   surgeryId: string;
+  procedureId: string;
   items: SurgeryMaterialItem[];
   materials: { id: string; name: string }[];
   suppliers: { id: string; company_name: string }[];
-  importableVersions: ImportableProtocolVersion[];
+  defaultMaterials: ProcedureDefaultMaterial[];
 }) {
   const action = addSurgeryMaterialItemAction.bind(null, surgeryId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const [importPending, startImport] = useTransition();
+  const [updatePending, startUpdate] = useTransition();
   useActionToast(state, "Material adicionado.");
+
+  const differsFromDefault =
+    items.length > 0 &&
+    materialsDifferFromDefault(
+      items.map((i) => ({ material_id: i.material_id, quantity: i.quantity, supplier_id: i.supplier_id })),
+      defaultMaterials
+    );
 
   return (
     <div className="flex flex-col gap-4">
-      {importableVersions.length > 0 ? (
+      {defaultMaterials.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted p-3">
-          <p className="text-sm text-muted-foreground">Importar itens de um protocolo aprovado:</p>
-          {importableVersions.map((version) => (
-            <Button
-              key={version.id}
-              variant="outline"
-              size="sm"
-              disabled={importPending}
-              onClick={() =>
-                startImport(async () => {
-                  await importProtocolVersionItemsAction(surgeryId, version.id);
-                  toast.success("Itens do protocolo importados.");
-                })
-              }
-            >
-              {version.protocol_name} (v{version.version_number})
-            </Button>
-          ))}
+          <p className="text-sm text-muted-foreground">
+            Kit padrão deste procedimento tem {defaultMaterials.length} material
+            {defaultMaterials.length === 1 ? "" : "is"}.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={importPending}
+            onClick={() =>
+              startImport(async () => {
+                await importProcedureDefaultMaterialsAction(surgeryId, procedureId);
+                toast.success("Materiais padrão carregados.");
+              })
+            }
+          >
+            Carregar materiais padrão
+          </Button>
+        </div>
+      ) : null}
+
+      {differsFromDefault ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3">
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Esta lista é diferente do kit padrão do procedimento.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={updatePending}
+            onClick={() =>
+              startUpdate(async () => {
+                await updateProcedureDefaultMaterialsAction(procedureId, surgeryId);
+                toast.success("Kit padrão do procedimento atualizado.");
+              })
+            }
+          >
+            {updatePending ? "Atualizando..." : "Atualizar padrão com esta lista"}
+          </Button>
         </div>
       ) : null}
 

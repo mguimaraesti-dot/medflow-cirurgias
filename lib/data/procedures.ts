@@ -38,6 +38,16 @@ export async function listActiveProceduresForSelect(supabase: SupabaseClient) {
   return data as Pick<Procedure, "id" | "name">[];
 }
 
+export async function getProcedure(supabase: SupabaseClient, id: string) {
+  const { data, error } = await supabase
+    .from("procedures")
+    .select("id,internal_code,name,specialty,description,admin_notes,active,created_at")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data as Procedure;
+}
+
 export async function createProcedure(supabase: SupabaseClient, input: ProcedureInput) {
   const { error } = await supabase.from("procedures").insert(input);
   if (error) throw error;
@@ -55,22 +65,6 @@ export async function updateProcedure(
 export async function setProcedureActive(supabase: SupabaseClient, id: string, active: boolean) {
   const { error } = await supabase.from("procedures").update({ active }).eq("id", id);
   if (error) throw error;
-}
-
-/**
- * procedure_protocols.procedure_id tem "on delete cascade" — ou seja, se
- * deixássemos o banco cuidar sozinho, apagar um procedimento com
- * protocolos apagaria os protocolos junto, sem avisar. Por isso
- * verificamos aqui antes e bloqueamos com uma mensagem clara, em vez de
- * confiar só no erro de chave estrangeira (que não dispara nesse caso).
- */
-export async function hasProcedureProtocols(supabase: SupabaseClient, id: string) {
-  const { count, error } = await supabase
-    .from("procedure_protocols")
-    .select("id", { count: "exact", head: true })
-    .eq("procedure_id", id);
-  if (error) throw error;
-  return (count ?? 0) > 0;
 }
 
 export async function deleteProcedure(supabase: SupabaseClient, id: string) {

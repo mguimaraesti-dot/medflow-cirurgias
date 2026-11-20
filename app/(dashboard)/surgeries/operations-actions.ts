@@ -15,9 +15,11 @@ import {
   addSurgeryMaterialItem,
   setSurgeryMaterialItemStatus,
   removeSurgeryMaterialItem,
-  importProtocolVersionItems,
+  importProcedureDefaultMaterials,
+  listSurgeryMaterialItems,
   type PreoperativeItem,
 } from "@/lib/data/operations";
+import { replaceDefaultMaterials } from "@/lib/data/procedure-materials";
 import {
   authorizationSchema,
   orReservationSchema,
@@ -246,11 +248,35 @@ export async function removeSurgeryMaterialItemAction(itemId: string, surgeryId:
   revalidateSurgery(surgeryId);
 }
 
-export async function importProtocolVersionItemsAction(
+export async function importProcedureDefaultMaterialsAction(
   surgeryId: string,
-  protocolVersionId: string
+  procedureId: string
 ) {
   const supabase = await createClient();
-  await importProtocolVersionItems(supabase, surgeryId, protocolVersionId);
+  await importProcedureDefaultMaterials(supabase, surgeryId, procedureId);
   revalidateSurgery(surgeryId);
+}
+
+/**
+ * Confirmação explícita do usuário: os materiais usados nesta cirurgia
+ * passam a ser o novo kit padrão do procedimento (substitui o anterior).
+ */
+export async function updateProcedureDefaultMaterialsAction(
+  procedureId: string,
+  surgeryId: string
+) {
+  const supabase = await createClient();
+  const items = await listSurgeryMaterialItems(supabase, surgeryId);
+  await replaceDefaultMaterials(
+    supabase,
+    procedureId,
+    items.map((item) => ({
+      material_id: item.material_id,
+      quantity: item.quantity,
+      unit: item.unit,
+      preferred_supplier_id: item.supplier_id,
+    }))
+  );
+  revalidateSurgery(surgeryId);
+  revalidatePath(`/catalog/procedures/${procedureId}`);
 }

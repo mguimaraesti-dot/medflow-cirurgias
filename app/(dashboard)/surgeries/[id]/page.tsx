@@ -18,7 +18,7 @@ import {
 } from "@/lib/data/operations";
 import { listActiveMaterialsForSelect } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
-import { listApprovedProtocolVersionsForSurgery } from "@/lib/data/protocols";
+import { listDefaultMaterials } from "@/lib/data/procedure-materials";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,14 +72,14 @@ export default async function SurgeryDetailPage({
     checklistId,
     materials,
     suppliers,
-    importableVersions,
+    defaultMaterials,
   ] = await Promise.all([
     getAuthorizationRequest(supabase, id),
     getOrReservation(supabase, id),
     getOrCreateChecklist(supabase, id),
     listActiveMaterialsForSelect(supabase),
     listActiveSuppliersForSelect(supabase),
-    listApprovedProtocolVersionsForSurgery(supabase, surgery.primary_procedure_id, surgery.hospital_id),
+    listDefaultMaterials(supabase, surgery.primary_procedure_id),
   ]);
 
   const [preoperativeItems, materialItems] = await Promise.all([
@@ -182,6 +182,7 @@ export default async function SurgeryDetailPage({
         <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
         <SurgeryRequirementsPanel
           surgeryId={surgery.id}
+          procedureId={surgery.primary_procedure_id}
           hospitalId={surgery.hospital_id}
           insuranceProviderId={surgery.insurance_provider_id}
           requirements={requirements}
@@ -191,7 +192,7 @@ export default async function SurgeryDetailPage({
           materialItems={materialItems}
           materials={materials}
           suppliers={suppliers}
-          importableVersions={importableVersions}
+          defaultMaterials={defaultMaterials}
         />
       </div>
 
