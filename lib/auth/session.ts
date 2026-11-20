@@ -22,10 +22,12 @@ export async function getCurrentUser() {
  * `hasPermission(...)` não precisa mudar.
  */
 export async function hasPermission(
-  _user: { id: string } | null,
+  user: { id: string } | null,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _module: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _action: "view" | "create" | "edit" | "delete" | "approve"
 ): Promise<boolean> {
-  if (!_user) return false;
+  if (!user) return false;
   return true;
 }
