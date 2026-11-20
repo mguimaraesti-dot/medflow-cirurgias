@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { MATERIAL_UNITS } from "@/lib/constants/units";
 
 const initialState: MaterialFormState = {};
 
@@ -48,7 +50,9 @@ export function MaterialFormDialog({ material }: { material?: Material }) {
         <DialogHeader>
           <DialogTitle>{material ? "Editar material" : "Novo material"}</DialogTitle>
           <DialogDescription>
-            Os fornecedores são vinculados depois de salvar, pela tela de detalhe do material.
+            {material
+              ? "Os fornecedores são vinculados pela tela de detalhe do material."
+              : "O código interno é gerado automaticamente ao salvar. Os fornecedores são vinculados depois, pela tela de detalhe do material."}
           </DialogDescription>
         </DialogHeader>
 
@@ -59,14 +63,15 @@ export function MaterialFormDialog({ material }: { material?: Material }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="internal_code">Código interno</Label>
-              <Input
-                id="internal_code"
-                name="internal_code"
-                defaultValue={material?.internal_code ?? ""}
-              />
-            </div>
+            {material ? (
+              <div className="flex flex-col gap-1.5">
+                <Label>Código interno</Label>
+                <p className="flex h-9 items-center text-sm text-slate-500">
+                  {material.internal_code}
+                </p>
+                <input type="hidden" name="internal_code" value={material.internal_code ?? ""} />
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="category">Categoria</Label>
               <Input id="category" name="category" defaultValue={material?.category ?? ""} />
@@ -76,7 +81,18 @@ export function MaterialFormDialog({ material }: { material?: Material }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="unit">Unidade de medida</Label>
-              <Input id="unit" name="unit" defaultValue={material?.unit ?? ""} />
+              <Select name="unit" defaultValue={material?.unit ?? undefined}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_UNITS.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="specs">Especificações técnicas</Label>

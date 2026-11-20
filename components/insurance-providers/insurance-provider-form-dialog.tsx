@@ -50,7 +50,9 @@ export function InsuranceProviderFormDialog({ provider }: { provider?: Insurance
         <DialogHeader>
           <DialogTitle>{provider ? "Editar operadora" : "Nova operadora"}</DialogTitle>
           <DialogDescription>
-            Usada para vincular autorizações, faturamento e regras de convênio.
+            {provider
+              ? "Usada para vincular autorizações, faturamento e regras de convênio."
+              : "O código/identificação é gerado automaticamente ao salvar. Usada para vincular autorizações, faturamento e regras de convênio."}
           </DialogDescription>
         </DialogHeader>
 
@@ -65,10 +67,13 @@ export function InsuranceProviderFormDialog({ provider }: { provider?: Insurance
               <Label htmlFor="cnpj">CNPJ</Label>
               <Input id="cnpj" name="cnpj" defaultValue={provider?.cnpj ?? ""} />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="code">Código/identificação</Label>
-              <Input id="code" name="code" defaultValue={provider?.code ?? ""} />
-            </div>
+            {provider ? (
+              <div className="flex flex-col gap-1.5">
+                <Label>Código/identificação</Label>
+                <p className="flex h-9 items-center text-sm text-slate-500">{provider.code}</p>
+                <input type="hidden" name="code" value={provider.code ?? ""} />
+              </div>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

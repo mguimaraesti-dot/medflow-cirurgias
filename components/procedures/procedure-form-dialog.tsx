@@ -50,8 +50,9 @@ export function ProcedureFormDialog({ procedure }: { procedure?: Procedure }) {
         <DialogHeader>
           <DialogTitle>{procedure ? "Editar procedimento" : "Novo procedimento"}</DialogTitle>
           <DialogDescription>
-            Procedimentos reutilizáveis — ao criar uma cirurgia, os materiais de referência do
-            protocolo associado são carregados automaticamente.
+            {procedure
+              ? "Procedimentos reutilizáveis — ao criar uma cirurgia, os materiais de referência do protocolo associado são carregados automaticamente."
+              : "O código interno é gerado automaticamente ao salvar. Ao criar uma cirurgia, os materiais de referência do protocolo associado são carregados automaticamente."}
           </DialogDescription>
         </DialogHeader>
 
@@ -62,14 +63,15 @@ export function ProcedureFormDialog({ procedure }: { procedure?: Procedure }) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="internal_code">Código interno</Label>
-              <Input
-                id="internal_code"
-                name="internal_code"
-                defaultValue={procedure?.internal_code ?? ""}
-              />
-            </div>
+            {procedure ? (
+              <div className="flex flex-col gap-1.5">
+                <Label>Código interno</Label>
+                <p className="flex h-9 items-center text-sm text-slate-500">
+                  {procedure.internal_code}
+                </p>
+                <input type="hidden" name="internal_code" value={procedure.internal_code ?? ""} />
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="specialty">Especialidade</Label>
               <Input id="specialty" name="specialty" defaultValue={procedure?.specialty ?? ""} />
