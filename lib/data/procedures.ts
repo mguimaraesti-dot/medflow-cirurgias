@@ -6,17 +6,30 @@ export type Procedure = {
   id: string;
   internal_code: string | null;
   name: string;
+  tuss_code: string | null;
   specialty: string | null;
+  anatomical_region: string | null;
+  classification: "diagnostico" | "terapeutico" | "ambos" | null;
+  procedure_type: "endoscopico" | "cirurgico" | null;
+  location: string | null;
   description: string | null;
   admin_notes: string | null;
+  requires_anesthesia: boolean;
+  requires_hospitalization: boolean;
+  requires_opme: boolean;
+  requires_special_equipment: boolean;
+  requires_authorization: boolean;
   active: boolean;
   created_at: string;
 };
 
+const PROCEDURE_COLUMNS =
+  "id,internal_code,name,tuss_code,specialty,anatomical_region,classification,procedure_type,location,description,admin_notes,requires_anesthesia,requires_hospitalization,requires_opme,requires_special_equipment,requires_authorization,active,created_at" as const;
+
 export async function listProcedures(supabase: SupabaseClient, search?: string) {
   let query = supabase
     .from("procedures")
-    .select("id,internal_code,name,specialty,description,admin_notes,active,created_at")
+    .select(PROCEDURE_COLUMNS)
     .order("name", { ascending: true });
 
   if (search) {
@@ -41,7 +54,7 @@ export async function listActiveProceduresForSelect(supabase: SupabaseClient) {
 export async function getProcedure(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase
     .from("procedures")
-    .select("id,internal_code,name,specialty,description,admin_notes,active,created_at")
+    .select(PROCEDURE_COLUMNS)
     .eq("id", id)
     .single();
   if (error) throw error;

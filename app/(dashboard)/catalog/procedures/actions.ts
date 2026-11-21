@@ -13,6 +13,7 @@ import { procedureSchema } from "@/lib/validation/procedures";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
 import { addDefaultMaterial, removeDefaultMaterial } from "@/lib/data/procedure-materials";
 import { procedureDefaultMaterialSchema } from "@/lib/validation/procedure-materials";
+import { searchTussProcedures, type TussResult } from "@/lib/tuss";
 
 export type ProcedureFormState = {
   error?: string;
@@ -22,9 +23,19 @@ function parseForm(formData: FormData) {
   return procedureSchema.safeParse({
     internal_code: formData.get("internal_code"),
     name: formData.get("name"),
+    tuss_code: formData.get("tuss_code"),
     specialty: formData.get("specialty"),
+    anatomical_region: formData.get("anatomical_region"),
+    classification: formData.get("classification"),
+    procedure_type: formData.get("procedure_type"),
+    location: formData.get("location"),
     description: formData.get("description"),
     admin_notes: formData.get("admin_notes"),
+    requires_anesthesia: formData.get("requires_anesthesia"),
+    requires_hospitalization: formData.get("requires_hospitalization"),
+    requires_opme: formData.get("requires_opme"),
+    requires_special_equipment: formData.get("requires_special_equipment"),
+    requires_authorization: formData.get("requires_authorization"),
     active: formData.get("active"),
   });
 }
@@ -136,4 +147,21 @@ export async function removeDefaultMaterialAction(id: string, procedureId: strin
   const supabase = await createClient();
   await removeDefaultMaterial(supabase, id);
   revalidatePath(`/catalog/procedures/${procedureId}`);
+}
+
+// ----------------------------------------------------------------------------
+// Busca de código TUSS na base pública da ANS
+// ----------------------------------------------------------------------------
+
+export async function searchTussCodesAction(
+  query: string
+): Promise<{ results?: TussResult[]; error?: string }> {
+  try {
+    const results = await searchTussProcedures(query);
+    return { results };
+  } catch {
+    return {
+      error: "Não foi possível consultar a tabela TUSS agora. Você pode digitar o código manualmente.",
+    };
+  }
 }

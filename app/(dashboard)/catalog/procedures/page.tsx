@@ -6,6 +6,10 @@ import { ActiveBadge } from "@/components/shared/active-badge";
 import { ProcedureFormDialog } from "@/components/procedures/procedure-form-dialog";
 import { ProcedureRowActions } from "@/components/procedures/procedure-row-actions";
 
+// A busca de código TUSS (ANS) pode demorar além do padrão de 10s das
+// Server Actions na Vercel — damos mais margem para essa rota.
+export const maxDuration = 30;
+
 export default async function ProceduresCatalogPage({
   searchParams,
 }: {
@@ -40,6 +44,7 @@ export default async function ProceduresCatalogPage({
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Código</th>
+              <th className="px-4 py-3">TUSS</th>
               <th className="px-4 py-3">Especialidade</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3" />
@@ -48,7 +53,7 @@ export default async function ProceduresCatalogPage({
           <tbody className="divide-y divide-border">
             {procedures.length === 0 ? (
               <EmptyRow
-                colSpan={5}
+                colSpan={6}
                 message={
                   q
                     ? "Nenhum procedimento encontrado para essa busca."
@@ -65,6 +70,9 @@ export default async function ProceduresCatalogPage({
                       <td className="px-4 py-3 font-medium text-foreground">{procedure.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {procedure.internal_code || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {procedure.tuss_code || "—"}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {procedure.specialty || "—"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
   createProcedureAction,
@@ -8,11 +8,21 @@ import {
   type ProcedureFormState,
 } from "@/app/(dashboard)/catalog/procedures/actions";
 import type { Procedure } from "@/lib/data/procedures";
+import {
+  PROCEDURE_SPECIALTIES,
+  ANATOMICAL_REGIONS,
+  PROCEDURE_LOCATIONS,
+  CLASSIFICATION_OPTIONS,
+  PROCEDURE_TYPE_OPTIONS,
+} from "@/lib/constants/procedure-options";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SelectWithOther } from "@/components/shared/select-with-other";
+import { TussCodeField } from "@/components/procedures/tuss-code-field";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +34,14 @@ import {
 } from "@/components/ui/dialog";
 
 const initialState: ProcedureFormState = {};
+
+const REQUIREMENT_FIELDS = [
+  { name: "requires_anesthesia", label: "Necessita de anestesia" },
+  { name: "requires_hospitalization", label: "Necessita de internação" },
+  { name: "requires_opme", label: "Necessita de OPME" },
+  { name: "requires_special_equipment", label: "Necessita de equipamentos especiais" },
+  { name: "requires_authorization", label: "Exige autorização prévia" },
+] as const;
 
 export function ProcedureFormDialog({
   procedure,
@@ -37,6 +55,7 @@ export function ProcedureFormDialog({
     ? updateProcedureAction.bind(null, procedure.id)
     : createProcedureAction;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
 
@@ -67,23 +86,87 @@ export function ProcedureFormDialog({
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Nome *</Label>
-            <Input id="name" name="name" defaultValue={procedure?.name} required />
+            <Input id="name" name="name" ref={nameInputRef} defaultValue={procedure?.name} required />
+          </div>
+
+          {procedure ? (
+            <div className="flex flex-col gap-1.5">
+              <Label>Código interno</Label>
+              <p className="flex h-9 items-center text-sm text-muted-foreground">
+                {procedure.internal_code}
+              </p>
+              <input type="hidden" name="internal_code" value={procedure.internal_code ?? ""} />
+            </div>
+          ) : null}
+
+          <TussCodeField
+            defaultCode={procedure?.tuss_code}
+            defaultQuery={procedure?.name}
+            nameInputRef={nameInputRef}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label>Especialidade executora</Label>
+              <SelectWithOther
+                name="specialty"
+                options={PROCEDURE_SPECIALTIES}
+                defaultValue={procedure?.specialty}
+                placeholder="Selecione"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Região anatômica</Label>
+              <SelectWithOther
+                name="anatomical_region"
+                options={ANATOMICAL_REGIONS}
+                defaultValue={procedure?.anatomical_region}
+                placeholder="Selecione"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {procedure ? (
-              <div className="flex flex-col gap-1.5">
-                <Label>Código interno</Label>
-                <p className="flex h-9 items-center text-sm text-muted-foreground">
-                  {procedure.internal_code}
-                </p>
-                <input type="hidden" name="internal_code" value={procedure.internal_code ?? ""} />
-              </div>
-            ) : null}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="specialty">Especialidade</Label>
-              <Input id="specialty" name="specialty" defaultValue={procedure?.specialty ?? ""} />
+              <Label htmlFor="classification">Classificação</Label>
+              <Select name="classification" defaultValue={procedure?.classification ?? undefined}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASSIFICATION_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="procedure_type">Tipo</Label>
+              <Select name="procedure_type" defaultValue={procedure?.procedure_type ?? undefined}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROCEDURE_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Local de realização</Label>
+            <SelectWithOther
+              name="location"
+              options={PROCEDURE_LOCATIONS}
+              defaultValue={procedure?.location}
+              placeholder="Selecione"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -98,6 +181,22 @@ export function ProcedureFormDialog({
               name="admin_notes"
               defaultValue={procedure?.admin_notes ?? ""}
             />
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-border pt-3">
+            <p className="text-sm font-medium text-foreground">Requisitos do procedimento</p>
+            <div className="grid grid-cols-2 gap-2">
+              {REQUIREMENT_FIELDS.map((field) => (
+                <label key={field.name} className="flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    name={field.name}
+                    value="on"
+                    defaultChecked={procedure?.[field.name] ?? false}
+                  />
+                  {field.label}
+                </label>
+              ))}
+            </div>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-foreground">
