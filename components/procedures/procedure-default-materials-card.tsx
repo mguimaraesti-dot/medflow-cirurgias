@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   addDefaultMaterialAction,
   removeDefaultMaterialAction,
+  getDefaultMaterialsAction,
   type DefaultMaterialFormState,
 } from "@/app/(dashboard)/catalog/procedures/actions";
 import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
@@ -23,9 +24,11 @@ const initialState: DefaultMaterialFormState = {};
 function ItemRow({
   item,
   procedureId,
+  onRemoved,
 }: {
   item: ProcedureDefaultMaterial;
   procedureId: string;
+  onRemoved?: () => void | Promise<void>;
 }) {
   return (
     <li className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
@@ -46,6 +49,7 @@ function ItemRow({
         onClick={async () => {
           await removeDefaultMaterialAction(item.id, procedureId);
           toast.success("Material removido do padrão.");
+          await onRemoved?.();
         }}
       >
         Remover
@@ -59,17 +63,28 @@ export function ProcedureDefaultMaterialsCard({
   items,
   materials,
   suppliers,
+  onItemsChange,
 }: {
   procedureId: string;
   items: ProcedureDefaultMaterial[];
   materials: { id: string; name: string }[];
   suppliers: { id: string; company_name: string }[];
+  /** Quando informado (uso no painel lateral de Procedimentos), é chamado
+   * após adicionar/remover um item, pra buscar a lista atualizada — no
+   * lugar de depender do re-render do Server Component da página. */
+  onItemsChange?: (items: ProcedureDefaultMaterial[]) => void;
 }) {
   const action = addDefaultMaterialAction.bind(null, procedureId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   useActionToast(state, "Material adicionado ao padrão.");
+
+  async function refetchItems() {
+    if (!onItemsChange) return;
+    const updated = await getDefaultMaterialsAction(procedureId);
+    onItemsChange(updated);
+  }
 
   const [materialOptions, setMaterialOptions] = useState(materials);
   const [materialId, setMaterialId] = useState("");
@@ -91,6 +106,7 @@ export function ProcedureDefaultMaterialsCard({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMaterialId("");
       setSupplierId("");
+      void refetchItems();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
@@ -105,7 +121,7 @@ export function ProcedureDefaultMaterialsCard({
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) => (
-            <ItemRow key={item.id} item={item} procedureId={procedureId} />
+            <ItemRow key={item.id} item={item} procedureId={procedureId} onRemoved={refetchItems} />
           ))}
         </ul>
       )}

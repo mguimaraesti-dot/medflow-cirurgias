@@ -11,7 +11,12 @@ import {
 } from "@/lib/data/procedures";
 import { procedureSchema } from "@/lib/validation/procedures";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
-import { addDefaultMaterial, removeDefaultMaterial } from "@/lib/data/procedure-materials";
+import {
+  addDefaultMaterial,
+  removeDefaultMaterial,
+  listDefaultMaterials,
+  type ProcedureDefaultMaterial,
+} from "@/lib/data/procedure-materials";
 import { procedureDefaultMaterialSchema } from "@/lib/validation/procedure-materials";
 import { searchTussProcedures, type TussResult } from "@/lib/tuss";
 
@@ -114,6 +119,14 @@ export async function deleteProcedureAction(id: string): Promise<{ error?: strin
 
 export type DefaultMaterialFormState = { error?: string };
 
+// Usado pelo painel lateral de "Materiais padrão" na própria listagem de
+// procedimentos, que busca os itens sob demanda ao abrir (em vez de
+// carregar o kit de todos os procedimentos de uma vez na listagem).
+export async function getDefaultMaterialsAction(procedureId: string): Promise<ProcedureDefaultMaterial[]> {
+  const supabase = await createClient();
+  return listDefaultMaterials(supabase, procedureId);
+}
+
 export async function addDefaultMaterialAction(
   procedureId: string,
   _prevState: DefaultMaterialFormState,
@@ -140,6 +153,7 @@ export async function addDefaultMaterialAction(
   }
 
   revalidatePath(`/catalog/procedures/${procedureId}`);
+  revalidatePath("/catalog/procedures");
   return {};
 }
 
@@ -147,6 +161,7 @@ export async function removeDefaultMaterialAction(id: string, procedureId: strin
   const supabase = await createClient();
   await removeDefaultMaterial(supabase, id);
   revalidatePath(`/catalog/procedures/${procedureId}`);
+  revalidatePath("/catalog/procedures");
 }
 
 // ----------------------------------------------------------------------------

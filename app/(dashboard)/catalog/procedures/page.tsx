@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
 import { listProcedures } from "@/lib/data/procedures";
+import { listActiveMaterialsForSelect } from "@/lib/data/materials";
+import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { SearchInput } from "@/components/shared/search-input";
 import { ProcedureFormDialog } from "@/components/procedures/procedure-form-dialog";
 import { ProceduresTable } from "@/components/procedures/procedures-table";
@@ -17,7 +19,11 @@ export default async function ProceduresCatalogPage({
   await requireModuleView("procedures");
   const { q } = await searchParams;
   const supabase = await createClient();
-  const procedures = await listProcedures(supabase, q);
+  const [procedures, materials, suppliers] = await Promise.all([
+    listProcedures(supabase, q),
+    listActiveMaterialsForSelect(supabase),
+    listActiveSuppliersForSelect(supabase),
+  ]);
 
   return (
     <div>
@@ -40,6 +46,8 @@ export default async function ProceduresCatalogPage({
 
       <ProceduresTable
         procedures={procedures}
+        materials={materials}
+        suppliers={suppliers}
         emptyMessage={
           q ? "Nenhum procedimento encontrado para essa busca." : "Nenhum procedimento cadastrado ainda."
         }
