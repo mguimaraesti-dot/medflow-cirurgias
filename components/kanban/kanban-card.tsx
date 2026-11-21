@@ -18,7 +18,8 @@ const PRIORITY_LABEL: Record<SurgeryListItem["priority"], string> = {
 
 const PRIORITY_CLASS: Record<SurgeryListItem["priority"], string> = {
   low: "bg-muted text-muted-foreground border-border",
-  normal: "bg-muted text-muted-foreground border-border",
+  normal:
+    "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900",
   high: "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900",
   urgent: "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900",
 };
@@ -84,8 +85,11 @@ export function KanbanCard({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-foreground">{surgery.code}</span>
-        <Badge className={cn("border", PRIORITY_CLASS[surgery.priority])} variant="outline">
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground">{surgery.code}</span>
+        <Badge
+          className={cn("shrink-0 border", PRIORITY_CLASS[surgery.priority])}
+          variant="outline"
+        >
           {PRIORITY_LABEL[surgery.priority]}
         </Badge>
       </div>
