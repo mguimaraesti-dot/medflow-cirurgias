@@ -118,6 +118,7 @@ export default async function KanbanPage({
         {isListView ? (
           <MapListTable
             surgeries={surgeries}
+            stages={stages}
             openTasksBySurgery={openTasksBySurgery}
             documentsBySurgery={documentsBySurgery}
           />

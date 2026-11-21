@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 
-import type { SurgeryListItem } from "@/lib/data/surgeries";
+import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
+import { RequirementBadges } from "@/components/kanban/requirement-badges";
+import { getStageColor } from "@/components/kanban/stage-palette";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -29,42 +31,35 @@ const PRIORITY_LABEL: Record<string, string> = {
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 
+const PRIORITY_VARIANT: Record<string, "secondary" | "info" | "warning" | "destructive"> = {
+  low: "secondary",
+  normal: "info",
+  high: "warning",
+  urgent: "destructive",
+};
+
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
-/** Mesmo critério OK/Pendente/Dispensado usado nos cards de requisito da
- * tela de detalhe da cirurgia ("Requisitos para liberação"), só que
- * compacto pra caber numa célula de tabela. */
-function StageBadge({ req }: { req: { is_satisfied: boolean; waived: boolean } | undefined }) {
-  if (!req) return <span className="text-xs text-muted-foreground">—</span>;
-  if (req.waived) return <span className="text-xs text-muted-foreground">Dispensado</span>;
-  if (req.is_satisfied) {
-    return <span className="text-xs text-emerald-600 dark:text-emerald-400">OK</span>;
-  }
-  return <span className="text-xs text-red-600 dark:text-red-400">Pendente</span>;
-}
-
-/** Status de requisito traduzido pra número, pra ordenação da coluna poder
- * comparar: Pendente < Dispensado < OK (quanto mais "resolvido", maior). */
-function requirementRank(req: { is_satisfied: boolean; waived: boolean } | undefined) {
-  if (!req) return -1;
-  if (req.is_satisfied) return 2;
-  if (req.waived) return 1;
-  return 0;
+function satisfiedCount(requirements: SurgeryListItem["requirements"]) {
+  return requirements.filter((r) => r.is_satisfied).length;
 }
 
 export function MapListTable({
   surgeries,
+  stages,
   openTasksBySurgery,
   documentsBySurgery,
 }: {
   surgeries: SurgeryListItem[];
+  stages: WorkflowStage[];
   openTasksBySurgery: Record<string, number>;
   documentsBySurgery: Record<string, number>;
 }) {
   const today = new Date().toISOString().slice(0, 10);
+  const stageIndexById = new Map(stages.map((stage, index) => [stage.id, index]));
 
   const columns: SortableColumn<SurgeryListItem>[] = [
     {
@@ -84,18 +79,21 @@ export function MapListTable({
       cell: (surgery) => <span className="text-muted-foreground">{surgery.patient?.full_name ?? "—"}</span>,
     },
     {
-      key: "hospital",
-      label: "Hospital / Procedimento",
-      accessor: (s) => s.hospital?.name ?? null,
+      key: "procedure",
+      label: "Procedimento",
+      accessor: (s) => s.primary_procedure?.name ?? null,
       cell: (surgery) => (
-        <div className="text-muted-foreground">
-          <p>{surgery.hospital?.name ?? "—"}</p>
-          <p className="text-xs text-muted-foreground">
-            {surgery.primary_procedure?.name ?? "—"}
-            {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
-          </p>
-        </div>
+        <span className="text-muted-foreground">
+          {surgery.primary_procedure?.name ?? "—"}
+          {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
+        </span>
       ),
+    },
+    {
+      key: "hospital",
+      label: "Hospital",
+      accessor: (s) => s.hospital?.name ?? null,
+      cell: (surgery) => <span className="text-muted-foreground">{surgery.hospital?.name ?? "—"}</span>,
     },
     {
       key: "insurance",
@@ -105,6 +103,14 @@ export function MapListTable({
         <span className="text-muted-foreground">
           {surgery.attendance_type === "particular" ? "Particular" : surgery.insurance_provider?.name ?? "Convênio"}
         </span>
+      ),
+    },
+    {
+      key: "priority",
+      label: "Prioridade",
+      accessor: (s) => PRIORITY_ORDER[s.priority] ?? 9,
+      cell: (surgery) => (
+        <Badge variant={PRIORITY_VARIANT[surgery.priority]}>{PRIORITY_LABEL[surgery.priority]}</Badge>
       ),
     },
     {
@@ -120,16 +126,28 @@ export function MapListTable({
         return (
           <span className={isOverdue ? "font-medium text-red-600 dark:text-red-400" : "text-muted-foreground"}>
             {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
-            {isOverdue ? " (atrasada)" : ""}
+            {isOverdue ? " · atrasada" : ""}
           </span>
         );
       },
     },
     {
-      key: "priority",
-      label: "Prioridade",
-      accessor: (s) => PRIORITY_ORDER[s.priority] ?? 9,
-      cell: (surgery) => <span className="text-muted-foreground">{PRIORITY_LABEL[surgery.priority]}</span>,
+      key: "stage",
+      label: "Etapa",
+      accessor: (s) => stageIndexById.get(s.stage_id) ?? 0,
+      cell: (surgery) => {
+        const index = stageIndexById.get(surgery.stage_id) ?? 0;
+        const stage = stages[index];
+        return (
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: getStageColor(index, stages.length) }}
+            />
+            {stage?.name ?? "—"}
+          </span>
+        );
+      },
     },
     {
       key: "documents",
@@ -141,37 +159,16 @@ export function MapListTable({
         return hasDocuments ? (
           <span className="text-xs text-emerald-600 dark:text-emerald-400">OK</span>
         ) : (
-          <span className="text-xs text-red-600 dark:text-red-400">Pendente</span>
+          <span className="text-xs text-amber-600 dark:text-amber-400">Pendente</span>
         );
       },
     },
     {
-      key: "authorization",
-      label: "Autorização",
+      key: "requirements",
+      label: "Pendências",
       className: "px-3",
-      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "authorization")),
-      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "authorization")} />,
-    },
-    {
-      key: "materials",
-      label: "Materiais",
-      className: "px-3",
-      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "materials")),
-      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "materials")} />,
-    },
-    {
-      key: "or_reservation",
-      label: "Reserva",
-      className: "px-3",
-      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "or_reservation")),
-      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "or_reservation")} />,
-    },
-    {
-      key: "preoperative",
-      label: "Pré-op",
-      className: "px-3",
-      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "preoperative")),
-      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "preoperative")} />,
+      accessor: (s) => satisfiedCount(s.requirements),
+      cell: (surgery) => <RequirementBadges requirements={surgery.requirements} />,
     },
     {
       key: "tasks",

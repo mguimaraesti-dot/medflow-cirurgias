@@ -4,20 +4,8 @@ import { useDroppable } from "@dnd-kit/core";
 
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { KanbanCard } from "@/components/kanban/kanban-card";
+import { getStageColor } from "@/components/kanban/stage-palette";
 import { cn } from "@/lib/utils";
-
-// Uma cor de destaque por etapa, pra reforçar visualmente a progressão
-// de uma coluna pra outra (a última, "Realizada/Encerrada", fica verde).
-const ACCENT_COLORS = [
-  "#60A5FA",
-  "#3B82F6",
-  "#2563EB",
-  "#1D4ED8",
-  "#1E40AF",
-  "#1E3A8A",
-  "#0EA5E9",
-  "#10B981",
-];
 
 export function KanbanColumn({
   stage,
@@ -33,10 +21,7 @@ export function KanbanColumn({
   total: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
-  const accent =
-    index === total - 1
-      ? ACCENT_COLORS[ACCENT_COLORS.length - 1]
-      : ACCENT_COLORS[index % (ACCENT_COLORS.length - 1)];
+  const accent = getStageColor(index, total);
 
   return (
     <div
@@ -44,12 +29,20 @@ export function KanbanColumn({
       style={{ borderTopColor: accent, borderTopWidth: 3 }}
     >
       <div
-        className="flex shrink-0 items-start justify-between gap-1.5 border-b border-border bg-muted/60 px-2.5 py-2"
+        className="flex shrink-0 items-center justify-between gap-1.5 border-b border-border bg-muted/60 px-2.5 py-2"
         title={stage.name}
       >
-        <p className="line-clamp-2 text-xs font-medium leading-tight text-foreground break-words">
-          {stage.name}
-        </p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+            style={{ backgroundColor: accent }}
+          >
+            {index + 1}
+          </span>
+          <p className="line-clamp-2 text-xs font-medium leading-tight text-foreground break-words">
+            {stage.name}
+          </p>
+        </div>
         <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
           {surgeries.length}
         </span>

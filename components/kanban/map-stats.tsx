@@ -11,49 +11,49 @@ const CARDS: {
   key: keyof MapStats;
   label: string;
   icon: typeof Activity;
-  accent: string;
+  iconClass: string;
   href: string;
 }[] = [
   {
     key: "inProgress",
     label: "Cirurgias em andamento",
     icon: Activity,
-    accent: "border-l-blue-500",
+    iconClass: "bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400",
     href: "?status=active",
   },
   {
     key: "awaitingAuthorization",
     label: "Aguardando autorização",
     icon: Clock,
-    accent: "border-l-amber-500",
+    iconClass: "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400",
     href: "?status=active&pending=authorization",
   },
   {
     key: "materialsPending",
     label: "Pendências de materiais",
     icon: PackageX,
-    accent: "border-l-red-500",
+    iconClass: "bg-pink-100 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400",
     href: "?status=active&pending=materials",
   },
   {
     key: "scheduled",
     label: "Agendadas",
     icon: CalendarCheck2,
-    accent: "border-l-indigo-500",
+    iconClass: "bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400",
     href: "?status=active&scheduled=1",
   },
   {
     key: "overdue",
     label: "Atrasadas",
     icon: AlertTriangle,
-    accent: "border-l-red-600",
+    iconClass: "bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400",
     href: "?status=active&overdue=1",
   },
   {
     key: "completed",
     label: "Realizadas",
     icon: CircleCheck,
-    accent: "border-l-emerald-500",
+    iconClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400",
     href: "?view=lista&status=completed",
   },
 ];
@@ -61,19 +61,20 @@ const CARDS: {
 export function MapStatsRow({ stats }: { stats: MapStats }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-      {CARDS.map(({ key, label, icon: Icon, accent, href }) => {
+      {CARDS.map(({ key, label, icon: Icon, iconClass, href }) => {
         const content = (
           <>
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", iconClass)}>
               <Icon className="h-4 w-4" />
-              <p className="text-xs font-medium">{label}</p>
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+              <p className="text-xl font-semibold text-foreground">{stats[key]}</p>
             </div>
-            <p className="mt-1.5 text-2xl font-semibold text-foreground">{stats[key]}</p>
           </>
         );
         const className = cn(
-          "rounded-lg border border-l-4 border-border bg-card px-4 py-3 shadow-sm",
-          accent,
+          "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm",
           stats[key] > 0 && "transition-shadow hover:shadow-md"
         );
 
