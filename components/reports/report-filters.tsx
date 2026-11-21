@@ -109,6 +109,7 @@ export function ReportFilters({ hospitals }: { hospitals: { id: string; name: st
   const statusParam = searchParams.get("status");
   if (type === "cirurgias" && statusParam) exportParams.set("status", statusParam);
   const exportHref = `/api/reports/export?${exportParams.toString()}`;
+  const pdfHref = `/api/reports/pdf?${exportParams.toString()}`;
 
   const activeCount = [hospitalParam, type === "cirurgias" ? statusParam : null].filter(Boolean).length;
 
@@ -195,15 +196,23 @@ export function ReportFilters({ hospitals }: { hospitals: { id: string; name: st
             Exportar CSV
           </a>
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="print:hidden"
-          onClick={() => window.print()}
-        >
-          Imprimir / PDF
-        </Button>
+        {type === "cirurgias" ? (
+          <Button asChild variant="outline" size="sm">
+            <a href={pdfHref} target="_blank" rel="noopener noreferrer">
+              Baixar PDF
+            </a>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="print:hidden"
+            onClick={() => window.print()}
+          >
+            Imprimir / PDF
+          </Button>
+        )}
       </div>
     </div>
   );
