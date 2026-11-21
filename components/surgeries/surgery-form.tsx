@@ -61,7 +61,7 @@ export function SurgeryForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="patient_id">Paciente *</Label>
           <div className="flex gap-2">
@@ -130,7 +130,7 @@ export function SurgeryForm({
         defaultSelected={surgery?.procedures.map((p) => ({ id: p.id, name: p.name, is_primary: p.is_primary }))}
       />
 
-      <div className={attendanceType === "convenio" ? "grid grid-cols-2 gap-3" : ""}>
+      <div className={attendanceType === "convenio" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : ""}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="attendance_type">Tipo de atendimento *</Label>
           <Select
@@ -172,7 +172,7 @@ export function SurgeryForm({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="priority">Prioridade</Label>
           <Select name="priority" defaultValue={surgery?.priority ?? "normal"}>
@@ -198,7 +198,7 @@ export function SurgeryForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="expected_date">Data prevista</Label>
           <Input

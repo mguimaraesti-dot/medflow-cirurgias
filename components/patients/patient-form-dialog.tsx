@@ -79,7 +79,7 @@ export function PatientFormDialog({
             <Input id="full_name" name="full_name" defaultValue={patient?.full_name} required />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cpf">CPF</Label>
               <Input id="cpf" name="cpf" defaultValue={patient?.cpf ?? ""} />
@@ -95,7 +95,7 @@ export function PatientFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="phone">Celular</Label>
               <Input id="phone" name="phone" defaultValue={patient?.phone ?? ""} />
@@ -155,7 +155,7 @@ export function PatientFormDialog({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="insurance_card_number">Número da carteirinha</Label>
                   <Input

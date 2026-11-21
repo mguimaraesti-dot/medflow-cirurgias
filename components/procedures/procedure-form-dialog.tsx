@@ -105,7 +105,7 @@ export function ProcedureFormDialog({
             nameInputRef={nameInputRef}
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label>Especialidade executora</Label>
               <SelectWithOther
@@ -126,7 +126,7 @@ export function ProcedureFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="classification">Classificação</Label>
               <Select name="classification" defaultValue={procedure?.classification ?? undefined}>
@@ -185,7 +185,7 @@ export function ProcedureFormDialog({
 
           <div className="flex flex-col gap-2 border-t border-border pt-3">
             <p className="text-sm font-medium text-foreground">Requisitos do procedimento</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {REQUIREMENT_FIELDS.map((field) => (
                 <label key={field.name} className="flex items-center gap-2 text-sm text-foreground">
                   <Checkbox

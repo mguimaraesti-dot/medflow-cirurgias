@@ -197,7 +197,7 @@ export function SurgeryMaterialsCard({
         }}
         className="flex flex-col gap-2 border-t border-border pt-4"
       >
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="col-span-2">
             <Select name="material_id" required>
               <SelectTrigger>

@@ -64,7 +64,7 @@ export function HolidayFormDialog({ holiday, trigger }: { holiday?: Holiday; tri
             <Input id="name" name="name" defaultValue={holiday?.name} required />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="date">Data *</Label>
               <Input id="date" name="date" type="date" defaultValue={holiday?.date} required />
@@ -85,7 +85,7 @@ export function HolidayFormDialog({ holiday, trigger }: { holiday?: Holiday; tri
           </div>
 
           {scope !== "national" ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="state">UF</Label>
                 <Input id="state" name="state" maxLength={2} className="uppercase" defaultValue={holiday?.state ?? ""} />

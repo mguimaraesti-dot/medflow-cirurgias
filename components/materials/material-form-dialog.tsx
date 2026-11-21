@@ -80,7 +80,7 @@ export function MaterialFormDialog({
             <Input id="name" name="name" ref={nameInputRef} defaultValue={material?.name} required />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {material ? (
               <div className="flex flex-col gap-1.5">
                 <Label>Código interno</Label>

@@ -61,7 +61,7 @@ export function SupplierFormDialog({
         </DialogHeader>
 
         <form action={formAction} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="company_name">Razão social *</Label>
               <Input
@@ -77,7 +77,7 @@ export function SupplierFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cnpj">CNPJ</Label>
               <Input id="cnpj" name="cnpj" defaultValue={supplier?.cnpj ?? ""} />
@@ -88,7 +88,7 @@ export function SupplierFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="phone">Telefone</Label>
               <Input id="phone" name="phone" defaultValue={supplier?.phone ?? ""} />

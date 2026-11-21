@@ -78,7 +78,7 @@ export function HospitalFormDialog({
             <Input id="name" name="name" defaultValue={hospital?.name} required />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cnpj">CNPJ</Label>
               <Input id="cnpj" name="cnpj" defaultValue={hospital?.cnpj ?? ""} />
@@ -94,7 +94,7 @@ export function HospitalFormDialog({
             <Input id="address" name="address" defaultValue={hospital?.address ?? ""} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="admin_contact">Contato administrativo</Label>
               <Input

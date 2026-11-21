@@ -50,7 +50,7 @@ export function AuthorizationCard({
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="status">Status</Label>
           <Select name="status" value={status} onValueChange={setStatus}>
@@ -85,7 +85,7 @@ export function AuthorizationCard({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="sent_at">Enviada em</Label>
           <Input id="sent_at" name="sent_at" type="date" defaultValue={authorization?.sent_at ?? ""} />
