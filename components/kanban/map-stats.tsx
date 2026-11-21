@@ -68,7 +68,7 @@ export function MapStatsRow({ stats }: { stats: MapStats }) {
               <Icon className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+              <p className="line-clamp-2 text-xs font-medium leading-tight text-muted-foreground">{label}</p>
               <p className="text-xl font-semibold text-foreground">{stats[key]}</p>
             </div>
           </>

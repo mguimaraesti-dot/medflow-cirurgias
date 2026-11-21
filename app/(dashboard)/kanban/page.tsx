@@ -87,12 +87,18 @@ export default async function KanbanPage({
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-3">
+      {/*
+        No mobile o botão fica ACIMA dos indicadores (flex-col-reverse: a
+        1ª div no DOM é a dos indicadores, mas visualmente ele some pra
+        cima) — assim os indicadores ficam com a largura toda disponível
+        e não espremem ao lado do botão, em vez de dividir a tela com ele.
+      */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <MapStatsRow stats={stats} />
         </div>
         <Link href="/surgeries/new" className="shrink-0">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Nova cirurgia
           </Button>
