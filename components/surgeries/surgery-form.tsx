@@ -188,7 +188,7 @@ export function SurgeryForm({
           </Select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="indication_date">Data da indicação</Label>
+          <Label htmlFor="indication_date">Data da solicitação</Label>
           <Input
             id="indication_date"
             name="indication_date"

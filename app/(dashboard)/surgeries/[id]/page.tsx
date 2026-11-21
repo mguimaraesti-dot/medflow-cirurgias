@@ -158,7 +158,7 @@ export default async function SurgeryDetailPage({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Data da indicação</dt>
+              <dt className="text-muted-foreground">Data da solicitação</dt>
               <dd className="text-foreground">{formatDate(surgery.indication_date)}</dd>
             </div>
             <div>
