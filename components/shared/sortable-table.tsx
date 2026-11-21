@@ -166,13 +166,23 @@ export function SortableTable<T>({
                  * enquanto as ações ficavam coladas ao lado/por cima. */}
                 <div className="min-w-0">{titleColumn?.cell(row)}</div>
                 {fieldColumns.length > 0 ? (
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                    {fieldColumns.map((column) => (
-                      <div key={column.key} className="min-w-0">
-                        <dt className="text-muted-foreground">{column.label}</dt>
-                        <dd className="mt-0.5 text-foreground">{column.cell(row)}</dd>
-                      </div>
-                    ))}
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                    {fieldColumns.map((column, index) => {
+                      // Quando o número de campos é ímpar, o último fica
+                      // sozinho numa grade de 2 colunas — sobrando metade
+                      // da linha vazia do lado (ex.: o badge de Status
+                      // "flutuando" sozinho). Nesse caso ele ocupa a linha
+                      // toda em vez de ficar pela metade.
+                      const spansFullRow = index === fieldColumns.length - 1 && fieldColumns.length % 2 === 1;
+                      return (
+                        <div key={column.key} className={cn("min-w-0", spansFullRow && "col-span-2")}>
+                          <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {column.label}
+                          </dt>
+                          <dd className="mt-1 text-sm leading-snug text-foreground">{column.cell(row)}</dd>
+                        </div>
+                      );
+                    })}
                   </dl>
                 ) : null}
                 {actionColumns.length > 0 ? (
