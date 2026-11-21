@@ -14,7 +14,12 @@ export function CancelSurgeryButton({ surgeryId }: { surgeryId: string }) {
 
   if (!open) {
     return (
-      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+        onClick={() => setOpen(true)}
+      >
         Cancelar cirurgia
       </Button>
     );
