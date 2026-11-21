@@ -8,6 +8,7 @@ import {
   updateFinancialRecordReceivedValue,
   generateInstallments,
   recordInstallmentPayment,
+  listInstallments,
   upsertInsuranceBilling,
   createGlosa,
   updateGlosaStatus,
@@ -45,6 +46,44 @@ export async function saveConvenioValuesAction(
   const supabase = await createClient();
   try {
     await updateFinancialRecord(supabase, financialRecordId, parsed.data);
+  } catch {
+    return genericError;
+  }
+  revalidatePath(`/surgeries/${surgeryId}`);
+  return {};
+}
+
+/** Atalho pro caso comum (pagamento à vista, sem parcelamento): confirma o
+ * recebimento num clique só, sem precisar passar por "Gerar parcelas"
+ * manualmente antes. Por baixo ainda usa o mesmo mecanismo de parcela
+ * (cria uma parcela única na primeira vez que é chamada, se ainda não
+ * existir nenhuma) — assim o saldo/recebido continua vindo de uma única
+ * fonte de verdade (receivable_installments), só a UI é que esconde esse
+ * passo intermediário pra quem nunca parcela. */
+export async function confirmSinglePaymentAction(
+  surgeryId: string,
+  financialRecordId: string,
+  _prevState: FinancialActionState,
+  formData: FormData
+): Promise<FinancialActionState> {
+  const parsed = installmentPaymentSchema.safeParse({
+    amount: formData.get("amount"),
+    received_at: formData.get("received_at"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  try {
+    const existing = await listInstallments(supabase, financialRecordId);
+    if (existing.length === 0) {
+      await generateInstallments(supabase, financialRecordId, parsed.data.amount, 1, parsed.data.received_at);
+    }
+    const installments = await listInstallments(supabase, financialRecordId);
+    const target = installments[0];
+    if (!target) return genericError;
+    await recordInstallmentPayment(supabase, target.id, parsed.data.amount, parsed.data.received_at);
   } catch {
     return genericError;
   }

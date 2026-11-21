@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import {
+  confirmSinglePaymentAction,
   generateInstallmentsAction,
   recordInstallmentPaymentAction,
   type FinancialActionState,
@@ -42,6 +43,48 @@ function formatDate(value: string | null) {
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
+/** Caso comum: pagamento à vista, sem parcelamento. Confirma o
+ * recebimento direto, sem precisar passar por "Gerar parcelas" antes. */
+function ConfirmSinglePaymentForm({
+  surgeryId,
+  financialRecordId,
+  defaultAmount,
+}: {
+  surgeryId: string;
+  financialRecordId: string;
+  defaultAmount: number | null;
+}) {
+  const action = confirmSinglePaymentAction.bind(null, surgeryId, financialRecordId);
+  const [state, formAction, pending] = useActionState(action, initialState);
+  useActionToast(state, "Recebimento confirmado.");
+
+  return (
+    <form action={formAction} className="flex flex-wrap items-end gap-3 rounded-lg bg-muted p-3">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="single_amount">Valor recebido</Label>
+        <CurrencyInput id="single_amount" name="amount" defaultValue={defaultAmount} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="single_received_at">Data do recebimento</Label>
+        <Input
+          id="single_received_at"
+          name="received_at"
+          type="date"
+          defaultValue={new Date().toISOString().slice(0, 10)}
+        />
+      </div>
+      {state.error ? (
+        <p className="w-full text-sm text-red-600 dark:text-red-400" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+      <Button type="submit" size="sm" disabled={pending}>
+        {pending ? "Salvando..." : "Confirmar recebimento"}
+      </Button>
+    </form>
+  );
+}
+
 function GenerateInstallmentsForm({
   surgeryId,
   financialRecordId,
@@ -63,7 +106,7 @@ function GenerateInstallmentsForm({
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="count">Nº de parcelas</Label>
-        <Input id="count" name="count" type="number" min={1} max={60} defaultValue={1} className="w-24" />
+        <Input id="count" name="count" type="number" min={2} max={60} defaultValue={2} className="w-24" />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="first_due_date">1º vencimento</Label>
@@ -75,7 +118,7 @@ function GenerateInstallmentsForm({
         </p>
       ) : null}
       <Button type="submit" variant="outline" size="sm" disabled={pending}>
-        {pending ? "Gerando..." : "Gerar parcelas"}
+        {pending ? "Gerando..." : "Dividir em parcelas"}
       </Button>
     </form>
   );
@@ -153,39 +196,68 @@ export function InstallmentsPanel({
   agreedValue: number | null;
   installments: Installment[];
 }) {
+  const [splitOpen, setSplitOpen] = useState(false);
+
+  // Caso mais comum: nenhuma parcela ainda — pagamento é à vista na
+  // grande maioria dos casos, então o destaque vai pra confirmação
+  // direta; "dividir em parcelas" fica como opção secundária, escondida
+  // atrás de um link, só pra quem realmente for parcelar.
+  if (installments.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        <ConfirmSinglePaymentForm
+          surgeryId={surgeryId}
+          financialRecordId={financialRecordId}
+          defaultAmount={agreedValue}
+        />
+        {splitOpen ? (
+          <GenerateInstallmentsForm
+            surgeryId={surgeryId}
+            financialRecordId={financialRecordId}
+            defaultAmount={agreedValue}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSplitOpen(true)}
+            className="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Em vez disso, dividir esse valor em parcelas
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const totalReceived = installments.reduce((sum, i) => sum + i.received_amount, 0);
   const totalAmount = installments.reduce((sum, i) => sum + i.amount, 0);
   const balance = totalAmount - totalReceived;
 
   return (
     <div className="flex flex-col gap-3">
-      {installments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma parcela gerada ainda.</p>
-      ) : (
-        <>
-          <div className="flex flex-wrap gap-4 rounded-lg bg-muted px-3 py-2 text-sm">
-            <span>
-              Total: <span className="font-medium text-foreground">{formatBRL(totalAmount)}</span>
-            </span>
-            <span>
-              Recebido: <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatBRL(totalReceived)}</span>
-            </span>
-            <span>
-              Saldo: <span className="font-medium text-foreground">{formatBRL(balance)}</span>
-            </span>
-          </div>
-          <ul className="divide-y divide-border">
-            {installments.map((installment) => (
-              <InstallmentRow key={installment.id} surgeryId={surgeryId} installment={installment} />
-            ))}
-          </ul>
-        </>
-      )}
-      <GenerateInstallmentsForm
-        surgeryId={surgeryId}
-        financialRecordId={financialRecordId}
-        defaultAmount={agreedValue}
-      />
+      <div className="flex flex-wrap gap-4 rounded-lg bg-muted px-3 py-2 text-sm">
+        <span>
+          Total: <span className="font-medium text-foreground">{formatBRL(totalAmount)}</span>
+        </span>
+        <span>
+          Recebido: <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatBRL(totalReceived)}</span>
+        </span>
+        <span>
+          Saldo: <span className="font-medium text-foreground">{formatBRL(balance)}</span>
+        </span>
+      </div>
+      <ul className="divide-y divide-border">
+        {installments.map((installment) => (
+          <InstallmentRow key={installment.id} surgeryId={surgeryId} installment={installment} />
+        ))}
+      </ul>
+      {installments.length === 1 && totalReceived === 0 ? (
+        <GenerateInstallmentsForm
+          surgeryId={surgeryId}
+          financialRecordId={financialRecordId}
+          defaultAmount={totalAmount}
+        />
+      ) : null}
     </div>
   );
 }
