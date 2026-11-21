@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import { createHoliday, updateHoliday, deleteHoliday } from "@/lib/data/holidays";
 import { holidaySchema } from "@/lib/validation/holidays";
 
@@ -30,6 +31,11 @@ export async function createHolidayAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -52,6 +58,11 @@ export async function updateHolidayAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -66,6 +77,11 @@ export async function updateHolidayAction(
 }
 
 export async function deleteHolidayAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
   const supabase = await createClient();
   try {
     await deleteHoliday(supabase, id);

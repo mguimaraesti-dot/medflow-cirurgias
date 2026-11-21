@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createMaterial,
   updateMaterial,
@@ -42,6 +43,7 @@ export async function searchTussMaterialsAction(
   query: string
 ): Promise<{ results?: TussResult[]; error?: string }> {
   try {
+    await requireActionPermission("materials", "view");
     const results = await searchTussMaterials(query);
     return { results };
   } catch {
@@ -67,6 +69,11 @@ export async function createMaterialAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("materials");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   let created;
@@ -89,6 +96,11 @@ export async function updateMaterialAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("materials");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -102,12 +114,18 @@ export async function updateMaterialAction(
 }
 
 export async function toggleMaterialActiveAction(id: string, active: boolean) {
+  await requireActionPermission("materials");
   const supabase = await createClient();
   await setMaterialActive(supabase, id, active);
   revalidatePath("/catalog/materials");
 }
 
 export async function deleteMaterialAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("materials");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
   const supabase = await createClient();
   try {
     await deleteMaterial(supabase, id);
@@ -128,6 +146,7 @@ export type MaterialSupplierFormState = {
 // materiais, que busca os vínculos sob demanda ao abrir (em vez de
 // carregar os fornecedores de todos os materiais de uma vez na listagem).
 export async function getMaterialSuppliersAction(materialId: string): Promise<MaterialSupplierRow[]> {
+  await requireActionPermission("materials", "view");
   const supabase = await createClient();
   return listMaterialSuppliers(supabase, materialId);
 }
@@ -145,6 +164,11 @@ export async function addMaterialSupplierAction(
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("materials");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
   }
 
   const supabase = await createClient();
@@ -169,6 +193,7 @@ export async function addMaterialSupplierAction(
 }
 
 export async function removeMaterialSupplierAction(linkId: string, materialId?: string) {
+  await requireActionPermission("materials");
   const supabase = await createClient();
   await removeMaterialSupplier(supabase, linkId);
   revalidatePath("/catalog/materials");

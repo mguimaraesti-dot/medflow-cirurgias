@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createSurgery,
   updateSurgery,
@@ -78,6 +79,11 @@ export async function createSurgeryAction(
   if (!parsedProcedures.success) {
     return { error: parsedProcedures.error.issues[0]?.message ?? "Selecione os procedimentos." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   let surgeryId: string;
@@ -112,6 +118,11 @@ export async function updateSurgeryAction(
   if (!parsedProcedures.success) {
     return { error: parsedProcedures.error.issues[0]?.message ?? "Selecione os procedimentos." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -133,6 +144,7 @@ export async function updateSurgeryAction(
 }
 
 export async function moveSurgeryStageAction(surgeryId: string, stageId: string) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await moveSurgeryStage(supabase, surgeryId, stageId);
   revalidatePath("/kanban");
@@ -147,6 +159,7 @@ export async function moveSurgeryCardAction(
   stageId: string,
   boardPosition: number
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await moveSurgeryCard(supabase, surgeryId, stageId, boardPosition);
   revalidatePath("/kanban");
@@ -154,6 +167,7 @@ export async function moveSurgeryCardAction(
 }
 
 export async function cancelSurgeryAction(surgeryId: string, reason: string) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await cancelSurgery(supabase, surgeryId, reason);
   revalidatePath("/kanban");
@@ -169,6 +183,7 @@ export async function setSurgeryScheduleAction(
   confirmedDate: string,
   confirmedTime: string | null
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await setSurgerySchedule(supabase, surgeryId, { confirmedDate, confirmedTime });
   revalidatePath("/schedule");
@@ -180,6 +195,7 @@ export async function setSurgeryScheduleAction(
  * é aberto (não vem junto com a lista do mês inteiro, pra não pesar o
  * carregamento normal da Agenda). */
 export async function getSurgeryHistoryAction(surgeryId: string) {
+  await requireActionPermission("surgeries", "view");
   const supabase = await createClient();
   return getSurgeryHistoryTimeline(supabase, surgeryId);
 }
@@ -203,6 +219,11 @@ export async function updateRequirementAction(
   if (parsed.data.waived && !parsed.data.waived_reason) {
     return { error: "Informe a justificativa para dispensar este requisito." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -223,6 +244,7 @@ export async function toggleRequirementSatisfiedAction(
   surgeryId: string,
   isSatisfied: boolean
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await setRequirementSatisfied(supabase, requirementId, isSatisfied);
   revalidatePath("/kanban");
@@ -235,6 +257,7 @@ export async function toggleRequirementSatisfiedAction(
  * precisa de revalidatePath.
  */
 export async function getAuthorizationRequestTextAction(surgeryId: string): Promise<string> {
+  await requireActionPermission("surgeries", "view");
   const supabase = await createClient();
   const data = await getSurgeryAuthorizationRequestData(supabase, surgeryId);
   return buildAuthorizationRequestText(data);
@@ -254,6 +277,11 @@ export async function saveParticularFinancialAction(
   });
   if (!parsed.success) {
     return { error: "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
   }
 
   const supabase = await createClient();

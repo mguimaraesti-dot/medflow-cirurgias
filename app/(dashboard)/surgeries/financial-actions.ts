@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   updateFinancialRecord,
   updateFinancialRecordReceivedValue,
@@ -26,6 +27,7 @@ import {
 export type FinancialActionState = { error?: string };
 
 const genericError: FinancialActionState = { error: "Não foi possível salvar. Tente novamente." };
+const forbiddenError: FinancialActionState = { error: "Você não tem permissão para esta ação." };
 
 export async function saveConvenioValuesAction(
   surgeryId: string,
@@ -42,6 +44,11 @@ export async function saveConvenioValuesAction(
     notes: formData.get("notes"),
   });
   if (!parsed.success) return { error: "Dados inválidos." };
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
+  }
 
   const supabase = await createClient();
   try {
@@ -72,6 +79,11 @@ export async function confirmSinglePaymentAction(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
   }
 
   const supabase = await createClient();
@@ -105,6 +117,11 @@ export async function generateInstallmentsAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
+  }
 
   const supabase = await createClient();
   try {
@@ -135,6 +152,11 @@ export async function recordInstallmentPaymentAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
+  }
 
   const supabase = await createClient();
   try {
@@ -164,6 +186,11 @@ export async function saveInsuranceBillingAction(
     notes: formData.get("notes"),
   });
   if (!parsed.success) return { error: "Dados inválidos." };
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
+  }
 
   const supabase = await createClient();
   try {
@@ -199,6 +226,11 @@ export async function createGlosaAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
+  }
 
   const supabase = await createClient();
   try {
@@ -222,6 +254,11 @@ export async function sendGlosaAppealAction(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
   }
 
   const supabase = await createClient();
@@ -247,6 +284,11 @@ export async function resolveGlosaAction(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("financial");
+  } catch {
+    return forbiddenError;
   }
 
   const supabase = await createClient();

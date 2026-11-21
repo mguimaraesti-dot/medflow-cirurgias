@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createProcedure,
   updateProcedure,
@@ -61,6 +62,11 @@ export async function createProcedureAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("procedures");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -82,6 +88,11 @@ export async function updateProcedureAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("procedures");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -95,12 +106,18 @@ export async function updateProcedureAction(
 }
 
 export async function toggleProcedureActiveAction(id: string, active: boolean) {
+  await requireActionPermission("procedures");
   const supabase = await createClient();
   await setProcedureActive(supabase, id, active);
   revalidatePath("/catalog/procedures");
 }
 
 export async function deleteProcedureAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("procedures");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
   const supabase = await createClient();
 
   try {
@@ -123,6 +140,7 @@ export type DefaultMaterialFormState = { error?: string };
 // procedimentos, que busca os itens sob demanda ao abrir (em vez de
 // carregar o kit de todos os procedimentos de uma vez na listagem).
 export async function getDefaultMaterialsAction(procedureId: string): Promise<ProcedureDefaultMaterial[]> {
+  await requireActionPermission("procedures", "view");
   const supabase = await createClient();
   return listDefaultMaterials(supabase, procedureId);
 }
@@ -139,6 +157,11 @@ export async function addDefaultMaterialAction(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("procedures");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
   }
 
   const supabase = await createClient();
@@ -158,6 +181,7 @@ export async function addDefaultMaterialAction(
 }
 
 export async function removeDefaultMaterialAction(id: string, procedureId: string) {
+  await requireActionPermission("procedures");
   const supabase = await createClient();
   await removeDefaultMaterial(supabase, id);
   revalidatePath(`/catalog/procedures/${procedureId}`);
@@ -172,6 +196,7 @@ export async function searchTussCodesAction(
   query: string
 ): Promise<{ results?: TussResult[]; error?: string }> {
   try {
+    await requireActionPermission("procedures", "view");
     const results = await searchTussProcedures(query);
     return { results };
   } catch {

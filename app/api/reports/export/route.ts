@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, hasPermission } from "@/lib/auth/session";
 import { getSurgeriesReport, getFinancialReport, getProductivityReport } from "@/lib/data/reports";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -36,6 +37,10 @@ export async function GET(request: NextRequest) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
     return new Response("Não autenticado.", { status: 401 });
+  }
+  const user = await getCurrentUser();
+  if (!(await hasPermission(user, "reports", "view"))) {
+    return new Response("Sem permissão para exportar relatórios.", { status: 403 });
   }
 
   const params = request.nextUrl.searchParams;

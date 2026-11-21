@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createHospital,
   updateHospital,
@@ -40,6 +41,11 @@ export async function createHospitalAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   let created;
@@ -62,6 +68,11 @@ export async function updateHospitalAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -75,12 +86,18 @@ export async function updateHospitalAction(
 }
 
 export async function toggleHospitalActiveAction(id: string, active: boolean) {
+  await requireActionPermission("settings");
   const supabase = await createClient();
   await setHospitalActive(supabase, id, active);
   revalidatePath("/settings/hospitals");
 }
 
 export async function deleteHospitalAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
   const supabase = await createClient();
   try {
     await deleteHospital(supabase, id);

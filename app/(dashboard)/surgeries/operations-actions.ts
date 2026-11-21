@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createAuthorizationRequest,
   updateAuthorizationRequest,
@@ -34,6 +35,8 @@ function revalidateSurgery(surgeryId: string) {
   revalidatePath("/kanban");
 }
 
+const forbiddenFormError = { error: "Você não tem permissão para esta ação." };
+
 // ----------------------------------------------------------------------------
 // Autorização
 // ----------------------------------------------------------------------------
@@ -63,6 +66,11 @@ export async function createAuthorizationAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
+  }
 
   const supabase = await createClient();
   try {
@@ -83,6 +91,11 @@ export async function updateAuthorizationAction(
   const parsed = parseAuthorizationForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
   }
 
   const supabase = await createClient();
@@ -123,6 +136,11 @@ export async function createOrReservationAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
+  }
 
   const supabase = await createClient();
   try {
@@ -143,6 +161,11 @@ export async function updateOrReservationAction(
   const parsed = parseOrReservationForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
   }
 
   const supabase = await createClient();
@@ -174,6 +197,11 @@ export async function addPreoperativeItemAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
+  }
 
   const supabase = await createClient();
   try {
@@ -191,12 +219,14 @@ export async function setPreoperativeItemStatusAction(
   surgeryId: string,
   status: PreoperativeItem["status"]
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await setPreoperativeItemStatus(supabase, itemId, status);
   revalidateSurgery(surgeryId);
 }
 
 export async function removePreoperativeItemAction(itemId: string, surgeryId: string) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await removePreoperativeItem(supabase, itemId);
   revalidateSurgery(surgeryId);
@@ -215,6 +245,11 @@ export async function savePreanestheticEvaluationAction(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
   }
 
   const supabase = await createClient();
@@ -253,6 +288,11 @@ export async function addSurgeryMaterialItemAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return forbiddenFormError;
+  }
 
   const supabase = await createClient();
   try {
@@ -269,12 +309,14 @@ export async function setSurgeryMaterialItemStatusAction(
   surgeryId: string,
   status: string
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await setSurgeryMaterialItemStatus(supabase, itemId, status);
   revalidateSurgery(surgeryId);
 }
 
 export async function removeSurgeryMaterialItemAction(itemId: string, surgeryId: string) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await removeSurgeryMaterialItem(supabase, itemId);
   revalidateSurgery(surgeryId);
@@ -284,6 +326,7 @@ export async function importProcedureDefaultMaterialsAction(
   surgeryId: string,
   procedureIds: string[]
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await importProcedureDefaultMaterials(supabase, surgeryId, procedureIds);
   revalidateSurgery(surgeryId);
@@ -297,6 +340,7 @@ export async function updateProcedureDefaultMaterialsAction(
   procedureId: string,
   surgeryId: string
 ) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   const items = await listSurgeryMaterialItems(supabase, surgeryId);
   await replaceDefaultMaterials(

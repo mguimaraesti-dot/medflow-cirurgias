@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { requireActionPermission } from "@/lib/auth/guard";
 import { addSurgeryDocument, removeSurgeryDocument } from "@/lib/data/surgery-documents";
 
 export type SurgeryDocumentFormState = {
@@ -26,6 +27,11 @@ export async function uploadSurgeryDocumentAction(
   if (file.size > MAX_FILE_SIZE) {
     return { error: "Arquivo muito grande (máximo 15 MB)." };
   }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   const user = await getCurrentUser();
@@ -47,6 +53,7 @@ export async function uploadSurgeryDocumentAction(
 }
 
 export async function removeSurgeryDocumentAction(id: string, surgeryId: string) {
+  await requireActionPermission("surgeries");
   const supabase = await createClient();
   await removeSurgeryDocument(supabase, id);
   revalidatePath(`/surgeries/${surgeryId}`);

@@ -24,3 +24,21 @@ export async function requireModuleEdit(module: string) {
   const allowed = await hasPermission(user, module, "edit");
   if (!allowed) redirect("/sem-acesso");
 }
+
+/**
+ * Verificação de permissão pra usar DENTRO de Server Actions (não em
+ * páginas). `requireModuleView`/`requireModuleEdit` acima fazem
+ * `redirect()`, o que é certo pra uma página, mas uma Server Action pode
+ * ser chamada direto (sem passar pela página/guard dela), então cada
+ * ação que grava ou lê dado sensível precisa checar de novo aqui —
+ * a tela escondendo o botão não é proteção (ver auditoria de segurança).
+ * Lança erro (não redireciona) pra cada action capturar com seu try/catch
+ * e devolver o estado de erro genérico já usado no padrão existente.
+ */
+export async function requireActionPermission(module: string, action: "view" | "edit" = "edit") {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("forbidden");
+  const allowed = await hasPermission(user, module, action);
+  if (!allowed) throw new Error("forbidden");
+  return user;
+}

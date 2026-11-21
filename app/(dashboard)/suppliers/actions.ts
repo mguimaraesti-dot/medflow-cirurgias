@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createSupplier,
   updateSupplier,
@@ -38,6 +39,11 @@ export async function createSupplierAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("suppliers");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -59,6 +65,11 @@ export async function updateSupplierAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("suppliers");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -72,12 +83,18 @@ export async function updateSupplierAction(
 }
 
 export async function toggleSupplierActiveAction(id: string, active: boolean) {
+  await requireActionPermission("suppliers");
   const supabase = await createClient();
   await setSupplierActive(supabase, id, active);
   revalidatePath("/suppliers");
 }
 
 export async function deleteSupplierAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("suppliers");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
   const supabase = await createClient();
   try {
     await deleteSupplier(supabase, id);

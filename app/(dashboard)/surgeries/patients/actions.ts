@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import { createPatient, updatePatient, deletePatient, type PatientUpdateInput } from "@/lib/data/patients";
 import { patientSchema } from "@/lib/validation/patients";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
@@ -61,6 +62,11 @@ export async function createPatientAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("patients");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   let created;
@@ -83,6 +89,11 @@ export async function updatePatientAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("patients");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -96,6 +107,12 @@ export async function updatePatientAction(
 }
 
 export async function deletePatientAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("patients");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
+
   const supabase = await createClient();
 
   try {

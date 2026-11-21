@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireActionPermission } from "@/lib/auth/guard";
 import {
   createInsuranceProvider,
   updateInsuranceProvider,
@@ -39,6 +40,11 @@ export async function createInsuranceProviderAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -60,6 +66,11 @@ export async function updateInsuranceProviderAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
 
   const supabase = await createClient();
   try {
@@ -73,12 +84,18 @@ export async function updateInsuranceProviderAction(
 }
 
 export async function toggleInsuranceProviderActiveAction(id: string, active: boolean) {
+  await requireActionPermission("settings");
   const supabase = await createClient();
   await setInsuranceProviderActive(supabase, id, active);
   revalidatePath("/settings/insurance-providers");
 }
 
 export async function deleteInsuranceProviderAction(id: string): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("settings");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
   const supabase = await createClient();
   try {
     await deleteInsuranceProvider(supabase, id);
