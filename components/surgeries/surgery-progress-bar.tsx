@@ -19,7 +19,7 @@ export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
   return (
     <div className="flex w-full items-start px-1 py-1">
       {steps.map((step, index) => (
-        <div key={step.label} className="flex min-w-0 flex-1 items-start last:flex-none last:w-auto">
+        <div key={step.label} className="flex min-w-0 flex-1 items-start">
           <div className="flex min-w-0 flex-col items-center gap-1.5">
             <div
               className={cn(
