@@ -53,7 +53,10 @@ function formatDate(value: string | null) {
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("pt-BR");
+  // Essa formatação roda no servidor (fuso UTC na Vercel) — sem fixar o
+  // fuso explicitamente, toLocaleString usaria o horário do servidor em
+  // vez do horário de Brasília.
+  return new Date(value).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 export default async function SurgeryDetailPage({

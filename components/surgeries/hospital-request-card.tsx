@@ -19,7 +19,10 @@ import { RequirementCardShell, type RequirementTone } from "@/components/surgeri
 const initialState: SurgeryDocumentFormState = {};
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("pt-BR");
+  // Fixa o fuso de Brasília explicitamente em vez de depender do fuso do
+  // navegador/dispositivo, pra ficar sempre consistente com o resto do
+  // sistema (ex: o histórico da cirurgia, que roda no servidor).
+  return new Date(value).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 export function HospitalRequestCard({
