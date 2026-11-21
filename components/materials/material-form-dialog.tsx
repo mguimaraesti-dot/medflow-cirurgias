@@ -64,7 +64,7 @@ export function MaterialFormDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{material ? "Editar material" : "Novo material"}</DialogTitle>
           <DialogDescription>
