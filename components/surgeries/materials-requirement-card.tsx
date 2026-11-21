@@ -33,9 +33,7 @@ export function MaterialsRequirementCard({
   onToggle: () => void;
 }) {
   const total = items.length;
-  const ready = items.filter((i) =>
-    ["confirmed", "delivered", "used"].includes(i.status)
-  ).length;
+  const ready = items.filter((i) => i.status === "delivered").length;
 
   let tone: RequirementTone = "neutral";
   let statusLabel = "Não iniciada";

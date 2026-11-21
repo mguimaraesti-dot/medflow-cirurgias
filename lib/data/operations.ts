@@ -340,7 +340,7 @@ export async function importProcedureDefaultMaterials(
     supplier_id: item.preferred_supplier_id,
     quantity: item.quantity,
     unit: item.unit,
-    status: "suggested",
+    status: "requested",
   }));
 
   const { error: insertError } = await supabase.from("surgery_material_items").insert(rows);

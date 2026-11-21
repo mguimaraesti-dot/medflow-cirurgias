@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { SurgeryInput } from "@/lib/validation/surgeries";
-import { listAuthorizationHistoryForSurgery } from "@/lib/data/operations";
+import {
+  listAuthorizationHistoryForSurgery,
+  importProcedureDefaultMaterials,
+} from "@/lib/data/operations";
 
 export type WorkflowStage = {
   id: string;
@@ -375,6 +378,22 @@ export async function setSurgeryProcedures(
   }));
   const { error: insertError } = await supabase.from("surgery_procedures").insert(rows);
   if (insertError) throw insertError;
+
+  // Carrega o kit padrão de materiais automaticamente — mas só quando a
+  // lista ainda está vazia, pra nunca sobrescrever itens que o usuário já
+  // tenha ajustado manualmente (ex: reabrir e resalvar a edição sem mexer
+  // nos procedimentos não deve reimportar nada).
+  if (procedureIds.length > 0) {
+    const { count, error: countError } = await supabase
+      .from("surgery_material_items")
+      .select("id", { count: "exact", head: true })
+      .eq("surgery_id", surgeryId)
+      .neq("status", "removed");
+    if (countError) throw countError;
+    if (!count) {
+      await importProcedureDefaultMaterials(supabase, surgeryId, procedureIds);
+    }
+  }
 }
 
 // Mesmo padrão de lib/data/patients.ts: `insurance_provider_id` aceita

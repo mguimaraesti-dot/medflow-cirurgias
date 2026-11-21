@@ -27,13 +27,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Simplificado pra só 2 estados (quem usa no dia a dia não precisa de
+// mais granularidade que isso): Solicitado → Entregue. Um item com um
+// status antigo (de antes dessa simplificação) ainda aparece rotulado
+// corretamente graças ao fallback em STATUS_LABEL[item.status] ?? item.status.
 const STATUS_LABEL: Record<string, string> = {
-  suggested: "Sugerido",
   requested: "Solicitado",
-  confirmed: "Confirmado",
   delivered: "Entregue",
-  used: "Utilizado",
-  substituted: "Substituído",
 };
 
 const STATUS_OPTIONS = Object.keys(STATUS_LABEL);
