@@ -1,11 +1,14 @@
 import { Shield, Package, Building2, FileText } from "lucide-react";
 
-// Metadados comuns dos 4 requisitos de liberação de uma cirurgia —
-// compartilhados entre o badge compacto do Kanban/Lista
-// (requirement-badges.tsx) e o checklist do painel de detalhe
-// (surgery-detail-sheet.tsx), pra manter ícone/rótulo/ordem consistentes
-// em todo o Mapa Cirúrgico.
-export const REQUIREMENT_ORDER = ["authorization", "materials", "or_reservation", "preoperative"] as const;
+// Metadados comuns dos requisitos de liberação de uma cirurgia exibidos
+// no Mapa Cirúrgico — compartilhados entre o badge compacto do
+// Kanban/Lista (requirement-badges.tsx) e o checklist do painel de
+// detalhe (surgery-detail-sheet.tsx), pra manter ícone/rótulo/ordem
+// consistentes. "materials" fica de fora da lista por pedido do usuário
+// (não aparece mais nesses dois lugares), mas o card de materiais
+// continua existindo normalmente na ficha completa da cirurgia
+// (surgery-requirements-panel.tsx), que não depende desta lista.
+export const REQUIREMENT_ORDER = ["authorization", "or_reservation", "preoperative"] as const;
 
 export type RequirementKey = (typeof REQUIREMENT_ORDER)[number];
 
