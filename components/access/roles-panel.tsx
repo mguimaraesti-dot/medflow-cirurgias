@@ -182,11 +182,11 @@ export function RolesPanel({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-medium text-foreground">Funções e permissões</h2>
         <NewRoleDialog />
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {matrix.map((m) => (
           <RolePermissionsCard key={m.role.id} matrix={m} permissions={permissions} />
         ))}

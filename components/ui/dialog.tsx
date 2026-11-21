@@ -38,8 +38,10 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm text-muted-foreground hover:text-foreground focus:outline-none">
-        <X className="h-4 w-4" />
+      {/* h-11 w-11 (44x44px): área de toque mínima recomendada — o ícone
+       * sozinho (16px) era fácil de errar no celular. */}
+      <DialogPrimitive.Close className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none">
+        <X className="h-5 w-5" />
         <span className="sr-only">Fechar</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -48,7 +50,9 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col gap-1.5", className)} {...props} />
+  // pr-6: reserva espaço pro botão fechar (44x44px) no canto, mesma ideia
+  // do SheetHeader — sem isso, um título longo podia encostar nele.
+  <div className={cn("flex flex-col gap-1.5 pr-6", className)} {...props} />
 );
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

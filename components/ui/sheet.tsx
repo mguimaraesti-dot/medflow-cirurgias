@@ -38,8 +38,12 @@ const SheetContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm text-muted-foreground hover:text-foreground focus:outline-none">
-        <X className="h-4 w-4" />
+      {/* h-11 w-11 (44x44px): área de toque mínima recomendada — o ícone
+       * sozinho (16px) era fácil de errar no celular, perto da borda da
+       * tela, e um toque que caía dentro do painel (não sobre a overlay
+       * escurecida) não fechava nada. */}
+      <DialogPrimitive.Close className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none">
+        <X className="h-5 w-5" />
         <span className="sr-only">Fechar</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

@@ -92,7 +92,7 @@ export default async function DashboardPage({
         <FinancialSummaryCards totals={financialReport.totals} />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <UpcomingSurgeriesList surgeries={upcomingSurgeries} />
         <CompletedByMonthChart data={completedByMonth} />
       </div>
