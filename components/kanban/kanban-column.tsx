@@ -44,11 +44,15 @@ export function KanbanColumn({
       style={{ borderTopColor: accent, borderTopWidth: 3 }}
     >
       <div
-        className="flex shrink-0 items-center justify-between gap-1 border-b border-border bg-muted/60 px-3 py-2.5"
+        className="flex shrink-0 items-start justify-between gap-1.5 border-b border-border bg-muted/60 px-2.5 py-2"
         title={stage.name}
       >
-        <p className="truncate text-sm font-medium text-foreground">{stage.name}</p>
-        <span className="shrink-0 text-xs text-muted-foreground">{surgeries.length}</span>
+        <p className="line-clamp-2 text-xs font-medium leading-tight text-foreground break-words">
+          {stage.name}
+        </p>
+        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+          {surgeries.length}
+        </span>
       </div>
       <div
         ref={setNodeRef}
