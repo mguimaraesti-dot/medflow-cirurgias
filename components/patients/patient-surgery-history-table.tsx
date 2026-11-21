@@ -74,6 +74,7 @@ export function PatientSurgeryHistoryTable({ surgeries }: { surgeries: ScheduleS
         rows={surgeries}
         rowKey={(surgery) => surgery.id}
         emptyMessage="Nenhuma cirurgia registrada para este paciente ainda."
+        mobileCardHref={(surgery) => `/surgeries/${surgery.id}`}
       />
     </div>
   );

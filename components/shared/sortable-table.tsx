@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronsUpDown, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -38,6 +39,13 @@ export function SortableTable<T>({
   /** Envolve o <tr> já montado — usado pelas telas em que a linha inteira
    * é o gatilho de um diálogo de edição (ex.: catálogos, cadastros). */
   wrapRow,
+  /**
+   * Quando informado, o card inteiro no mobile vira clicável e leva pra
+   * essa URL (com uma setinha ">" indicando isso) — em vez de precisar
+   * tocar exatamente no título/código pra abrir o detalhe. Só afeta a
+   * visão mobile; a tabela no desktop continua como está.
+   */
+  mobileCardHref,
 }: {
   columns: SortableColumn<T>[];
   rows: T[];
@@ -46,7 +54,9 @@ export function SortableTable<T>({
   defaultSort?: { key: string; direction: SortDirection };
   rowClassName?: (row: T) => string | undefined;
   wrapRow?: (row: T, rowNode: ReactNode) => ReactNode;
+  mobileCardHref?: (row: T) => string;
 }) {
+  const router = useRouter();
   const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(
     defaultSort ?? null
   );
@@ -154,17 +164,29 @@ export function SortableTable<T>({
           <p className="px-4 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           sortedRows.map((row) => {
+            const href = mobileCardHref?.(row);
             const card = (
               <div
                 key={rowKey(row)}
-                className={cn("flex flex-col gap-2 p-4 text-sm", rowClassName?.(row))}
+                onClick={href ? () => router.push(href) : undefined}
+                className={cn(
+                  "flex flex-col gap-2 p-4 text-sm",
+                  href && "cursor-pointer active:bg-muted/60",
+                  rowClassName?.(row)
+                )}
               >
                 {/* Título em linha própria, sem dividir espaço com as
                  * ações: numa linha só, uma ação "larga" (ex.: um botão
                  * com texto, não só ícone) sobrava pouquíssimo espaço pro
                  * título, forçando-o a quebrar em várias linhas estreitas
-                 * enquanto as ações ficavam coladas ao lado/por cima. */}
-                <div className="min-w-0">{titleColumn?.cell(row)}</div>
+                 * enquanto as ações ficavam coladas ao lado/por cima.
+                 * Quando o card é clicável (mobileCardHref), a setinha
+                 * deixa claro que dá pra tocar em qualquer parte do card
+                 * pra abrir o detalhe — não só no título. */}
+                <div className="flex min-w-0 items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">{titleColumn?.cell(row)}</div>
+                  {href ? <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /> : null}
+                </div>
                 {fieldColumns.length > 0 ? (
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                     {fieldColumns.map((column, index) => {

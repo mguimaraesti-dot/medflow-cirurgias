@@ -87,6 +87,7 @@ export function FinancialOverviewTable({ rows }: { rows: FinancialOverviewRow[] 
         rows={rows}
         rowKey={(row) => row.id}
         emptyMessage="Nenhum registro financeiro encontrado para esse filtro."
+        mobileCardHref={(row) => `/surgeries/${row.surgery_id}`}
       />
     </div>
   );

@@ -76,7 +76,13 @@ export function PatientsTable({
   const columns = buildColumns(surgeryCountByPatient);
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-      <SortableTable columns={columns} rows={patients} rowKey={(patient) => patient.id} emptyMessage={emptyMessage} />
+      <SortableTable
+        columns={columns}
+        rows={patients}
+        rowKey={(patient) => patient.id}
+        emptyMessage={emptyMessage}
+        mobileCardHref={(patient) => `/surgeries/patients/${patient.id}`}
+      />
     </div>
   );
 }

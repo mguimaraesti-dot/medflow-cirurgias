@@ -92,7 +92,13 @@ const columns: SortableColumn<SurgeryListItem>[] = [
 export function SurgeriesTable({ surgeries, emptyMessage }: { surgeries: SurgeryListItem[]; emptyMessage: string }) {
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-      <SortableTable columns={columns} rows={surgeries} rowKey={(surgery) => surgery.id} emptyMessage={emptyMessage} />
+      <SortableTable
+        columns={columns}
+        rows={surgeries}
+        rowKey={(surgery) => surgery.id}
+        emptyMessage={emptyMessage}
+        mobileCardHref={(surgery) => `/surgeries/${surgery.id}`}
+      />
     </div>
   );
 }

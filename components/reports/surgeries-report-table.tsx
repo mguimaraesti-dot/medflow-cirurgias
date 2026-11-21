@@ -80,6 +80,7 @@ export function SurgeriesReportTable({ rows }: { rows: ScheduleSurgeryItem[] }) 
         rows={rows}
         rowKey={(row) => row.id}
         emptyMessage="Nenhuma cirurgia encontrada para esse filtro."
+        mobileCardHref={(row) => `/surgeries/${row.id}`}
       />
     </div>
   );
