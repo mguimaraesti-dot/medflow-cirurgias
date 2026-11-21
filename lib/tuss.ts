@@ -73,12 +73,25 @@ async function fetchTussPage(table: TussTable, term: string): Promise<TussResult
   }
 
   // A base da ANS pode demorar bastante (observado ~8-15s em termos mais
-  // genéricos), então damos uma margem generosa antes de desistir.
+  // genéricos), então damos uma margem generosa antes de desistir. Usa um
+  // AbortController próprio (em vez de AbortSignal.timeout) pra poder
+  // cancelar o timer assim que a resposta chegar — com buscas em paralelo
+  // (busca ampla + variações de acento), um timer que não é limpo pode
+  // disparar um abort "fantasma" depois que a requisição já terminou, e
+  // isso vira uma promise rejeitada sem ninguém ouvindo (derruba o
+  // processo do servidor).
   const url = `${TUSS_BASE_URL}/${table}?q=${encodeURIComponent(trimmed)}&page=1`;
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(20000),
-    headers: { Accept: "application/json" },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     throw new Error(`Tabela TUSS (ANS) respondeu ${response.status}`);
@@ -134,21 +147,60 @@ function significantTokens(query: string): string[] {
 }
 
 /**
+ * A busca da ANS é sensível a acento (e maiúsculo/minúsculo, mas isso ela
+ * já ignora sozinha): buscar "protese" não acha nada escrito "Prótese", e
+ * vice-versa — confirmado testando contra a base real. Como a API aceita
+ * "?" como curinga de 1 caractere (até 2 por busca — testado: um 3º
+ * curinga zera os resultados), geramos variações do termo com pares de
+ * vogais (e "c" que poderia ser "ç", já que em português "ç" só aparece
+ * antes de a/o/u) trocados por "?", cobrindo toda vogal da palavra em
+ * pelo menos 1 variação — pra achar o item não importa se o nome oficial
+ * tem acento/cedilha e a busca não (ou o contrário).
+ */
+function accentWildcardVariants(term: string): string[] {
+  const lower = term.toLowerCase();
+  const positions: number[] = [];
+  for (let i = 0; i < lower.length; i++) {
+    const ch = lower[i];
+    const isVowel = ch === "a" || ch === "e" || ch === "i" || ch === "o" || ch === "u";
+    const isMaybeCedilla = ch === "c" && "aou".includes(lower[i + 1] ?? "");
+    if (isVowel || isMaybeCedilla) positions.push(i);
+  }
+
+  const variants: string[] = [];
+  for (let i = 0; i < positions.length; i += 2) {
+    const chars = term.split("");
+    for (const pos of positions.slice(i, i + 2)) chars[pos] = "?";
+    variants.push(chars.join(""));
+  }
+  return variants;
+}
+
+/**
  * Busca "ampla" na base da ANS: além da frase completa digitada, busca
- * também cada palavra significativa separadamente e junta tudo. A base da
- * ANS não lida bem com buscas de várias palavras — "fio guia roadrunner"
- * pode não achar nada mesmo quando "fio guia" ou "roadrunner" sozinhos
- * acham — e com milhares de itens na tabela, a ordem que a ANS devolve nem
- * sempre traz o mais provável primeiro. Por isso os resultados juntados
- * são reordenados por relevância (quantas palavras da busca aparecem no
- * nome do item, frase exata primeiro) antes de voltar pra tela.
+ * também cada palavra significativa separadamente, mais variações com
+ * curinga no lugar de vogais/cedilha (pra não depender do usuário acertar
+ * os acentos) — e junta tudo. A base da ANS não lida bem com buscas de
+ * várias palavras — "fio guia roadrunner" pode não achar nada mesmo
+ * quando "fio guia" ou "roadrunner" sozinhos acham — e com milhares de
+ * itens na tabela, a ordem que a ANS devolve nem sempre traz o mais
+ * provável primeiro. Por isso os resultados juntados são reordenados por
+ * relevância (quantas palavras da busca aparecem no nome do item, frase
+ * exata primeiro, acentos e caixa ignorados) antes de voltar pra tela.
  */
 async function searchTuss(table: TussTable, query: string): Promise<TussResult[]> {
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
 
   const tokens = significantTokens(trimmed);
-  const searchTerms = Array.from(new Set([trimmed, ...tokens]));
+  // Cada termo-base (frase completa + cada palavra) ganha sua própria cota
+  // de variações com curinga — em vez de um teto global só pra tudo, que
+  // na prática era consumido inteiro pelas primeiras vogais da primeira
+  // palavra, deixando palavras mais pra frente (ex: "pancreática" em
+  // "protese pancreatica") sem nenhuma variação testada.
+  const baseTerms = Array.from(new Set([trimmed, ...tokens]));
+  const wildcardTerms = Array.from(new Set(baseTerms.flatMap((term) => accentWildcardVariants(term))));
+  const searchTerms = Array.from(new Set([...baseTerms, ...wildcardTerms]));
 
   const settled = await Promise.allSettled(searchTerms.map((term) => fetchTussPage(table, term)));
   const pages = settled
