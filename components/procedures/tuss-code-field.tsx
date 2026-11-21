@@ -26,10 +26,22 @@ export function TussCodeField({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  // Resultado da busca automática pelo código digitado diretamente no
+  // primeiro campo (não o campo de busca por nome).
+  const [codeMatch, setCodeMatch] = useState<TussResult | null>(null);
+  const [codeNotFound, setCodeNotFound] = useState(false);
+
   // Contador para ignorar respostas de buscas antigas que chegam depois de
   // uma busca mais recente (evita sobrescrever o resultado atual com um
   // resultado desatualizado quando o usuário digita rápido).
   const requestIdRef = useRef(0);
+  const codeRequestIdRef = useRef(0);
+
+  function fillNameIfEmpty(name: string) {
+    if (nameInputRef?.current && !nameInputRef.current.value.trim()) {
+      nameInputRef.current.value = name;
+    }
+  }
 
   function runSearch(term: string) {
     const requestId = ++requestIdRef.current;
@@ -62,12 +74,37 @@ export function TussCodeField({
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Quando o código é digitado diretamente (ex: colado de outro sistema),
+  // busca o nome correspondente na tabela TUSS e preenche o campo Nome.
+  useEffect(() => {
+    const trimmed = code.trim();
+    if (!/^\d{6,}$/.test(trimmed)) {
+      codeRequestIdRef.current++;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCodeMatch(null);
+      setCodeNotFound(false);
+      return;
+    }
+    const requestId = ++codeRequestIdRef.current;
+    const timer = setTimeout(() => {
+      searchTussCodesAction(trimmed).then((res) => {
+        if (requestId !== codeRequestIdRef.current) return; // resposta obsoleta
+        const match = res.results?.find((r) => r.code === trimmed) ?? null;
+        setCodeMatch(match);
+        setCodeNotFound(!match);
+        if (match) fillNameIfEmpty(match.name);
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
   function handlePick(result: TussResult) {
     setCode(result.code);
     setResults(null);
-    if (nameInputRef?.current && !nameInputRef.current.value.trim()) {
-      nameInputRef.current.value = result.name;
-    }
+    setCodeMatch(result);
+    setCodeNotFound(false);
+    fillNameIfEmpty(result.name);
   }
 
   return (
@@ -80,6 +117,21 @@ export function TussCodeField({
         onChange={(e) => setCode(e.target.value)}
         placeholder="Ex: 40201082"
       />
+      {codeMatch ? (
+        <p
+          className={
+            codeMatch.active
+              ? "text-xs text-emerald-600 dark:text-emerald-400"
+              : "text-xs text-amber-600 dark:text-amber-400"
+          }
+        >
+          ✓ {codeMatch.name}
+          {!codeMatch.active ? " (código descontinuado na TUSS)" : ""}
+        </p>
+      ) : null}
+      {codeNotFound ? (
+        <p className="text-xs text-muted-foreground">Código não encontrado na tabela TUSS.</p>
+      ) : null}
 
       <div className="relative mt-1">
         <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
