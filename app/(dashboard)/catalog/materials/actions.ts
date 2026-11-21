@@ -16,6 +16,7 @@ import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type MaterialFormState = {
   error?: string;
+  created?: { id: string; name: string };
 };
 
 function parseForm(formData: FormData) {
@@ -49,14 +50,15 @@ export async function createMaterialAction(
   }
 
   const supabase = await createClient();
+  let created;
   try {
-    await createMaterial(supabase, parsed.data);
+    created = await createMaterial(supabase, parsed.data);
   } catch (e) {
     return { error: toUserMessage(e) };
   }
 
   revalidatePath("/catalog/materials");
-  return {};
+  return { created };
 }
 
 export async function updateMaterialAction(

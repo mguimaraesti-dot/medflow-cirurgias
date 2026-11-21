@@ -59,8 +59,13 @@ export async function getMaterial(supabase: SupabaseClient, id: string) {
 }
 
 export async function createMaterial(supabase: SupabaseClient, input: MaterialInput) {
-  const { error } = await supabase.from("materials_catalog").insert(input);
+  const { data, error } = await supabase
+    .from("materials_catalog")
+    .insert(input)
+    .select("id,name")
+    .single();
   if (error) throw error;
+  return data as { id: string; name: string };
 }
 
 export async function updateMaterial(supabase: SupabaseClient, id: string, input: MaterialInput) {

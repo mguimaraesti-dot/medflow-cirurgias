@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import {
@@ -12,7 +13,10 @@ import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MaterialFormDialog } from "@/components/materials/material-form-dialog";
+import { Plus } from "lucide-react";
 
 const initialState: DefaultMaterialFormState = {};
 
@@ -64,7 +68,32 @@ export function ProcedureDefaultMaterialsCard({
   const action = addDefaultMaterialAction.bind(null, procedureId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   useActionToast(state, "Material adicionado ao padrão.");
+
+  const [materialOptions, setMaterialOptions] = useState(materials);
+  const [materialId, setMaterialId] = useState("");
+  const [supplierId, setSupplierId] = useState("");
+
+  // Mantém a lista em dia caso a página seja atualizada pelo servidor, e
+  // limpa a seleção depois de um envio concluído (sucesso ou erro).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMaterialOptions(materials);
+  }, [materials]);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    if (!pending && !state.error) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMaterialId("");
+      setSupplierId("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -87,36 +116,64 @@ export function ProcedureDefaultMaterialsCard({
           await formAction(formData);
           formRef.current?.reset();
         }}
-        className="flex flex-col gap-2 border-t border-border pt-4"
+        className="flex flex-col gap-3 border-t border-border pt-4"
       >
-        <div className="grid grid-cols-4 gap-2">
-          <div className="col-span-2">
-            <Select name="material_id" required>
+        <div className="grid grid-cols-4 gap-3">
+          <div className="col-span-2 flex flex-col gap-1.5">
+            <Label>Material *</Label>
+            <div className="flex gap-2">
+              <Select name="material_id" required value={materialId} onValueChange={setMaterialId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o material" />
+                </SelectTrigger>
+                <SelectContent>
+                  {materialOptions.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <MaterialFormDialog
+                trigger={
+                  <Button type="button" variant="outline" size="icon" title="Cadastrar novo material">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                }
+                onCreated={(created) => {
+                  setMaterialOptions((prev) => [...prev, created]);
+                  setMaterialId(created.id);
+                  router.refresh();
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Fornecedor preferencial</Label>
+            <Select name="supplier_id" value={supplierId} onValueChange={setSupplierId}>
               <SelectTrigger>
-                <SelectValue placeholder="Material" />
+                <SelectValue placeholder="Opcional" />
               </SelectTrigger>
               <SelectContent>
-                {materials.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.name}
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.company_name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Select name="supplier_id">
-            <SelectTrigger>
-              <SelectValue placeholder="Fornecedor preferencial" />
-            </SelectTrigger>
-            <SelectContent>
-              {suppliers.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.company_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input name="quantity" type="number" step="0.01" min="0.01" defaultValue={1} />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="default-material-quantity">Quantidade</Label>
+            <Input
+              id="default-material-quantity"
+              name="quantity"
+              type="number"
+              step="0.01"
+              min="0.01"
+              defaultValue={1}
+            />
+          </div>
         </div>
         <Button type="submit" variant="outline" size="sm" disabled={pending} className="self-start">
           {pending ? "Adicionando..." : "Adicionar ao padrão"}

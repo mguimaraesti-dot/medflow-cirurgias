@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
   createMaterialAction,
@@ -30,20 +30,28 @@ const initialState: MaterialFormState = {};
 export function MaterialFormDialog({
   material,
   trigger,
+  onCreated,
 }: {
   material?: Material;
   trigger?: ReactNode;
+  /** Chamado uma vez, só no modo de criação, quando um novo material é salvo com sucesso. */
+  onCreated?: (material: { id: string; name: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const action = material ? updateMaterialAction.bind(null, material.id) : createMaterialAction;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const handledCreatedId = useRef<string | null>(null);
 
   useEffect(() => {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!pending && !state.error && open) setOpen(false);
+    if (!pending && !material && state.created && state.created.id !== handledCreatedId.current) {
+      handledCreatedId.current = state.created.id;
+      onCreated?.(state.created);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending]);
+  }, [pending, state]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
