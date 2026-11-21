@@ -2,11 +2,14 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
+import { SlidersHorizontal, ChevronDown } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchInput } from "@/components/shared/search-input";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -119,9 +122,9 @@ function DateRangeFilter() {
     // flex-wrap: com "Personalizado" selecionado, os 2 campos de data +
     // "até" não cabem numa linha só no mobile (mesmo problema corrigido
     // em dashboard-period-filter.tsx).
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex w-full flex-wrap items-center gap-1.5 md:w-auto">
       <Select value={selected} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-[135px] shrink-0">
+        <SelectTrigger className="w-full shrink-0 md:w-[135px]">
           <SelectValue placeholder="Período" />
         </SelectTrigger>
         <SelectContent>
@@ -137,14 +140,14 @@ function DateRangeFilter() {
         <>
           <Input
             type="date"
-            className="w-[150px] shrink-0"
+            className="w-[calc(50%-12px)] shrink-0 md:w-[150px]"
             value={from}
             onChange={(e) => applyRange({ from: e.target.value, to })}
           />
           <span className="shrink-0 text-xs text-muted-foreground">até</span>
           <Input
             type="date"
-            className="w-[150px] shrink-0"
+            className="w-[calc(50%-12px)] shrink-0 md:w-[150px]"
             value={to}
             onChange={(e) => applyRange({ from, to: e.target.value })}
           />
@@ -181,6 +184,10 @@ export function MapFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  // No mobile os 6 filtros empilhados tomavam a tela toda antes mesmo de
+  // chegar no board — ficam escondidos atrás de um botão "Filtros" por
+  // padrão (sempre visíveis no desktop, onde cabem numa linha só).
+  const [expanded, setExpanded] = useState(false);
 
   function setParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -194,97 +201,121 @@ export function MapFilters({
     });
   }
 
+  const activeCount = ["procedure", "hospital", "attendance", "priority", "status", "from", "q"].filter(
+    (key) => searchParams.get(key)
+  ).length;
+
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-2.5">
-      <SearchInput
-        placeholder="Buscar por código ou paciente..."
-        className="min-w-[170px] max-w-[220px]"
-      />
-
-      <Select
-        value={searchParams.get("procedure") ?? "all"}
-        onValueChange={(v) => setParam("procedure", v)}
+    <div className="w-full md:w-auto">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground md:hidden"
       >
-        <SelectTrigger className="w-[165px] shrink-0">
-          <SelectValue placeholder="Procedimento" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todo procedimento</SelectItem>
-          {procedures.map((p) => (
-            <SelectItem key={p.id} value={p.id}>
-              {p.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <span className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+          Filtros
+          {activeCount > 0 ? <Badge variant="info">{activeCount}</Badge> : null}
+        </span>
+        <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
+      </button>
 
-      <Select
-        value={searchParams.get("hospital") ?? "all"}
-        onValueChange={(v) => setParam("hospital", v)}
+      <div
+        className={cn(
+          "mt-2 flex-col gap-2 md:mt-0 md:flex md:flex-row md:flex-wrap md:items-center md:gap-x-2 md:gap-y-2.5",
+          expanded ? "flex" : "hidden"
+        )}
       >
-        <SelectTrigger className="w-[150px] shrink-0">
-          <SelectValue placeholder="Hospital" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todo hospital</SelectItem>
-          {hospitals.map((h) => (
-            <SelectItem key={h.id} value={h.id}>
-              {h.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <SearchInput
+          placeholder="Buscar por código ou paciente..."
+          className="w-full max-w-none md:min-w-[170px] md:max-w-[220px]"
+        />
 
-      <Select
-        value={searchParams.get("attendance") ?? "all"}
-        onValueChange={(v) => setParam("attendance", v)}
-      >
-        <SelectTrigger className="w-[150px] shrink-0">
-          <SelectValue placeholder="Convênio" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Convênio / Particular</SelectItem>
-          <SelectItem value="particular">Particular</SelectItem>
-          {insuranceProviders.map((p) => (
-            <SelectItem key={p.id} value={p.id}>
-              {p.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select
+          value={searchParams.get("procedure") ?? "all"}
+          onValueChange={(v) => setParam("procedure", v)}
+        >
+          <SelectTrigger className="w-full shrink-0 md:w-[165px]">
+            <SelectValue placeholder="Procedimento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo procedimento</SelectItem>
+            {procedures.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select
-        value={searchParams.get("priority") ?? "all"}
-        onValueChange={(v) => setParam("priority", v)}
-      >
-        <SelectTrigger className="w-[130px] shrink-0">
-          <SelectValue placeholder="Prioridade" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Toda prioridade</SelectItem>
-          {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select
+          value={searchParams.get("hospital") ?? "all"}
+          onValueChange={(v) => setParam("hospital", v)}
+        >
+          <SelectTrigger className="w-full shrink-0 md:w-[150px]">
+            <SelectValue placeholder="Hospital" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo hospital</SelectItem>
+            {hospitals.map((h) => (
+              <SelectItem key={h.id} value={h.id}>
+                {h.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select value={searchParams.get("status") ?? "all"} onValueChange={(v) => setParam("status", v)}>
-        <SelectTrigger className="w-[130px] shrink-0">
-          <SelectValue placeholder="Situação" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Toda situação</SelectItem>
-          {Object.entries(STATUS_LABEL).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select
+          value={searchParams.get("attendance") ?? "all"}
+          onValueChange={(v) => setParam("attendance", v)}
+        >
+          <SelectTrigger className="w-full shrink-0 md:w-[150px]">
+            <SelectValue placeholder="Convênio" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Convênio / Particular</SelectItem>
+            <SelectItem value="particular">Particular</SelectItem>
+            {insuranceProviders.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <DateRangeFilter />
+        <Select
+          value={searchParams.get("priority") ?? "all"}
+          onValueChange={(v) => setParam("priority", v)}
+        >
+          <SelectTrigger className="w-full shrink-0 md:w-[130px]">
+            <SelectValue placeholder="Prioridade" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toda prioridade</SelectItem>
+            {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={searchParams.get("status") ?? "all"} onValueChange={(v) => setParam("status", v)}>
+          <SelectTrigger className="w-full shrink-0 md:w-[130px]">
+            <SelectValue placeholder="Situação" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toda situação</SelectItem>
+            {Object.entries(STATUS_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <DateRangeFilter />
+      </div>
     </div>
   );
 }

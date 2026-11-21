@@ -10,11 +10,40 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { moveSurgeryCardAction } from "@/app/(dashboard)/surgeries/actions";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { getStageColor } from "@/components/kanban/stage-palette";
-import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+function StageOptionLabel({
+  name,
+  count,
+  colorIndex,
+  total,
+}: {
+  name: string;
+  count: number;
+  colorIndex: number;
+  total: number;
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
+        style={{ backgroundColor: getStageColor(colorIndex, total) }}
+      >
+        {colorIndex + 1}
+      </span>
+      <span className="min-w-0 truncate">{name}</span>
+      <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
+        {count}
+      </span>
+    </span>
+  );
+}
 
 /** As 8 colunas lado a lado não cabem numa tela de celular — abaixo de
  * `md` o board mostra uma etapa por vez, selecionada por abas. O valor
@@ -122,40 +151,58 @@ export function KanbanBoard({
 
     return (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2">
-          {stages.map((stage, index) => {
-            const accent = getStageColor(index, stages.length);
-            const active = stage.id === activeStage?.id;
-            const count = surgeriesForStage(stage.id).length;
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                onClick={() => setActiveStageId(stage.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                  active ? "border-transparent text-white" : "border-border bg-card text-muted-foreground"
-                )}
-                style={active ? { backgroundColor: accent } : undefined}
-              >
-                <span
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-                  style={{ backgroundColor: active ? "rgba(255,255,255,0.25)" : accent }}
-                >
-                  {index + 1}
-                </span>
-                {stage.name}
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 text-[10px]",
-                    active ? "bg-white/25" : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        {/*
+          Antes era uma faixa de abas rolando de lado — dava pra ver só um
+          pedaço de cada etapa, cortada no meio da palavra, sem indicação
+          clara de que dava pra rolar mais. Um seletor (dropdown) mostra o
+          nome inteiro da etapa atual e lista todas de uma vez ao abrir;
+          as setas do lado permitem avançar/voltar sem precisar abri-lo.
+        */}
+        <div className="mb-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => activeIndex > 0 && setActiveStageId(stages[activeIndex - 1].id)}
+            disabled={activeIndex === 0}
+            aria-label="Etapa anterior"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground disabled:opacity-30"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <Select value={activeStage?.id} onValueChange={setActiveStageId}>
+            <SelectTrigger className="flex-1 text-sm font-medium text-foreground">
+              <SelectValue>
+                {activeStage ? (
+                  <StageOptionLabel
+                    name={activeStage.name}
+                    count={surgeriesForStage(activeStage.id).length}
+                    colorIndex={activeIndex}
+                    total={stages.length}
+                  />
+                ) : null}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {stages.map((stage, index) => (
+                <SelectItem key={stage.id} value={stage.id}>
+                  <StageOptionLabel
+                    name={stage.name}
+                    count={surgeriesForStage(stage.id).length}
+                    colorIndex={index}
+                    total={stages.length}
+                  />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            onClick={() => activeIndex < stages.length - 1 && setActiveStageId(stages[activeIndex + 1].id)}
+            disabled={activeIndex === stages.length - 1}
+            aria-label="Próxima etapa"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground disabled:opacity-30"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
         {activeStage ? (
           <KanbanColumn
