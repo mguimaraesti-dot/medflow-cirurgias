@@ -57,16 +57,25 @@ docs/
   ARCHITECTURE.md           → este arquivo
 ```
 
-## Permissão em 3 camadas (mesmo com perfil único hoje)
+## Permissão em 3 camadas (implementada — migration `0017_access_control.sql`)
 
-1. **UI**: esconder ação não permitida (hoje, irrelevante — só existe um usuário).
-2. **Server action / route handler**: `hasPermission()` em `lib/auth/session.ts` —
-   hoje retorna `true` para qualquer usuário autenticado; quando os perfis
-   existirem, passa a consultar `role_permissions`.
-3. **RLS no Postgres**: toda tabela tem RLS habilitado. Hoje, uma única
-   policy por tabela (`<tabela>_full_access_authenticated`) libera tudo para
-   `authenticated`. `profiles` é exceção: cada usuário só acessa o próprio
-   registro.
+1. **UI**: o menu lateral (`components/layout/sidebar.tsx`) só mostra os
+   módulos em que a função do usuário tem `<módulo>:view`.
+2. **Página / server action**: `requireModuleView(module)` e
+   `requireModuleEdit(module)` (`lib/auth/guard.ts`) no topo de cada uma
+   das 20 páginas de módulo — sem a permissão, redireciona pra
+   `/sem-acesso`. `hasPermission()` (`lib/auth/session.ts`) consulta de
+   fato `role_permissions` via cliente service role (não é mais um `true`
+   fixo).
+3. **RLS no Postgres**: a maioria das tabelas ainda tem a policy genérica
+   (`<tabela>_full_access_authenticated`, libera tudo pra `authenticated`)
+   — a granularidade por módulo não chegou nas policies de cada tabela de
+   negócio (financeiro, cirurgias etc.), só na camada 2. Exceção:
+   `roles`/`permissions`/`role_permissions`/`user_roles`/`allowed_users`
+   não têm policy nenhuma pra `authenticated` — só o cliente service role
+   (usado em `lib/auth/session.ts` e `lib/data/access.ts`) as acessa, pra
+   impedir que um usuário comum se auto-promova via cliente anônimo.
+   `profiles` é outra exceção: cada usuário só acessa o próprio registro.
 
 > Nenhuma tela esconde um botão como única proteção — a regra de negócio
 > real mora no banco e no backend (seção 26 do prompt original).
@@ -156,8 +165,18 @@ têm RLS habilitado sem exceção.
    período, financeiro (particular) e produtividade mensal, com filtros de
    período/hospital/status, exportação em CSV e impressão/PDF via
    navegador.
-7. **Segurança e produção** — revisão de permissões (quando os perfis
-   granulares forem criados), testes, homologação, publicação.
+7. **Segurança e produção** — ✅ login e perfis concluídos: login só via
+   Google (OAuth), restrito a e-mails convidados (tabela `allowed_users`
+   — o trigger `handle_new_user` rejeita qualquer e-mail não convidado,
+   `migration 0017`). Funções e permissões reais por módulo
+   (visualizar/editar), geridas em `/settings/users` — `admin_full_access`
+   continua com acesso total; novas funções (ex: "secretária") são criadas
+   e configuradas pelo próprio admin, sem precisar de código novo.
+   `roles`/`permissions`/`role_permissions`/`user_roles` deixaram de ter
+   RLS liberado pra qualquer autenticado — só o cliente service role
+   acessa. Falta: testes, homologação, e revisão geral antes de considerar
+   a fase 100% fechada (ainda não há suíte de testes automatizados no
+   projeto).
 
 ## Riscos e decisões em aberto
 
@@ -172,13 +191,15 @@ têm RLS habilitado sem exceção.
   mas registrar aqui para não gerar confusão numa máquina onde o CLI
   funcione e alguém tente rodar `init` de novo.
 
-## Status atual (pós Fase 6)
+## Status atual (pós Fase 7, login/perfis)
 
-Em produção (Vercel + Supabase reais, usuário único criado): Fases 1 a 6
-completas. Resta: feriado por cidade/UF do hospital (precisa de migration
-pra endereço estruturado em `hospitals`) e a Fase 7 (segurança e
-produção).
+Em produção (Vercel + Supabase reais): Fases 1 a 6 completas. Fase 7:
+login via Google + perfis de acesso concluído e validado em produção
+(e-mail `consultoria.paulaguimaraes@gmail.com` com a função de acesso
+total). Resta: feriado por cidade/UF do hospital (precisa de migration
+pra endereço estruturado em `hospitals`), e testes/homologação formais
+pra fechar a Fase 7 por completo.
 
-Próximo passo possível: Fase 7 (revisão de permissões, testes,
-homologação, publicação) — ou o item de feriado por hospital, se a
-prioridade for a Agenda.
+Próximo passo possível: convidar outras pessoas em `/settings/users` (ex:
+secretária) e configurar a função delas, testes/homologação, ou o item de
+feriado por hospital.
