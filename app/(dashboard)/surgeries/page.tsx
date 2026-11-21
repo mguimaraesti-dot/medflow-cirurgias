@@ -76,14 +76,16 @@ export default async function SurgeriesPage({
               <th className="px-4 py-3">Paciente</th>
               <th className="px-4 py-3">Hospital</th>
               <th className="px-4 py-3">Procedimento</th>
-              <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3">Solicitação</th>
+              <th className="px-4 py-3">Prevista</th>
+              <th className="px-4 py-3">Confirmada</th>
               <th className="px-4 py-3">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {surgeries.length === 0 ? (
               <EmptyRow
-                colSpan={6}
+                colSpan={8}
                 message={
                   q
                     ? "Nenhuma cirurgia encontrada para essa busca."
@@ -108,7 +110,13 @@ export default async function SurgeriesPage({
                     {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
+                    {formatDate(surgery.indication_date)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDate(surgery.expected_date)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDate(surgery.confirmed_date)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={STATUS_VARIANT[surgery.status] ?? "outline"}>

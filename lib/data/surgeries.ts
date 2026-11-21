@@ -22,6 +22,7 @@ export type SurgeryListItem = {
   stage_id: string;
   attendance_type: "particular" | "convenio";
   priority: "low" | "normal" | "high" | "urgent";
+  indication_date: string;
   expected_date: string | null;
   confirmed_date: string | null;
   status: string;
@@ -139,7 +140,7 @@ const AUTHORIZATION_STATUS_LABEL: Record<string, string> = {
 };
 
 const LIST_COLUMNS =
-  "id,code,stage_id,attendance_type,priority,expected_date,confirmed_date,status," +
+  "id,code,stage_id,attendance_type,priority,indication_date,expected_date,confirmed_date,status," +
   "patient:patients(id,full_name),hospital:hospitals(id,name)," +
   "surgery_procedures(id,is_primary,procedure:procedures(id,name))," +
   "insurance_provider:insurance_providers(id,name)," +
@@ -148,7 +149,7 @@ const LIST_COLUMNS =
 const DETAIL_COLUMNS =
   LIST_COLUMNS +
   ",patient_id,hospital_id,insurance_provider_id," +
-  "indication_date,confirmed_time,admin_notes,cancelled_reason,created_at";
+  "confirmed_time,admin_notes,cancelled_reason,created_at";
 
 export async function listWorkflowStages(supabase: SupabaseClient) {
   const { data, error } = await supabase
