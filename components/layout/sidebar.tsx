@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -60,7 +61,9 @@ export function Sidebar({
           collapsed ? "justify-center px-2" : "justify-between"
         )}
       >
-        <Logo collapsed={collapsed} />
+        <Link href="/dashboard" aria-label="Ir para o início">
+          <Logo collapsed={collapsed} />
+        </Link>
       </div>
 
       <SidebarBody

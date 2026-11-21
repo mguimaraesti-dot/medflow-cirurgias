@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
@@ -44,7 +45,9 @@ export function MobileNav({
         >
           <Menu className="h-5 w-5" />
         </button>
-        <Logo collapsed={false} />
+        <Link href="/dashboard" aria-label="Ir para o início">
+          <Logo collapsed={false} />
+        </Link>
         {/* Espaçador do mesmo tamanho do botão, pra manter a logo centralizada. */}
         <span className="h-9 w-9" aria-hidden="true" />
       </header>
@@ -53,7 +56,9 @@ export function MobileNav({
         <SheetContent side="left" className="flex w-72 max-w-[85vw] flex-col gap-0 p-0">
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
           <div className="flex items-center border-b border-border px-4 py-4">
-            <Logo collapsed={false} />
+            <Link href="/dashboard" aria-label="Ir para o início" onClick={() => setOpen(false)}>
+              <Logo collapsed={false} />
+            </Link>
           </div>
           <SidebarBody
             visibleItems={visibleItems}
