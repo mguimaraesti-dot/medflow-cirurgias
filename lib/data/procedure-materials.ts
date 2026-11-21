@@ -18,13 +18,13 @@ export type ProcedureDefaultMaterial = {
   preferred_supplier_id: string | null;
   notes: string | null;
   updated_at: string;
-  material: { id: string; name: string } | null;
+  material: { id: string; name: string; internal_code: string | null; tuss_code: string | null } | null;
   preferred_supplier: { id: string; company_name: string } | null;
 };
 
 const COLUMNS =
   "id,procedure_id,material_id,quantity,unit,preferred_supplier_id,notes,updated_at," +
-  "material:materials_catalog(id,name),preferred_supplier:suppliers(id,company_name)";
+  "material:materials_catalog(id,name,internal_code,tuss_code),preferred_supplier:suppliers(id,company_name)";
 
 export async function listDefaultMaterials(supabase: SupabaseClient, procedureId: string) {
   const { data, error } = await supabase

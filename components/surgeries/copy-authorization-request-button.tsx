@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 /**
  * Monta e copia pra área de transferência o texto pronto de solicitação de
  * autorização à central do convênio/hospital, já preenchido com os dados
- * da cirurgia (paciente, convênio, procedimento, código TUSS...). Campos
- * sem fonte no sistema (médico solicitante, materiais/OPME, justificativa
- * clínica) vêm como placeholder entre colchetes pra completar à mão.
+ * da cirurgia (paciente, convênio, procedimento, código TUSS, materiais do
+ * kit padrão...). Só a justificativa clínica da criticidade vem como
+ * placeholder entre colchetes, pra completar à mão.
  */
 export function CopyAuthorizationRequestButton({ surgeryId }: { surgeryId: string }) {
   const [pending, startTransition] = useTransition();

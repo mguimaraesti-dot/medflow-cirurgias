@@ -7,12 +7,17 @@ const CLASSIFICATION_BY_PRIORITY: Record<SurgeryAuthorizationRequestData["priori
   urgent: "Emergência",
 };
 
+/** Único médico do sistema — não existe campo de médico solicitante no
+ * cadastro da cirurgia, então o nome é fixo aqui. */
+const REQUESTING_DOCTOR = "Dr. Flávio Morita";
+
 /**
  * Monta o texto pronto pra copiar e enviar à central de autorizações do
- * convênio/hospital, com as informações que o sistema já tem preenchidas e
- * placeholders entre colchetes só onde não existe campo correspondente no
- * cadastro (médico solicitante, materiais/OPME e a justificativa clínica
- * da criticidade) — pra equipe completar à mão antes de enviar.
+ * convênio/hospital, com as informações que o sistema já tem preenchidas:
+ * paciente, convênio, procedimento(s) com código TUSS e os materiais/OPME
+ * do kit padrão de cada procedimento (tela de Procedimentos). Só a
+ * justificativa clínica da criticidade fica como placeholder entre
+ * colchetes, já que não existe um campo correspondente no cadastro.
  */
 export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestData): string {
   const isParticular = data.attendance_type === "particular";
@@ -36,9 +41,14 @@ export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestD
           .join("\n\n")
       : "- Procedimento: [Descrição do procedimento]\n- Código TUSS: [Código TUSS]\n- Quantidade: [Quantidade]";
 
-  return `Prezados, bom dia!
+  const materialRows =
+    data.materials.length > 0
+      ? data.materials
+          .map((m) => `| ${m.name} | ${m.code ?? "—"} | ${m.quantity} |`)
+          .join("\n")
+      : "| [Descrição do material] | [Código] | [Qtd.] |";
 
-Solicitamos a análise e autorização para realização do procedimento cirúrgico abaixo:
+  return `Solicitamos a análise e autorização para realização do procedimento cirúrgico abaixo:
 
 1. IDENTIFICAÇÃO DO PACIENTE
 
@@ -46,7 +56,7 @@ Solicitamos a análise e autorização para realização do procedimento cirúrg
 - Convênio: ${convenioLine}
 - Carteirinha: ${carteirinhaLine}
 - Hospital previsto: ${data.hospital_name ?? "[Nome do hospital]"}
-- Médico solicitante: [Nome do médico]
+- Médico solicitante: ${REQUESTING_DOCTOR}
 
 2. PROCEDIMENTO CIRÚRGICO
 
@@ -56,7 +66,7 @@ ${procedureBlocks}
 
 | Material | Código | Quantidade |
 |---|---|---|
-| [Descrição do material] | [Código] | [Qtd.] |
+${materialRows}
 
 4. CRITICIDADE DO PACIENTE
 

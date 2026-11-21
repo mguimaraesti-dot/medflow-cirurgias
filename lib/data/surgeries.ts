@@ -5,6 +5,7 @@ import {
   listAuthorizationHistoryForSurgery,
   importProcedureDefaultMaterials,
 } from "@/lib/data/operations";
+import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
 
 export type WorkflowStage = {
   id: string;
@@ -610,13 +611,16 @@ export type SurgeryAuthorizationRequestData = {
   attendance_type: "particular" | "convenio";
   priority: SurgeryListItem["priority"];
   procedures: { name: string; tuss_code: string | null; is_primary: boolean }[];
+  materials: { name: string; code: string | null; quantity: number }[];
 };
 
 /**
  * Dados pra montar o texto de solicitação de autorização à central do
  * convênio/hospital (botão "Copiar solicitação" no painel rápido do
  * Kanban) — uma seleção enxuta e específica pra isso, incluindo campos
- * (carteirinha, código TUSS) que a listagem/Kanban normal não carrega.
+ * (carteirinha, código TUSS) que a listagem/Kanban normal não carrega, e os
+ * materiais/OPME do kit padrão de cada procedimento (cadastrados na tela de
+ * Procedimentos — não são mais escolhidos por cirurgia individualmente).
  */
 export async function getSurgeryAuthorizationRequestData(
   supabase: SupabaseClient,
@@ -629,7 +633,7 @@ export async function getSurgeryAuthorizationRequestData(
         "patient:patients(full_name,insurance_card_number)," +
         "hospital:hospitals(name)," +
         "insurance_provider:insurance_providers(name)," +
-        "surgery_procedures(is_primary,procedure:procedures(name,tuss_code))"
+        "surgery_procedures(is_primary,procedure_id,procedure:procedures(name,tuss_code))"
     )
     .eq("id", surgeryId)
     .single();
@@ -644,6 +648,7 @@ export async function getSurgeryAuthorizationRequestData(
     insurance_provider: { name: string } | null;
     surgery_procedures: {
       is_primary: boolean;
+      procedure_id: string;
       procedure: { name: string; tuss_code: string | null } | null;
     }[];
   };
@@ -657,6 +662,16 @@ export async function getSurgeryAuthorizationRequestData(
       is_primary: link.is_primary,
     }));
 
+  const procedureIds = (row.surgery_procedures ?? []).map((link) => link.procedure_id);
+  const defaultMaterials = await listDefaultMaterialsForProcedures(supabase, procedureIds);
+  const materials = defaultMaterials
+    .filter((item) => item.material)
+    .map((item) => ({
+      name: item.material!.name,
+      code: item.material!.internal_code ?? item.material!.tuss_code,
+      quantity: item.quantity,
+    }));
+
   return {
     code: row.code,
     patient_name: row.patient?.full_name ?? "—",
@@ -666,6 +681,7 @@ export async function getSurgeryAuthorizationRequestData(
     attendance_type: row.attendance_type,
     priority: row.priority,
     procedures,
+    materials,
   };
 }
 
