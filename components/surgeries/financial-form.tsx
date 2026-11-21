@@ -9,9 +9,9 @@ import {
 import type { ParticularFinancialRecord } from "@/lib/data/surgeries";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CurrencyInput } from "@/components/shared/currency-input";
 
 const initialState: FinancialFormState = {};
 
@@ -31,24 +31,18 @@ export function FinancialForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="expected_value">Valor previsto (R$)</Label>
-          <Input
+          <CurrencyInput
             id="expected_value"
             name="expected_value"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={record?.expected_value ?? ""}
+            defaultValue={record?.expected_value ?? null}
           />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="agreed_value">Valor acordado (R$)</Label>
-          <Input
+          <CurrencyInput
             id="agreed_value"
             name="agreed_value"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={record?.agreed_value ?? ""}
+            defaultValue={record?.agreed_value ?? null}
           />
         </div>
       </div>
