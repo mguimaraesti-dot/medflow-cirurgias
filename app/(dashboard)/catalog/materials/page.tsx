@@ -6,6 +6,10 @@ import { ActiveBadge } from "@/components/shared/active-badge";
 import { MaterialFormDialog } from "@/components/materials/material-form-dialog";
 import { MaterialRowActions } from "@/components/materials/material-row-actions";
 
+// A busca de código TUSS (Tabela 19) na base da ANS pode demorar mais que
+// o padrão de 10s das Server Actions na Vercel.
+export const maxDuration = 30;
+
 export default async function MaterialsCatalogPage({
   searchParams,
 }: {
@@ -40,6 +44,7 @@ export default async function MaterialsCatalogPage({
             <tr>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Código</th>
+              <th className="px-4 py-3">TUSS</th>
               <th className="px-4 py-3">Categoria</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3" />
@@ -48,7 +53,7 @@ export default async function MaterialsCatalogPage({
           <tbody className="divide-y divide-border">
             {materials.length === 0 ? (
               <EmptyRow
-                colSpan={5}
+                colSpan={6}
                 message={
                   q
                     ? "Nenhum material encontrado para essa busca."
@@ -65,6 +70,9 @@ export default async function MaterialsCatalogPage({
                       <td className="px-4 py-3 font-medium text-foreground">{material.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {material.internal_code || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {material.tuss_code || "—"}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {material.category || "—"}

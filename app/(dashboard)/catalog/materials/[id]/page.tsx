@@ -43,7 +43,15 @@ export default async function MaterialDetailPage({
           <p className="mt-1 text-sm text-muted-foreground">
             {material.internal_code ? `Código ${material.internal_code} · ` : ""}
             {material.category || "Sem categoria"}
+            {material.tuss_code ? ` · TUSS ${material.tuss_code}` : ""}
           </p>
+          {material.manufacturer || material.anvisa_registration ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {material.manufacturer ? `Fabricante: ${material.manufacturer}` : ""}
+              {material.manufacturer && material.anvisa_registration ? " · " : ""}
+              {material.anvisa_registration ? `Registro ANVISA: ${material.anvisa_registration}` : ""}
+            </p>
+          ) : null}
         </div>
         <ActiveBadge active={material.active} />
       </div>

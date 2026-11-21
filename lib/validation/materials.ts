@@ -12,6 +12,10 @@ export const materialSchema = z.object({
   description: optionalText,
   unit: optionalText,
   notes: optionalText,
+  tuss_code: optionalText,
+  manufacturer: optionalText,
+  model: optionalText,
+  anvisa_registration: optionalText,
   active: z
     .union([z.literal("on"), z.literal("true"), z.literal(true), z.undefined(), z.null()])
     .transform((v) => v === "on" || v === "true" || v === true),

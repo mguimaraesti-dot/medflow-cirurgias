@@ -13,6 +13,7 @@ import {
 } from "@/lib/data/materials";
 import { materialSchema, materialSupplierSchema } from "@/lib/validation/materials";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
+import { searchTussMaterials, type TussResult } from "@/lib/tuss";
 
 export type MaterialFormState = {
   error?: string;
@@ -27,8 +28,25 @@ function parseForm(formData: FormData) {
     description: formData.get("description"),
     unit: formData.get("unit"),
     notes: formData.get("notes"),
+    tuss_code: formData.get("tuss_code"),
+    manufacturer: formData.get("manufacturer"),
+    model: formData.get("model"),
+    anvisa_registration: formData.get("anvisa_registration"),
     active: formData.get("active"),
   });
+}
+
+export async function searchTussMaterialsAction(
+  query: string
+): Promise<{ results?: TussResult[]; error?: string }> {
+  try {
+    const results = await searchTussMaterials(query);
+    return { results };
+  } catch {
+    return {
+      error: "Não foi possível consultar a tabela TUSS agora. Você pode informar os dados manualmente.",
+    };
+  }
 }
 
 function toUserMessage(e: unknown) {

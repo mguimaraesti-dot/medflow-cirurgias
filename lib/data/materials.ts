@@ -12,7 +12,15 @@ export type Material = {
   notes: string | null;
   active: boolean;
   created_at: string;
+  /** Código TUSS (Tabela 19 — materiais/OPME), quando encontrado na busca. */
+  tuss_code: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  anvisa_registration: string | null;
 };
+
+const COLUMNS =
+  "id,internal_code,name,category,description,unit,notes,active,created_at,tuss_code,manufacturer,model,anvisa_registration" as const;
 
 export type MaterialSupplierRow = {
   id: string;
@@ -25,7 +33,7 @@ export type MaterialSupplierRow = {
 export async function listMaterials(supabase: SupabaseClient, search?: string) {
   let query = supabase
     .from("materials_catalog")
-    .select("id,internal_code,name,category,description,unit,notes,active,created_at")
+    .select(COLUMNS)
     .order("name", { ascending: true });
 
   if (search) {
@@ -50,7 +58,7 @@ export async function listActiveMaterialsForSelect(supabase: SupabaseClient) {
 export async function getMaterial(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase
     .from("materials_catalog")
-    .select("id,internal_code,name,category,description,unit,notes,active,created_at")
+    .select(COLUMNS)
     .eq("id", id)
     .single();
   if (error) throw error;

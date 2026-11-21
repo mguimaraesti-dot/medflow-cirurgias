@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MATERIAL_UNITS } from "@/lib/constants/units";
+import { TussMaterialField } from "@/components/materials/tuss-material-field";
 
 const initialState: MaterialFormState = {};
 
@@ -41,6 +42,7 @@ export function MaterialFormDialog({
   const action = material ? updateMaterialAction.bind(null, material.id) : createMaterialAction;
   const [state, formAction, pending] = useActionState(action, initialState);
   const handledCreatedId = useRef<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
 
@@ -75,7 +77,7 @@ export function MaterialFormDialog({
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Nome *</Label>
-            <Input id="name" name="name" defaultValue={material?.name} required />
+            <Input id="name" name="name" ref={nameInputRef} defaultValue={material?.name} required />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -93,6 +95,15 @@ export function MaterialFormDialog({
               <Input id="category" name="category" defaultValue={material?.category ?? ""} />
             </div>
           </div>
+
+          <TussMaterialField
+            defaultCode={material?.tuss_code}
+            defaultQuery={material?.name}
+            defaultManufacturer={material?.manufacturer}
+            defaultModel={material?.model}
+            defaultAnvisaRegistration={material?.anvisa_registration}
+            nameInputRef={nameInputRef}
+          />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="unit">Unidade de medida</Label>
