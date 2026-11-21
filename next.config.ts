@@ -15,6 +15,13 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  experimental: {
+    // Padrão do Next é 1 MB; o anexo de documentos (Solicitação hospitalar)
+    // aceita arquivos até 15 MB, então o limite precisa acompanhar.
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
+  },
 };
 
 export default nextConfig;
