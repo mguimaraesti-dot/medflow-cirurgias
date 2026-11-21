@@ -62,12 +62,6 @@ export default async function DashboardPage({
       href: "/kanban?pending=authorization",
       dotClassName: "bg-amber-500",
     },
-    {
-      label: "Pendência de materiais",
-      value: mapStats.materialsPending,
-      href: "/kanban?pending=materials",
-      dotClassName: "bg-amber-500",
-    },
     { label: "Tarefas abertas", value: openTasks, href: "/pending-tasks", dotClassName: "bg-muted-foreground" },
   ];
 

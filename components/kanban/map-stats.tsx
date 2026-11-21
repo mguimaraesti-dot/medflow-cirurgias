@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, Clock, PackageX, CalendarCheck2, AlertTriangle, CircleCheck } from "lucide-react";
+import { Activity, Clock, CalendarCheck2, AlertTriangle, CircleCheck } from "lucide-react";
 
 import type { MapStats } from "@/lib/data/surgeries";
 import { cn } from "@/lib/utils";
@@ -29,13 +29,6 @@ const CARDS: {
     href: "?status=active&pending=authorization",
   },
   {
-    key: "materialsPending",
-    label: "Pendências de materiais",
-    icon: PackageX,
-    iconClass: "bg-pink-100 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400",
-    href: "?status=active&pending=materials",
-  },
-  {
     key: "scheduled",
     label: "Agendadas",
     icon: CalendarCheck2,
@@ -60,7 +53,7 @@ const CARDS: {
 
 export function MapStatsRow({ stats }: { stats: MapStats }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
       {CARDS.map(({ key, label, icon: Icon, iconClass, href }) => {
         const content = (
           <>

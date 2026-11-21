@@ -74,7 +74,7 @@ export type SurgeryMapFilters = {
   /** só cirurgias ativas com data prevista vencida e ainda não confirmadas */
   overdueOnly?: boolean;
   /** só cirurgias com esse requisito pendente (não satisfeito, não dispensado) */
-  pendingRequirement?: "authorization" | "materials" | "or_reservation" | "preoperative";
+  pendingRequirement?: "authorization" | "or_reservation" | "preoperative";
   /** só cirurgias com data confirmada (hoje em diante) */
   scheduledOnly?: boolean;
 };
@@ -82,7 +82,6 @@ export type SurgeryMapFilters = {
 export type MapStats = {
   inProgress: number;
   awaitingAuthorization: number;
-  materialsPending: number;
   scheduled: number;
   overdue: number;
   completed: number;
@@ -407,27 +406,22 @@ export async function getMapStats(supabase: SupabaseClient): Promise<MapStats> {
   ).length;
 
   let awaitingAuthorization = 0;
-  let materialsPending = 0;
   const activeIds = active.map((s) => s.id);
   if (activeIds.length > 0) {
     const { data: reqRows, error: reqError } = await supabase
       .from("surgery_requirements")
       .select("requirement_key,surgery_id")
       .in("surgery_id", activeIds)
-      .in("requirement_key", ["authorization", "materials"])
+      .eq("requirement_key", "authorization")
       .eq("is_satisfied", false)
       .eq("waived", false);
     if (reqError) throw reqError;
-    awaitingAuthorization = (reqRows ?? []).filter(
-      (r) => r.requirement_key === "authorization"
-    ).length;
-    materialsPending = (reqRows ?? []).filter((r) => r.requirement_key === "materials").length;
+    awaitingAuthorization = (reqRows ?? []).length;
   }
 
   return {
     inProgress: active.length,
     awaitingAuthorization,
-    materialsPending,
     scheduled,
     overdue,
     completed: completed ?? 0,
