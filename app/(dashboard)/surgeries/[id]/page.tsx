@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, User, Building2, Star } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -118,17 +118,30 @@ export default async function SurgeryDetailPage({
             </Badge>
             <Badge variant="outline">{PRIORITY_LABEL[surgery.priority]}</Badge>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {surgery.patient?.full_name} · {surgery.hospital?.name}
+          <p className="mt-2 flex items-center gap-1.5 text-base font-medium text-foreground">
+            <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+            {surgery.patient?.full_name ?? "—"}
           </p>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Building2 className="h-3.5 w-3.5 shrink-0" />
+            {surgery.hospital?.name ?? "—"}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {surgery.procedures.map((p) => (
-              <Badge key={p.id} variant={p.is_primary ? "secondary" : "outline"}>
-                {p.is_primary ? "★ " : ""}
+              <Badge
+                key={p.id}
+                variant="outline"
+                className={
+                  p.is_primary
+                    ? "gap-1 border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-400"
+                    : "gap-1"
+                }
+              >
+                {p.is_primary ? <Star className="h-3 w-3 fill-current" /> : null}
                 {p.name}
               </Badge>
             ))}
-          </p>
+          </div>
         </div>
         <Link href={`/surgeries/${surgery.id}/edit`}>
           <Button variant="outline" size="sm">
