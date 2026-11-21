@@ -50,7 +50,7 @@ export function HospitalRequestCard({
   return (
     <RequirementCardShell
       icon={Paperclip}
-      title="Solicitação hospitalar"
+      title="Documentação"
       tone={tone}
       statusLabel={statusLabel}
       summary={
