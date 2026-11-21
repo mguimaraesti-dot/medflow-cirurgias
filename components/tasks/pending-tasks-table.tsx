@@ -10,10 +10,10 @@ import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { TaskStatusSelect } from "@/components/tasks/task-status-select";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
-const PRIORITY_VARIANT: Record<string, "outline" | "secondary" | "destructive"> = {
-  low: "outline",
-  normal: "outline",
-  high: "secondary",
+const PRIORITY_VARIANT: Record<string, "secondary" | "info" | "warning" | "destructive"> = {
+  low: "secondary",
+  normal: "info",
+  high: "warning",
   urgent: "destructive",
 };
 

@@ -9,11 +9,11 @@ import { STATUS_LABEL } from "@/components/tasks/task-filters";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const STATUS_VARIANT: Record<Task["status"], "outline" | "secondary" | "default" | "destructive"> = {
-  open: "outline",
-  in_progress: "secondary",
+const STATUS_VARIANT: Record<Task["status"], "info" | "warning" | "secondary" | "success" | "destructive"> = {
+  open: "info",
+  in_progress: "warning",
   waiting_third_party: "secondary",
-  done: "default",
+  done: "success",
   cancelled: "destructive",
 };
 
@@ -28,7 +28,7 @@ export function TaskStatusSelect({ task }: { task: Task }) {
         startTransition(() => setTaskStatusAction(task.id, status as Task["status"]))
       }
     >
-      <SelectTrigger className="h-8 w-[170px] text-xs">
+      <SelectTrigger className="h-8 w-[170px] justify-start gap-1.5 border-transparent bg-transparent px-1 text-xs shadow-none hover:border-border">
         <SelectValue>
           <Badge variant={STATUS_VARIANT[task.status]}>{STATUS_LABEL[task.status]}</Badge>
         </SelectValue>

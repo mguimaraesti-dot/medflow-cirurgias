@@ -52,7 +52,7 @@ export function TaskFormDialog({
           {task ? "Editar" : "Nova tarefa"}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
           <DialogDescription>
@@ -60,13 +60,13 @@ export function TaskFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form action={formAction} className="flex flex-col gap-4">
+        <form action={formAction} className="flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="title">Título *</Label>
             <Input id="title" name="title" defaultValue={task?.title} required />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="category">Categoria *</Label>
               <Select name="category" defaultValue={task?.category} required>
@@ -97,9 +97,6 @@ export function TaskFormDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="status">Status</Label>
               <Select name="status" defaultValue={task?.status ?? "open"}>
@@ -115,47 +112,49 @@ export function TaskFormDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="due_date">Prazo</Label>
-              <Input id="due_date" name="due_date" type="date" defaultValue={task?.due_date ?? ""} />
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="surgery_id">Cirurgia relacionada</Label>
+                <Select name="surgery_id" defaultValue={task?.surgery_id ?? undefined}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhuma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {surgeries.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.code}
+                        {s.patient ? ` — ${s.patient.full_name}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="assigned_to">Atribuir a</Label>
+                <Select name="assigned_to" defaultValue={task?.assigned_to ?? undefined}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ninguém" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="due_date">Prazo</Label>
+                <Input id="due_date" name="due_date" type="date" defaultValue={task?.due_date ?? ""} />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="surgery_id">Cirurgia relacionada (opcional)</Label>
-              <Select name="surgery_id" defaultValue={task?.surgery_id ?? undefined}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Nenhuma" />
-                </SelectTrigger>
-                <SelectContent>
-                  {surgeries.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.code}
-                      {s.patient ? ` — ${s.patient.full_name}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="assigned_to">Atribuir a (opcional)</Label>
-              <Select name="assigned_to" defaultValue={task?.assigned_to ?? undefined}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Ninguém" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 border-t border-border pt-4">
             <Label htmlFor="description">Descrição</Label>
             <Textarea id="description" name="description" defaultValue={task?.description ?? ""} />
           </div>
