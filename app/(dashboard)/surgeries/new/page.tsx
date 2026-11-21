@@ -28,10 +28,6 @@ export default async function NewSurgeryPage() {
       </Link>
 
       <h1 className="text-lg font-medium text-foreground">Nova cirurgia</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        A cirurgia entra automaticamente na etapa &quot;Nova indicação&quot;. O código
-        (CIR-AAAA-NNNN) é gerado pelo sistema.
-      </p>
 
       <div className="mt-6 rounded-xl border border-border bg-card p-6">
         {procedures.length === 0 ? (
