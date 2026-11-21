@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 
 import { ThemeScript } from "@/components/theme/theme-script";
@@ -14,6 +14,18 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Medflow Cirurgias",
   description: "Gestão cirúrgica, operacional e financeira — Dr. Flávio Morita",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Permite pinch-to-zoom (não trava em 1x) — importante pra
+  // acessibilidade, só fixamos a largura inicial.
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0f1e" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

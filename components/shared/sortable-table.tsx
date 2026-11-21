@@ -83,58 +83,108 @@ export function SortableTable<T>({
     });
   }
 
+  // Abaixo de `md`, uma tabela larga não cabe na tela sem rolagem
+  // horizontal incômoda — em vez disso, cada linha vira um card
+  // empilhado: a 1ª coluna com accessor/label vira o "título" do card,
+  // colunas sem label (ex.: uma coluna de ações, sem cabeçalho) viram
+  // botões no canto, e o resto aparece como uma lista de rótulo/valor.
+  // Funciona pra qualquer tabela que já use esse componente, sem precisar
+  // mexer em cada tela que o consome.
+  const [titleColumn, ...otherColumns] = columns;
+  const fieldColumns = otherColumns.filter((c) => c.label);
+  const actionColumns = otherColumns.filter((c) => !c.label);
+
   return (
-    <table className="w-full text-sm">
-      <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        <tr>
-          {columns.map((column) => {
-            const sortable = !!column.accessor;
-            const active = sort?.key === column.key;
-            return (
-              <th key={column.key} className={cn("px-4 py-3", column.className)}>
-                {sortable ? (
-                  <button
-                    type="button"
-                    onClick={() => handleSort(column.key)}
-                    className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-foreground"
-                  >
-                    {column.label}
-                    {active ? (
-                      sort!.direction === "asc" ? (
-                        <ChevronUp className="h-3.5 w-3.5" />
+    <>
+      <table className="hidden w-full text-sm md:table">
+        <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <tr>
+            {columns.map((column) => {
+              const sortable = !!column.accessor;
+              const active = sort?.key === column.key;
+              return (
+                <th key={column.key} className={cn("px-4 py-3", column.className)}>
+                  {sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSort(column.key)}
+                      className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-foreground"
+                    >
+                      {column.label}
+                      {active ? (
+                        sort!.direction === "asc" ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )
                       ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      )
-                    ) : (
-                      <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
-                    )}
-                  </button>
-                ) : (
-                  column.label
-                )}
-              </th>
-            );
-          })}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-border">
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+                      )}
+                    </button>
+                  ) : (
+                    column.label
+                  )}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {sortedRows.length === 0 ? (
+            <EmptyRow colSpan={columns.length} message={emptyMessage} />
+          ) : (
+            sortedRows.map((row) => {
+              const tr = (
+                <tr key={rowKey(row)} className={cn("hover:bg-muted", rowClassName?.(row))}>
+                  {columns.map((column) => (
+                    <td key={column.key} className={cn("px-4 py-3", column.className)}>
+                      {column.cell(row)}
+                    </td>
+                  ))}
+                </tr>
+              );
+              return wrapRow ? wrapRow(row, tr) : tr;
+            })
+          )}
+        </tbody>
+      </table>
+
+      <div className="divide-y divide-border md:hidden">
         {sortedRows.length === 0 ? (
-          <EmptyRow colSpan={columns.length} message={emptyMessage} />
+          <p className="px-4 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           sortedRows.map((row) => {
-            const tr = (
-              <tr key={rowKey(row)} className={cn("hover:bg-muted", rowClassName?.(row))}>
-                {columns.map((column) => (
-                  <td key={column.key} className={cn("px-4 py-3", column.className)}>
-                    {column.cell(row)}
-                  </td>
-                ))}
-              </tr>
+            const card = (
+              <div
+                key={rowKey(row)}
+                className={cn("flex flex-col gap-2 p-4 text-sm", rowClassName?.(row))}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">{titleColumn?.cell(row)}</div>
+                  {actionColumns.length > 0 ? (
+                    <div className="flex shrink-0 items-center gap-1">
+                      {actionColumns.map((column) => (
+                        <span key={column.key}>{column.cell(row)}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                {fieldColumns.length > 0 ? (
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    {fieldColumns.map((column) => (
+                      <div key={column.key} className="min-w-0">
+                        <dt className="text-muted-foreground">{column.label}</dt>
+                        <dd className="mt-0.5 text-foreground">{column.cell(row)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+              </div>
             );
-            return wrapRow ? wrapRow(row, tr) : tr;
+            return wrapRow ? wrapRow(row, card) : card;
           })
         )}
-      </tbody>
-    </table>
+      </div>
+    </>
   );
 }
