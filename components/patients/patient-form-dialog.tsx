@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 
 import {
   createPatientAction,
@@ -28,9 +28,11 @@ const initialState: PatientFormState = {};
 export function PatientFormDialog({
   patient,
   insuranceProviders,
+  trigger,
 }: {
   patient?: Patient;
   insuranceProviders: { id: string; name: string }[];
+  trigger?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [attendanceType, setAttendanceType] = useState<"particular" | "convenio">(
@@ -49,9 +51,11 @@ export function PatientFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={patient ? "outline" : "default"} size={patient ? "sm" : "default"}>
-          {patient ? "Editar" : "Novo paciente"}
-        </Button>
+        {trigger ?? (
+          <Button variant={patient ? "outline" : "default"} size={patient ? "sm" : "default"}>
+            {patient ? "Editar" : "Novo paciente"}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

@@ -65,22 +65,27 @@ export default async function PatientsPage({
               />
             ) : (
               patients.map((patient) => (
-                <tr key={patient.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{patient.full_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{patient.cpf || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {patient.phone || patient.whatsapp || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {patient.insurance_provider?.name || "Particular"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDate(patient.birth_date)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end">
-                      <PatientFormDialog patient={patient} insuranceProviders={insuranceProviders} />
-                    </div>
-                  </td>
-                </tr>
+                <PatientFormDialog
+                  key={patient.id}
+                  patient={patient}
+                  insuranceProviders={insuranceProviders}
+                  trigger={
+                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
+                      <td className="px-4 py-3 font-medium text-foreground">{patient.full_name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{patient.cpf || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {patient.phone || patient.whatsapp || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {patient.insurance_provider?.name || "Particular"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(patient.birth_date)}
+                      </td>
+                      <td className="px-4 py-3" />
+                    </tr>
+                  }
+                />
               ))
             )}
           </tbody>
