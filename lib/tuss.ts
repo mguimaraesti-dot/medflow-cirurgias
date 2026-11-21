@@ -72,8 +72,11 @@ async function fetchTussPage(table: TussTable, term: string): Promise<TussResult
     return cached.results;
   }
 
-  // A base da ANS pode demorar bastante (observado ~8-15s em termos mais
-  // genéricos), então damos uma margem generosa antes de desistir. Usa um
+  // A base da ANS pode demorar (observado de ~1s a ~10s dependendo do
+  // termo) e, raramente, travar bem mais — 12s já é uma margem generosa
+  // sem deixar 1 termo lento travar a busca inteira por 20s. Como a busca
+  // dispara vários termos em paralelo (frase completa + cada palavra),
+  // se só esse 1 der timeout os outros ainda garantem resultado. Usa um
   // AbortController próprio (em vez de AbortSignal.timeout) pra poder
   // cancelar o timer assim que a resposta chegar — com buscas em paralelo
   // (busca ampla + variações de acento), um timer que não é limpo pode
@@ -82,7 +85,7 @@ async function fetchTussPage(table: TussTable, term: string): Promise<TussResult
   // processo do servidor).
   const url = `${TUSS_BASE_URL}/${table}?q=${encodeURIComponent(trimmed)}&page=1`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
   let response: Response;
   try {
     response = await fetch(url, {
