@@ -60,8 +60,10 @@ function cleanExtra(value: string | undefined): string | undefined {
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
 const cache = new Map<string, { expires: number; results: TussResult[] }>();
 
-async function searchTuss(table: TussTable, query: string): Promise<TussResult[]> {
-  const trimmed = query.trim();
+/** Busca 1 termo na API da ANS (com cache) — bloco de montagem da busca
+ * "ampla" abaixo, que dispara isso várias vezes em paralelo. */
+async function fetchTussPage(table: TussTable, term: string): Promise<TussResult[]> {
+  const trimmed = term.trim();
   if (trimmed.length < 3) return [];
 
   const cacheKey = `${table}:${trimmed.toLowerCase()}`;
@@ -95,11 +97,96 @@ async function searchTuss(table: TussTable, query: string): Promise<TussResult[]
       model: cleanExtra(item.extras?.modelo),
       anvisaRegistration: cleanExtra(item.extras?.registro_anvisa),
       riskClass: cleanExtra(item.extras?.classe_risco),
-    }))
-    .slice(0, 20);
+    }));
 
   cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, results });
   return results;
+}
+
+const STOPWORDS = new Set([
+  "de", "da", "do", "das", "dos", "e", "em", "no", "na", "nos", "nas",
+  "para", "com", "sem", "a", "o", "as", "os", "por", "ao", "aos", "um", "uma",
+]);
+
+/** Remove acentos e normaliza caixa, pra comparar "próteses" com "proteses". */
+function normalize(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+/** As palavras "de verdade" de uma busca (ignora preposições curtas e
+ * palavras com menos de 3 letras), sem repetição, no máximo 3 — pra não
+ * disparar buscas demais em paralelo na base da ANS. */
+function significantTokens(query: string): string[] {
+  const seen = new Set<string>();
+  const tokens: string[] = [];
+  for (const word of query.split(/[^\p{L}\p{N}]+/u)) {
+    if (word.length < 3) continue;
+    const key = normalize(word);
+    if (STOPWORDS.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    tokens.push(word);
+    if (tokens.length >= 3) break;
+  }
+  return tokens;
+}
+
+/**
+ * Busca "ampla" na base da ANS: além da frase completa digitada, busca
+ * também cada palavra significativa separadamente e junta tudo. A base da
+ * ANS não lida bem com buscas de várias palavras — "fio guia roadrunner"
+ * pode não achar nada mesmo quando "fio guia" ou "roadrunner" sozinhos
+ * acham — e com milhares de itens na tabela, a ordem que a ANS devolve nem
+ * sempre traz o mais provável primeiro. Por isso os resultados juntados
+ * são reordenados por relevância (quantas palavras da busca aparecem no
+ * nome do item, frase exata primeiro) antes de voltar pra tela.
+ */
+async function searchTuss(table: TussTable, query: string): Promise<TussResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return [];
+
+  const tokens = significantTokens(trimmed);
+  const searchTerms = Array.from(new Set([trimmed, ...tokens]));
+
+  const settled = await Promise.allSettled(searchTerms.map((term) => fetchTussPage(table, term)));
+  const pages = settled
+    .filter((s): s is PromiseFulfilledResult<TussResult[]> => s.status === "fulfilled")
+    .map((s) => s.value);
+
+  if (pages.length === 0) {
+    const firstRejected = settled.find((s): s is PromiseRejectedResult => s.status === "rejected");
+    if (firstRejected) throw firstRejected.reason;
+    return [];
+  }
+
+  const byCode = new Map<string, TussResult>();
+  for (const page of pages) {
+    for (const item of page) {
+      if (!byCode.has(item.code)) byCode.set(item.code, item);
+    }
+  }
+
+  const normalizedQuery = normalize(trimmed);
+  const normalizedTokens = tokens.map(normalize);
+
+  function relevance(item: TussResult): number {
+    const normalizedName = normalize(item.name);
+    let score = 0;
+    if (normalizedName.includes(normalizedQuery)) score += 1000;
+    for (const token of normalizedTokens) {
+      if (normalizedName.includes(token)) score += 10;
+    }
+    if (item.active) score += 2;
+    return score;
+  }
+
+  return Array.from(byCode.values())
+    .map((item) => ({ item, score: relevance(item) }))
+    .sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name, "pt-BR"))
+    .slice(0, 30)
+    .map(({ item }) => item);
 }
 
 export function searchTussProcedures(query: string): Promise<TussResult[]> {
