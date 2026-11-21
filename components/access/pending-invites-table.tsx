@@ -1,3 +1,5 @@
+"use client";
+
 import { DeleteRowButton } from "@/components/shared/delete-row-button";
 import { cancelInviteAction } from "@/app/(dashboard)/settings/users/actions";
 import type { AllowedUserInvite } from "@/lib/data/access";
