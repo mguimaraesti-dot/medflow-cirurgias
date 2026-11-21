@@ -15,6 +15,10 @@ export function KanbanColumn({
   openTasksBySurgery,
   index,
   total,
+  /** No modo "uma etapa por vez" do mobile (ver kanban-board.tsx), a
+   * coluna é a única coisa na tela — ocupa a largura toda e ganha mais
+   * altura, em vez de encolher pra caber ao lado de outras 7 colunas. */
+  mobileFull = false,
 }: {
   stage: WorkflowStage;
   stages: WorkflowStage[];
@@ -22,13 +26,17 @@ export function KanbanColumn({
   openTasksBySurgery: Record<string, number>;
   index: number;
   total: number;
+  mobileFull?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
   const accent = getStageColor(index, total);
 
   return (
     <div
-      className="flex max-h-[calc(100vh-280px)] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+      className={cn(
+        "flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm",
+        mobileFull ? "max-h-[calc(100vh-340px)] w-full" : "max-h-[calc(100vh-280px)] min-w-0 flex-1"
+      )}
       style={{ borderTopColor: accent, borderTopWidth: 3 }}
     >
       <div
