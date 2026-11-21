@@ -514,6 +514,25 @@ function toLocalISODate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Histórico de cirurgias de um paciente — usado no cadastro do paciente
+ * (/surgeries/patients/[id]). Traz todas, incluindo canceladas: é
+ * histórico, não a visão de "cirurgias em andamento". Mais recente
+ * primeiro (por criação, já que nem toda cirurgia tem confirmed_date). */
+export async function listSurgeriesByPatient(
+  supabase: SupabaseClient,
+  patientId: string
+): Promise<ScheduleSurgeryItem[]> {
+  const { data, error } = await supabase
+    .from("surgeries")
+    .select(SCHEDULE_COLUMNS)
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as unknown as (ScheduleSurgeryItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as ScheduleSurgeryItem[];
+}
+
 export async function listSurgeriesForSelect(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("surgeries")

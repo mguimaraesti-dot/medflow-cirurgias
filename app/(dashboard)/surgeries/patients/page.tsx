@@ -1,6 +1,8 @@
+import Link from "next/link";
+
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { listPatients } from "@/lib/data/patients";
+import { listPatients, calculateAge } from "@/lib/data/patients";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -49,7 +51,7 @@ export default async function PatientsPage({
           <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">CPF</th>
+              <th className="px-4 py-3">Idade</th>
               <th className="px-4 py-3">Telefone</th>
               <th className="px-4 py-3">Operadora</th>
               <th className="px-4 py-3">Nascimento</th>
@@ -67,31 +69,34 @@ export default async function PatientsPage({
                 }
               />
             ) : (
-              patients.map((patient) => (
-                <PatientFormDialog
-                  key={patient.id}
-                  patient={patient}
-                  insuranceProviders={insuranceProviders}
-                  trigger={
-                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
-                      <td className="px-4 py-3 font-medium text-foreground">{patient.full_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{patient.cpf || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {patient.phone || patient.whatsapp || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {patient.insurance_provider?.name || "Particular"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatDate(patient.birth_date)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <PatientRowActions patient={patient} />
-                      </td>
-                    </tr>
-                  }
-                />
-              ))
+              patients.map((patient) => {
+                const age = calculateAge(patient.birth_date);
+                return (
+                  <tr key={patient.id} className="hover:bg-muted">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/surgeries/patients/${patient.id}`}
+                        className="font-medium text-foreground hover:underline"
+                      >
+                        {patient.full_name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {age !== null ? `${age} anos` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {patient.phone || patient.whatsapp || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {patient.insurance_provider?.name || "Particular"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDate(patient.birth_date)}</td>
+                    <td className="px-4 py-3">
+                      <PatientRowActions patient={patient} />
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

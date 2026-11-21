@@ -19,6 +19,21 @@ export type Patient = {
   insurance_provider: { id: string; name: string } | null;
 };
 
+/** Idade em anos completos a partir da data de nascimento — usada na
+ * listagem e no cadastro do paciente, em vez do CPF (que não ajuda
+ * clinicamente e o Dr. Flávio nem sempre tem em mãos). */
+export function calculateAge(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate + "T00:00:00");
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const hasHadBirthdayThisYear =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+  if (!hasHadBirthdayThisYear) age -= 1;
+  return age;
+}
+
 const SELECT_COLUMNS =
   "id,full_name,cpf,birth_date,phone,whatsapp,email,address,insurance_provider_id,insurance_card_number,insurance_card_validity,admin_notes,created_at,insurance_provider:insurance_providers(id,name)";
 

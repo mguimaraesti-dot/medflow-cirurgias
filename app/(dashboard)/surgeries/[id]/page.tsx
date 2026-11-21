@@ -130,7 +130,13 @@ export default async function SurgeryDetailPage({
           </div>
           <p className="mt-2 flex items-center gap-1.5 text-base font-medium text-foreground">
             <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-            {surgery.patient?.full_name ?? "—"}
+            {surgery.patient ? (
+              <Link href={`/surgeries/patients/${surgery.patient.id}`} className="hover:underline">
+                {surgery.patient.full_name}
+              </Link>
+            ) : (
+              "—"
+            )}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
             <Building2 className="h-3.5 w-3.5 shrink-0" />
