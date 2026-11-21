@@ -37,7 +37,7 @@ export type SurgeryListItem = {
   /** Todos os procedimentos da cirurgia (principal + adicionais). */
   procedures: { id: string; name: string; is_primary: boolean }[];
   insurance_provider: { id: string; name: string } | null;
-  requirements: { requirement_key: string; is_satisfied: boolean; waived: boolean }[];
+  requirements: { id: string; requirement_key: string; is_satisfied: boolean; waived: boolean }[];
 };
 
 function withDerivedProcedures<T extends { surgery_procedures: SurgeryProcedureLink[] }>(
@@ -147,7 +147,7 @@ const LIST_COLUMNS =
   "patient:patients(id,full_name),hospital:hospitals(id,name)," +
   "surgery_procedures(id,is_primary,procedure:procedures(id,name))," +
   "insurance_provider:insurance_providers(id,name)," +
-  "requirements:surgery_requirements(requirement_key,is_satisfied,waived)";
+  "requirements:surgery_requirements(id,requirement_key,is_satisfied,waived)";
 
 const DETAIL_COLUMNS =
   LIST_COLUMNS +
@@ -787,6 +787,22 @@ export async function updateRequirement(
       waived: input.waived,
       waived_reason: input.waived_reason ?? null,
     })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Alterna só o "satisfeito" de um requisito, sem mexer em waived/
+ * waived_reason — usado pelo checklist rápido do painel lateral do Mapa
+ * Cirúrgico (diferente do formulário completo da página da cirurgia, que
+ * também lida com dispensa e justificativa). */
+export async function setRequirementSatisfied(
+  supabase: SupabaseClient,
+  id: string,
+  isSatisfied: boolean
+) {
+  const { error } = await supabase
+    .from("surgery_requirements")
+    .update({ is_satisfied: isSatisfied })
     .eq("id", id);
   if (error) throw error;
 }
