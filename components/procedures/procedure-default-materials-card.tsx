@@ -112,34 +112,40 @@ export function ProcedureDefaultMaterialsCard({
   }, [state]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhum material no kit padrão ainda. Ao criar uma cirurgia com este procedimento, nada
-          será sugerido automaticamente até que você cadastre a lista aqui.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {items.map((item) => (
-            <ItemRow key={item.id} item={item} procedureId={procedureId} onRemoved={refetchItems} />
-          ))}
-        </ul>
-      )}
+    <div className="flex flex-col gap-6">
+      <div>
+        <h3 className="mb-2 text-sm font-medium text-foreground">
+          Itens do kit {items.length > 0 ? `(${items.length})` : ""}
+        </h3>
+        {items.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+            Nenhum material no kit padrão ainda. Ao criar uma cirurgia com este procedimento, nada
+            será sugerido automaticamente até que você cadastre a lista aqui.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {items.map((item) => (
+              <ItemRow key={item.id} item={item} procedureId={procedureId} onRemoved={refetchItems} />
+            ))}
+          </ul>
+        )}
+      </div>
 
-      <form
-        ref={formRef}
-        action={async (formData) => {
-          await formAction(formData);
-          formRef.current?.reset();
-        }}
-        className="flex flex-col gap-3 border-t border-border pt-4"
-      >
-        <div className="grid grid-cols-4 gap-3">
-          <div className="col-span-2 flex flex-col gap-1.5">
+      <div className="border-t border-border pt-5">
+        <h3 className="mb-3 text-sm font-medium text-foreground">Adicionar material</h3>
+        <form
+          ref={formRef}
+          action={async (formData) => {
+            await formAction(formData);
+            formRef.current?.reset();
+          }}
+          className="flex flex-col gap-4"
+        >
+          <div className="flex flex-col gap-1.5">
             <Label>Material *</Label>
             <div className="flex gap-2">
               <Select name="material_id" required value={materialId} onValueChange={setMaterialId}>
-                <SelectTrigger>
+                <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Selecione o material" />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,42 +170,47 @@ export function ProcedureDefaultMaterialsCard({
               />
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Fornecedor preferencial</Label>
-            <Select name="supplier_id" value={supplierId} onValueChange={setSupplierId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Opcional" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label>Fornecedor preferencial</Label>
+              <Select name="supplier_id" value={supplierId} onValueChange={setSupplierId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Opcional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="default-material-quantity">Quantidade</Label>
+              <Input
+                id="default-material-quantity"
+                name="quantity"
+                type="number"
+                step="0.01"
+                min="0.01"
+                defaultValue={1}
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="default-material-quantity">Quantidade</Label>
-            <Input
-              id="default-material-quantity"
-              name="quantity"
-              type="number"
-              step="0.01"
-              min="0.01"
-              defaultValue={1}
-            />
-          </div>
-        </div>
-        <Button type="submit" variant="outline" size="sm" disabled={pending} className="self-start">
-          {pending ? "Adicionando..." : "Adicionar ao padrão"}
-        </Button>
-      </form>
-      {state.error ? (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-          {state.error}
-        </p>
-      ) : null}
+
+          {state.error ? (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+              {state.error}
+            </p>
+          ) : null}
+
+          <Button type="submit" disabled={pending} className="self-start">
+            {pending ? "Adicionando..." : "Adicionar ao padrão"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

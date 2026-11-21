@@ -28,7 +28,7 @@ const SheetContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col gap-4 border-l border-border bg-card p-6 text-card-foreground shadow-lg sm:max-w-lg",
+        "fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col gap-5 border-l border-border bg-card p-6 text-card-foreground shadow-lg sm:max-w-xl",
         "overflow-y-auto transition-transform duration-300 ease-out data-[state=closed]:translate-x-full data-[state=open]:translate-x-0",
         className
       )}
@@ -45,7 +45,7 @@ const SheetContent = React.forwardRef<
 SheetContent.displayName = DialogPrimitive.Content.displayName;
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col gap-1.5 pr-6", className)} {...props} />
+  <div className={cn("flex flex-col gap-1.5 border-b border-border pb-5 pr-6", className)} {...props} />
 );
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
