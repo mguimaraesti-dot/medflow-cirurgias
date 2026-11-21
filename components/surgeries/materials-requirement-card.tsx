@@ -71,7 +71,11 @@ export function MaterialsRequirementCard({
         suppliers={suppliers}
         defaultMaterials={defaultMaterials}
       />
-      <RequirementItem requirement={requirement} />
+      <RequirementItem
+        key={`${requirement.id}-${requirement.updated_at}`}
+        requirement={requirement}
+        hideManualSatisfied
+      />
     </RequirementCardShell>
   );
 }

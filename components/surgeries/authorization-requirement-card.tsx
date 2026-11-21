@@ -80,7 +80,7 @@ export function AuthorizationRequirementCard({
         insuranceProviderId={insuranceProviderId}
         authorization={authorization}
       />
-      <RequirementItem requirement={requirement} />
+      <RequirementItem key={`${requirement.id}-${requirement.updated_at}`} requirement={requirement} />
     </RequirementCardShell>
   );
 }

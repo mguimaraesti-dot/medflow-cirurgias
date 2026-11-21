@@ -73,7 +73,7 @@ export function OrReservationRequirementCard({
       onToggle={onToggle}
     >
       <OrReservationCard surgeryId={surgeryId} hospitalId={hospitalId} reservation={reservation} />
-      <RequirementItem requirement={requirement} />
+      <RequirementItem key={`${requirement.id}-${requirement.updated_at}`} requirement={requirement} />
     </RequirementCardShell>
   );
 }

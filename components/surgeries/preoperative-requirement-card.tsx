@@ -57,7 +57,7 @@ export function PreoperativeRequirementCard({
       onToggle={onToggle}
     >
       <PreoperativeCard surgeryId={surgeryId} items={items} />
-      <RequirementItem requirement={requirement} />
+      <RequirementItem key={`${requirement.id}-${requirement.updated_at}`} requirement={requirement} />
     </RequirementCardShell>
   );
 }

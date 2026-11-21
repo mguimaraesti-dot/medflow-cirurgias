@@ -22,8 +22,25 @@ const initialState: RequirementFormState = {};
  * controles abaixo seguem disponíveis para marcar manualmente ou dispensar
  * o requisito com justificativa, nos casos em que o fluxo normal não se
  * aplica.
+ *
+ * Importante: o componente é remontado (via `key` no componente pai,
+ * atrelado a `requirement.updated_at`) sempre que o valor recalculado
+ * automaticamente muda — sem isso, o checkbox "Satisfeito" ficaria com o
+ * valor desatualizado da renderização anterior, e um simples clique em
+ * "Salvar" (por qualquer outro motivo, ex: só pra dispensar) sobrescreveria
+ * silenciosamente de volta o cálculo automático correto.
  */
-export function RequirementItem({ requirement }: { requirement: SurgeryRequirement }) {
+export function RequirementItem({
+  requirement,
+  hideManualSatisfied,
+}: {
+  requirement: SurgeryRequirement;
+  /** Omite o checkbox "Marcar como satisfeito manualmente" — usado quando o
+   * requisito é 100% automático (ex: materiais, que já fica satisfeito
+   * sozinho quando todos os itens são entregues) e expor o controle manual
+   * só criaria risco de alguém desfazer o cálculo automático sem querer. */
+  hideManualSatisfied?: boolean;
+}) {
   const action = updateRequirementAction.bind(null, requirement.id, requirement.surgery_id);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [waived, setWaived] = useState(requirement.waived);
@@ -35,10 +52,14 @@ export function RequirementItem({ requirement }: { requirement: SurgeryRequireme
         Controle manual
       </p>
 
-      <label className="flex items-center gap-2 text-sm text-foreground">
-        <Checkbox name="is_satisfied" value="on" defaultChecked={requirement.is_satisfied} />
-        Marcar como satisfeito manualmente
-      </label>
+      {hideManualSatisfied ? (
+        <input type="hidden" name="is_satisfied" value={requirement.is_satisfied ? "on" : ""} />
+      ) : (
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <Checkbox name="is_satisfied" value="on" defaultChecked={requirement.is_satisfied} />
+          Marcar como satisfeito manualmente
+        </label>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-foreground">
         <Checkbox
