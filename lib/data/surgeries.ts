@@ -175,7 +175,35 @@ export async function listSurgeriesForMap(
     .order("priority", { ascending: false })
     .order("expected_date", { ascending: true, nullsFirst: false });
 
-  if (filters.q) query = query.ilike("code", `%${filters.q}%`);
+  if (filters.q?.trim()) {
+    // Busca tanto pelo código da cirurgia quanto pelo nome do paciente —
+    // como são tabelas diferentes, resolve os ids que batem em cada uma e
+    // depois filtra pela união (mesmo padrão usado pros filtros de
+    // procedimento/requisito pendente, que também são tabelas ligadas).
+    const term = filters.q.trim();
+    const [{ data: codeMatches, error: codeError }, { data: patientMatches, error: patientError }] =
+      await Promise.all([
+        supabase.from("surgeries").select("id").ilike("code", `%${term}%`),
+        supabase.from("patients").select("id").ilike("full_name", `%${term}%`),
+      ]);
+    if (codeError) throw codeError;
+    if (patientError) throw patientError;
+
+    const patientIds = (patientMatches ?? []).map((p) => p.id);
+    let idsViaPatient: string[] = [];
+    if (patientIds.length > 0) {
+      const { data: viaPatient, error: viaPatientError } = await supabase
+        .from("surgeries")
+        .select("id")
+        .in("patient_id", patientIds);
+      if (viaPatientError) throw viaPatientError;
+      idsViaPatient = (viaPatient ?? []).map((s) => s.id);
+    }
+
+    const ids = Array.from(new Set([...(codeMatches ?? []).map((s) => s.id), ...idsViaPatient]));
+    if (ids.length === 0) return [];
+    query = query.in("id", ids);
+  }
   if (filters.procedureId) {
     // Filtra por cirurgias que tenham esse procedimento (principal ou
     // adicional) — resolve os ids antes, já que o filtro é numa tabela
