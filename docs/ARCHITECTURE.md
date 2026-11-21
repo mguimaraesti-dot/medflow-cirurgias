@@ -134,12 +134,14 @@ têm RLS habilitado sem exceção.
    operadoras, procedimentos, materiais, fornecedores.
 3. **Gestão cirúrgica** — ✅ concluída: ficha da cirurgia, Kanban, histórico,
    anexos, valor particular básico.
-4. **Operação cirúrgica** — ✅ quase concluída: autorizações, reserva de
-   centro cirúrgico, checklist pré-operatório, materiais/OPME, pendências
-   (tarefas). Falta só **protocolos versionados** (hoje os materiais padrão
-   por procedimento são uma tabela simples — `procedure_default_materials`
-   — sem o fluxo draft → pending_approval → approved → archived descrito
-   no modelo de dados original).
+4. **Operação cirúrgica** — ✅ concluída: autorizações, reserva de centro
+   cirúrgico, checklist pré-operatório, materiais/OPME, pendências
+   (tarefas). O versionamento de protocolos (draft → pending_approval →
+   approved → archived, com nome e aprovação por procedimento) foi
+   descartado de propósito (ver migration `0008_simplify_procedure_materials.sql`)
+   — hoje `procedure_default_materials` é só o kit de materiais atual por
+   procedimento, sem nome/versão/aprovação. Simplificação definitiva, não
+   pendência.
 5. **Financeiro completo** — ✅ concluída: particular com parcelas e
    recebimentos parciais, convênio com faturamento e glosas (identificação
    → recurso → recuperada/mantida), dashboard `/financial` com totais e
@@ -170,13 +172,13 @@ têm RLS habilitado sem exceção.
   mas registrar aqui para não gerar confusão numa máquina onde o CLI
   funcione e alguém tente rodar `init` de novo.
 
-## Status atual (pós Fase 5)
+## Status atual (pós Fase 6)
 
-Em produção (Vercel + Supabase reais, usuário único criado): Fases 1 a 3
-completas, Fase 4 completa à exceção de protocolos versionados, e Fase 5
-(financeiro completo) completa — particular com parcelas, convênio com
-faturamento e glosas, dashboard `/financial`.
+Em produção (Vercel + Supabase reais, usuário único criado): Fases 1 a 6
+completas. Resta: feriado por cidade/UF do hospital (precisa de migration
+pra endereço estruturado em `hospitals`) e a Fase 7 (segurança e
+produção).
 
-Próximos passos possíveis: fechar a Fase 4 (protocolos versionados) ou
-avançar pra Fase 7 (segurança e produção) — a Fase 6 (dashboard geral,
-agenda, relatórios e exportações) está completa.
+Próximo passo possível: Fase 7 (revisão de permissões, testes,
+homologação, publicação) — ou o item de feriado por hospital, se a
+prioridade for a Agenda.
