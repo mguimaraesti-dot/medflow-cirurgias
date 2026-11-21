@@ -69,19 +69,28 @@ export function KanbanCard({
   const waitingDays = daysSinceIndication(surgery.indication_date);
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      onClick={() => {
-        if (!isDragging) setOpen(true);
-      }}
-      className={cn(
-        "cursor-grab rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-ring active:cursor-grabbing",
-        isDragging && "opacity-50"
-      )}
-    >
+    // O painel de detalhe (SurgeryDetailSheet) é renderizado como irmão
+    // desta div, fora dela de propósito: mesmo o conteúdo do Sheet
+    // aparecendo em outro lugar da tela (via portal), o React ainda o
+    // considera filho desta div pra fins de propagação de evento — se
+    // ficasse aninhado aqui dentro, os `listeners` do dnd-kit (arrastar o
+    // card) capturariam cliques e arrastos feitos dentro do painel,
+    // inclusive no botão de fechar (X), que o dnd-kit interpretava como
+    // início de um arraste do card.
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        onClick={() => {
+          if (!isDragging) setOpen(true);
+        }}
+        className={cn(
+          "cursor-grab rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-ring active:cursor-grabbing",
+          isDragging && "opacity-50"
+        )}
+      >
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <span className="whitespace-nowrap font-medium text-foreground">{surgery.code}</span>
         <div className="flex shrink-0 items-center gap-1">
@@ -125,8 +134,8 @@ export function KanbanCard({
       <div className="mt-2 border-t border-border pt-1.5">
         <RequirementBadges requirements={surgery.requirements} />
       </div>
-
+      </div>
       <SurgeryDetailSheet surgery={surgery} stages={stages} open={open} onOpenChange={setOpen} />
-    </div>
+    </>
   );
 }
