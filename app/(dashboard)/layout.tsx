@@ -16,7 +16,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-muted">
-      <Sidebar userEmail={user.email ?? null} />
+      <div className="shrink-0 print:hidden">
+        <Sidebar userEmail={user.email ?? null} />
+      </div>
       <main className="flex-1 overflow-y-auto">
         {/*
           Sem max-w aqui: telas de lista/kanban/tabela devem aproveitar toda

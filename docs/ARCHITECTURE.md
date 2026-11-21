@@ -145,12 +145,15 @@ têm RLS habilitado sem exceção.
    → recurso → recuperada/mantida), dashboard `/financial` com totais e
    filtros. Relatórios exportáveis (PDF/Excel) ainda não existem — hoje é
    só a visão em tela.
-6. **Gestão e indicadores** — dashboard geral, agenda, relatórios,
-   exportações. ✅ Agenda (`/schedule`) concluída: calendário mensal e
-   lista, indicadores de status clicáveis, feriados nacionais, filtro por
-   hospital/status. ✅ Dashboard (`/dashboard`) concluído: KPIs clicáveis,
-   financeiro resumido, próximas cirurgias, gráfico de realizadas por mês.
-   `/reports` (relatórios/exportações) continua como placeholder.
+6. **Gestão e indicadores** — ✅ concluída: dashboard geral, agenda,
+   relatórios, exportações. ✅ Agenda (`/schedule`) concluída: calendário
+   mensal e lista, indicadores de status clicáveis, feriados nacionais,
+   filtro por hospital/status. ✅ Dashboard (`/dashboard`) concluído: KPIs
+   clicáveis, financeiro resumido, próximas cirurgias, gráfico de
+   realizadas por mês. ✅ Relatórios (`/reports`) concluído: cirurgias no
+   período, financeiro (particular) e produtividade mensal, com filtros de
+   período/hospital/status, exportação em CSV e impressão/PDF via
+   navegador.
 7. **Segurança e produção** — revisão de permissões (quando os perfis
    granulares forem criados), testes, homologação, publicação.
 
@@ -175,5 +178,5 @@ completas, Fase 4 completa à exceção de protocolos versionados, e Fase 5
 faturamento e glosas, dashboard `/financial`.
 
 Próximos passos possíveis: fechar a Fase 4 (protocolos versionados) ou
-avançar pra Fase 6 (dashboard geral, agenda, relatórios e exportações —
-hoje só placeholders).
+avançar pra Fase 7 (segurança e produção) — a Fase 6 (dashboard geral,
+agenda, relatórios e exportações) está completa.

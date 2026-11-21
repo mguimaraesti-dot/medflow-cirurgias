@@ -332,6 +332,42 @@ export async function listSurgeriesWithoutDate(
   ) as unknown as ScheduleSurgeryItem[];
 }
 
+export type SurgeriesReportFilters = {
+  from: string;
+  to: string;
+  hospitalId?: string;
+  status?: string;
+};
+
+/**
+ * Lista usada pelo relatório de cirurgias (/reports). Mesma regra de
+ * "data efetiva" da Agenda (confirmed_date, senão expected_date) pro
+ * filtro de período, mas sem forçar nenhum status específico — quem
+ * decide o que aparece é o filtro de status escolhido na tela (ou nenhum,
+ * trazendo todos).
+ */
+export async function listSurgeriesForReport(
+  supabase: SupabaseClient,
+  filters: SurgeriesReportFilters
+): Promise<ScheduleSurgeryItem[]> {
+  let query = supabase
+    .from("surgeries")
+    .select(SCHEDULE_COLUMNS)
+    .or(
+      `and(confirmed_date.gte.${filters.from},confirmed_date.lte.${filters.to}),` +
+        `and(confirmed_date.is.null,expected_date.gte.${filters.from},expected_date.lte.${filters.to})`
+    );
+
+  if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
+  if (filters.status) query = query.eq("status", filters.status);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as unknown as (ScheduleSurgeryItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as ScheduleSurgeryItem[];
+}
+
 /**
  * Números dos cards do topo do Mapa Cirúrgico. Calculados separadamente
  * dos filtros da barra de busca (são a visão geral, não dependem do que
