@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import {
   listWorkflowStages,
   listSurgeriesForMap,
@@ -40,6 +41,7 @@ export default async function KanbanPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  await requireModuleView("kanban");
   const params = await searchParams;
   const supabase = await createClient();
 

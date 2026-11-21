@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, LayoutGrid } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listSurgeries } from "@/lib/data/surgeries";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -32,6 +33,7 @@ export default async function SurgeriesPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireModuleView("surgeries");
   const { q } = await searchParams;
   const supabase = await createClient();
   const surgeries = await listSurgeries(supabase, q);

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listSuppliers } from "@/lib/data/suppliers";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -11,6 +12,7 @@ export default async function SuppliersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireModuleView("suppliers");
   const { q } = await searchParams;
   const supabase = await createClient();
   const suppliers = await listSuppliers(supabase, q);

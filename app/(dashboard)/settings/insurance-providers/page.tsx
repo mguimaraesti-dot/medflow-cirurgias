@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -14,6 +15,7 @@ export default async function InsuranceProvidersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireModuleView("settings");
   const { q } = await searchParams;
   const supabase = await createClient();
   const providers = await listInsuranceProviders(supabase, q);

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listPatients } from "@/lib/data/patients";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { SearchInput } from "@/components/shared/search-input";
@@ -16,6 +17,7 @@ export default async function PatientsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireModuleView("patients");
   const { q } = await searchParams;
   const supabase = await createClient();
   const [patients, insuranceProviders] = await Promise.all([

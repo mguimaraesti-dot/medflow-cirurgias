@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Building2, HeartHandshake, CalendarHeart, Users } from "lucide-react";
 
+import { requireModuleView } from "@/lib/auth/guard";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SECTIONS = [
@@ -23,15 +24,15 @@ const SECTIONS = [
     description: "Destaque visual na Agenda — nacionais, estaduais e municipais.",
   },
   {
-    href: "#",
+    href: "/settings/users",
     icon: Users,
     title: "Usuários e permissões",
-    description: "Hoje: usuário único com acesso total. Perfis granulares entram numa fase futura.",
-    disabled: true,
+    description: "Convites por e-mail (login via Google), funções e permissões por módulo.",
   },
 ];
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireModuleView("settings");
   return (
     <div>
       <h1 className="text-lg font-medium text-foreground">Configurações</h1>
@@ -42,31 +43,17 @@ export default function SettingsPage() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
-          const content = (
-            <Card
-              className={
-                section.disabled
-                  ? "opacity-60"
-                  : "transition-colors hover:border-ring"
-              }
-            >
-              <CardContent className="flex items-start gap-3 pt-5">
-                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">{section.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{section.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-
-          if (section.disabled) {
-            return <div key={section.title}>{content}</div>;
-          }
-
           return (
             <Link key={section.title} href={section.href}>
-              {content}
+              <Card className="transition-colors hover:border-ring">
+                <CardContent className="flex items-start gap-3 pt-5">
+                  <Icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{section.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{section.description}</p>
+                  </div>
+                </CardContent>
+              </Card>
             </Link>
           );
         })}

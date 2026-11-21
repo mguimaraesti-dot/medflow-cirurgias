@@ -14,9 +14,18 @@ import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "medflow-sidebar-collapsed";
 
-export function Sidebar({ userEmail }: { userEmail: string | null }) {
+export function Sidebar({
+  userEmail,
+  roleName,
+  permissions,
+}: {
+  userEmail: string | null;
+  roleName: string;
+  permissions: string[];
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const visibleItems = NAV_ITEMS.filter((item) => permissions.includes(`${item.module}:view`));
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -33,7 +42,7 @@ export function Sidebar({ userEmail }: { userEmail: string | null }) {
   // só o mais específico (href mais longo) fica marcado como ativo — sem
   // isso, "/surgeries/patients" também acendia "Cirurgias" (href "/surgeries"),
   // já que um é prefixo do outro.
-  const activeHref = NAV_ITEMS.reduce<string | null>((best, item) => {
+  const activeHref = visibleItems.reduce<string | null>((best, item) => {
     const matches = pathname === item.href || pathname.startsWith(item.href + "/");
     if (!matches) return best;
     if (best === null || item.href.length > best.length) return item.href;
@@ -66,7 +75,7 @@ export function Sidebar({ userEmail }: { userEmail: string | null }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active = item.href === activeHref;
           const Icon = item.icon;
           const link = (
@@ -99,7 +108,9 @@ export function Sidebar({ userEmail }: { userEmail: string | null }) {
             {!collapsed ? (
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">{userEmail}</p>
-                <p className="text-xs text-muted-foreground">Administrador</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {roleName === "admin_full_access" ? "Acesso total" : roleName}
+                </p>
               </div>
             ) : null}
           </div>

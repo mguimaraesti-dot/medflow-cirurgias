@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listHolidays } from "@/lib/data/holidays";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ export default async function HolidaysPage({
 }: {
   searchParams: Promise<{ year?: string }>;
 }) {
+  await requireModuleView("settings");
   const { year: yearParam } = await searchParams;
   const year = yearParam ? Number(yearParam) : new Date().getFullYear();
 

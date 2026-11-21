@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { getMapStats, listUpcomingSurgeries, getCompletedSurgeriesByMonth } from "@/lib/data/surgeries";
 import { countOpenTasks } from "@/lib/data/tasks";
 import { getFinancialTotals } from "@/lib/data/financial";
@@ -8,6 +9,7 @@ import { CompletedByMonthChart } from "@/components/dashboard/completed-by-month
 import { FinancialSummaryCards } from "@/components/financial/financial-summary-cards";
 
 export default async function DashboardPage() {
+  await requireModuleView("dashboard");
   const supabase = await createClient();
 
   const [mapStats, openTasks, financialTotals, upcomingSurgeries, completedByMonth] = await Promise.all([

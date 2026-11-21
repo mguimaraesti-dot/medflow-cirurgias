@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { getSurgeriesReport, getFinancialReport, getProductivityReport } from "@/lib/data/reports";
 import { ReportFilters } from "@/components/reports/report-filters";
@@ -34,6 +35,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  await requireModuleView("reports");
   const params = await searchParams;
   const supabase = await createClient();
 

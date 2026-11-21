@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import {
   listSurgeriesForSchedule,
   listSurgeriesWithoutDate,
@@ -67,6 +68,7 @@ export default async function SchedulePage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  await requireModuleView("schedule");
   const params = await searchParams;
   const today = new Date();
   const year = params.year ? Number(params.year) : today.getFullYear();

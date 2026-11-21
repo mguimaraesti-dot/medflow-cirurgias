@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listMaterials } from "@/lib/data/materials";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -15,6 +16,7 @@ export default async function MaterialsCatalogPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireModuleView("materials");
   const { q } = await searchParams;
   const supabase = await createClient();
   const materials = await listMaterials(supabase, q);

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { Sidebar } from "@/components/layout/sidebar";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getCurrentUser, getCurrentAccess } from "@/lib/auth/session";
 
 export default async function DashboardLayout({
   children,
@@ -14,10 +14,22 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // Usuário autenticado mas sem role nenhuma (acesso revogado, ou convite
+  // criado errado) não entra em nenhuma tela do dashboard — a tela
+  // "/sem-acesso" é a única acessível nesse estado.
+  const access = await getCurrentAccess(user.id);
+  if (!access) {
+    redirect("/sem-acesso");
+  }
+
   return (
     <div className="flex min-h-screen bg-muted">
       <div className="shrink-0 print:hidden">
-        <Sidebar userEmail={user.email ?? null} />
+        <Sidebar
+          userEmail={user.email ?? null}
+          roleName={access.roleName}
+          permissions={Array.from(access.permissions)}
+        />
       </div>
       <main className="flex-1 overflow-y-auto">
         {/*

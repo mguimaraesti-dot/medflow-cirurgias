@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleEdit } from "@/lib/auth/guard";
 import { getSurgery } from "@/lib/data/surgeries";
 import { listActivePatientsForSelect } from "@/lib/data/patients";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
@@ -14,6 +15,7 @@ export default async function EditSurgeryPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireModuleEdit("surgeries");
   const { id } = await params;
   const supabase = await createClient();
   const [surgery, patients, hospitals, insuranceProviders, procedures] = await Promise.all([

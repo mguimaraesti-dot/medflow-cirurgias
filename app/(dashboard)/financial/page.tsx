@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listFinancialOverview, getFinancialTotals, type FinancialOverviewFilters } from "@/lib/data/financial";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { FinancialSummaryCards } from "@/components/financial/financial-summary-cards";
@@ -18,6 +19,7 @@ export default async function FinancialPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  await requireModuleView("financial");
   const params = await searchParams;
   const supabase = await createClient();
 

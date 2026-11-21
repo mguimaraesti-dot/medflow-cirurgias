@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { getProcedure } from "@/lib/data/procedures";
 import { listDefaultMaterials } from "@/lib/data/procedure-materials";
 import { listActiveMaterialsForSelect } from "@/lib/data/materials";
@@ -15,6 +16,7 @@ export default async function ProcedureDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireModuleView("procedures");
   const { id } = await params;
   const supabase = await createClient();
 

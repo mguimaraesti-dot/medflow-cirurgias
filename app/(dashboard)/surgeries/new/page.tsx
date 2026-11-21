@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleEdit } from "@/lib/auth/guard";
 import { listActivePatientsForSelect } from "@/lib/data/patients";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { listActiveInsuranceProvidersForSelect } from "@/lib/data/insurance-providers";
@@ -9,6 +10,7 @@ import { listActiveProceduresForSelect } from "@/lib/data/procedures";
 import { SurgeryForm } from "@/components/surgeries/surgery-form";
 
 export default async function NewSurgeryPage() {
+  await requireModuleEdit("surgeries");
   const supabase = await createClient();
   const [patients, hospitals, insuranceProviders, procedures] = await Promise.all([
     listActivePatientsForSelect(supabase),

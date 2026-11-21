@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Pencil, User, Building2, Star } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import {
   getSurgery,
   listRequirements,
@@ -64,6 +65,7 @@ export default async function SurgeryDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireModuleView("surgeries");
   const { id } = await params;
   const supabase = await createClient();
   const [surgery, requirements, stages, history] = await Promise.all([

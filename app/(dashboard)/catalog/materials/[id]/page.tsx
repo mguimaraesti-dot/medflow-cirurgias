@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { getMaterial, listMaterialSuppliers } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ export default async function MaterialDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireModuleView("materials");
   const { id } = await params;
   const supabase = await createClient();
 

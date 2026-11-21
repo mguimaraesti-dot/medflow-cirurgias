@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listProcedures } from "@/lib/data/procedures";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -15,6 +16,7 @@ export default async function ProceduresCatalogPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireModuleView("procedures");
   const { q } = await searchParams;
   const supabase = await createClient();
   const procedures = await listProcedures(supabase, q);

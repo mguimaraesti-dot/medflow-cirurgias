@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireModuleView } from "@/lib/auth/guard";
 import { listTasks } from "@/lib/data/tasks";
 import { listSurgeriesForSelect } from "@/lib/data/surgeries";
 import { EmptyRow } from "@/components/shared/empty-row";
@@ -31,6 +32,7 @@ export default async function PendingTasksPage({
 }: {
   searchParams: Promise<{ category?: string; priority?: string; status?: string; q?: string }>;
 }) {
+  await requireModuleView("pending_tasks");
   const filters = await searchParams;
   const supabase = await createClient();
   const [tasks, surgeries] = await Promise.all([
