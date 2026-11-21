@@ -44,6 +44,23 @@ export function TussCodeField({
   // personalizou.
   const userInteractedRef = useRef(false);
 
+  // O dropdown de resultados agora flutua por cima do resto do formulário
+  // (como o de procedimentos na tela de cirurgia), em vez de empurrar os
+  // campos abaixo pra dentro de uma caixinha de 160px — por isso precisa
+  // fechar sozinho ao clicar fora.
+  const [dismissed, setDismissed] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setDismissed(true);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   function applyName(name: string) {
     if (nameInputRef?.current) nameInputRef.current.value = name;
   }
@@ -91,6 +108,7 @@ export function TussCodeField({
     setPending(true);
     setSlow(false);
     setError(null);
+    setDismissed(false);
     const slowTimer = setTimeout(() => {
       if (requestId === requestIdRef.current) setSlow(true);
     }, 4000);
@@ -156,7 +174,7 @@ export function TussCodeField({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div ref={searchContainerRef} className="flex flex-col gap-1.5">
         <Label htmlFor="tuss_search" className="text-xs text-muted-foreground">
           Não sabe o código? Busque pelo nome
         </Label>
@@ -166,9 +184,44 @@ export function TussCodeField({
             id="tuss_search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setDismissed(false)}
             placeholder="Buscar na tabela TUSS (ANS) pelo nome..."
-            className="pl-7 text-xs"
+            className="pl-7"
+            autoComplete="off"
           />
+
+          {/* A lista de resultados flutua por cima do resto do formulário
+           * (não empurra mais os campos abaixo pra dentro de uma caixinha
+           * minúscula) — e ganha bem mais altura e linhas maiores, fáceis
+           * de tocar no celular. */}
+          {results && !dismissed ? (
+            results.length === 0 ? (
+              <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+                <p className="text-sm text-muted-foreground">Nenhum procedimento encontrado na TUSS.</p>
+              </div>
+            ) : (
+              <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                {results.map((result) => (
+                  <li key={result.code} className="border-b border-border last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => handlePick(result)}
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm hover:bg-muted"
+                    >
+                      <span
+                        className={
+                          result.active ? "text-foreground" : "text-muted-foreground line-through"
+                        }
+                      >
+                        {result.name}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{result.code}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : null}
         </div>
 
         {pending ? (
@@ -180,29 +233,6 @@ export function TussCodeField({
           <p className="text-xs text-muted-foreground">Digite ao menos 3 letras.</p>
         ) : null}
         {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
-
-        {results ? (
-          results.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nenhum procedimento encontrado na TUSS.</p>
-          ) : (
-            <ul className="max-h-40 overflow-y-auto rounded-md border border-border">
-              {results.map((result) => (
-                <li key={result.code}>
-                  <button
-                    type="button"
-                    onClick={() => handlePick(result)}
-                    className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-xs hover:bg-muted"
-                  >
-                    <span className={result.active ? "text-foreground" : "text-muted-foreground line-through"}>
-                      {result.name}
-                    </span>
-                    <span className="shrink-0 text-muted-foreground">{result.code}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )
-        ) : null}
       </div>
     </div>
   );

@@ -73,7 +73,7 @@ export function ProcedureFormDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{procedure ? "Editar procedimento" : "Novo procedimento"}</DialogTitle>
           <DialogDescription>
