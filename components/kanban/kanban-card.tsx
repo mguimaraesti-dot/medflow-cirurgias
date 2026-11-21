@@ -1,13 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { ListTodo, Building2, Clock, Stethoscope, CalendarClock } from "lucide-react";
 
-import type { SurgeryListItem } from "@/lib/data/surgeries";
+import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
 import { RequirementBadges } from "@/components/kanban/requirement-badges";
+import { SurgeryDetailSheet } from "@/components/kanban/surgery-detail-sheet";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_LABEL: Record<SurgeryListItem["priority"], string> = {
@@ -41,12 +42,14 @@ function daysSinceIndication(value: string): number {
 
 export function KanbanCard({
   surgery,
+  stages,
   openTasksCount = 0,
 }: {
   surgery: SurgeryListItem;
+  stages: WorkflowStage[];
   openTasksCount?: number;
 }) {
-  const router = useRouter();
+  const [open, setOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: surgery.id,
   });
@@ -70,7 +73,7 @@ export function KanbanCard({
       {...listeners}
       {...attributes}
       onClick={() => {
-        if (!isDragging) router.push(`/surgeries/${surgery.id}`);
+        if (!isDragging) setOpen(true);
       }}
       className={cn(
         "cursor-grab rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-ring active:cursor-grabbing",
@@ -120,6 +123,8 @@ export function KanbanCard({
       <div className="mt-2 border-t border-border pt-1.5">
         <RequirementBadges requirements={surgery.requirements} />
       </div>
+
+      <SurgeryDetailSheet surgery={surgery} stages={stages} open={open} onOpenChange={setOpen} />
     </div>
   );
 }

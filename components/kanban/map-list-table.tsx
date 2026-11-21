@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
-
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
 import { RequirementBadges } from "@/components/kanban/requirement-badges";
 import { getStageColor } from "@/components/kanban/stage-palette";
+import { SurgeryDetailSheet } from "@/components/kanban/surgery-detail-sheet";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -66,11 +65,7 @@ export function MapListTable({
       key: "code",
       label: "Código",
       accessor: (s) => s.code,
-      cell: (surgery) => (
-        <Link href={`/surgeries/${surgery.id}`} className="font-medium text-foreground hover:underline">
-          {surgery.code}
-        </Link>
-      ),
+      cell: (surgery) => <span className="font-medium text-foreground">{surgery.code}</span>,
     },
     {
       key: "patient",
@@ -198,6 +193,10 @@ export function MapListTable({
         rows={surgeries}
         rowKey={(s) => s.id}
         emptyMessage="Nenhuma cirurgia encontrada para esse filtro."
+        rowClassName={() => "cursor-pointer transition-colors hover:bg-muted/60"}
+        wrapRow={(surgery, rowNode) => (
+          <SurgeryDetailSheet key={surgery.id} surgery={surgery} stages={stages} trigger={rowNode} />
+        )}
       />
     </div>
   );

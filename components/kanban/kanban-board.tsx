@@ -60,6 +60,7 @@ export function KanbanBoard({
           <KanbanColumn
             key={stage.id}
             stage={stage}
+            stages={stages}
             surgeries={items.filter((s) => s.stage_id === stage.id)}
             openTasksBySurgery={openTasksBySurgery}
             index={index}

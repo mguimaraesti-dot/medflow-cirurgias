@@ -9,12 +9,14 @@ import { cn } from "@/lib/utils";
 
 export function KanbanColumn({
   stage,
+  stages,
   surgeries,
   openTasksBySurgery,
   index,
   total,
 }: {
   stage: WorkflowStage;
+  stages: WorkflowStage[];
   surgeries: SurgeryListItem[];
   openTasksBySurgery: Record<string, number>;
   index: number;
@@ -58,6 +60,7 @@ export function KanbanColumn({
           <KanbanCard
             key={surgery.id}
             surgery={surgery}
+            stages={stages}
             openTasksCount={openTasksBySurgery[surgery.id] ?? 0}
           />
         ))}

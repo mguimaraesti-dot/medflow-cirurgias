@@ -1,26 +1,10 @@
-import { Shield, Package, Building2, FileText } from "lucide-react";
-
 import type { SurgeryListItem } from "@/lib/data/surgeries";
 import { cn } from "@/lib/utils";
-
-// Um ícone fixo por tipo de requisito — a cor do badge é que muda
-// conforme o estado (pendente/dispensado/satisfeito), não o tipo, pra
-// bater o olho rapidamente no quanto falta sem precisar ler texto.
-const REQUIREMENT_ICON: Record<string, typeof Shield> = {
-  authorization: Shield,
-  materials: Package,
-  or_reservation: Building2,
-  preoperative: FileText,
-};
-
-const REQUIREMENT_LABEL: Record<string, string> = {
-  authorization: "Autorização do convênio",
-  materials: "Materiais e OPME",
-  or_reservation: "Reserva do centro cirúrgico",
-  preoperative: "Preparação pré-operatória",
-};
-
-const ORDER = ["authorization", "materials", "or_reservation", "preoperative"];
+import {
+  REQUIREMENT_ICON,
+  REQUIREMENT_LABEL,
+  REQUIREMENT_ORDER as ORDER,
+} from "@/components/kanban/requirement-meta";
 
 export function RequirementBadges({
   requirements,
