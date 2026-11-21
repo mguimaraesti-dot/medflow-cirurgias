@@ -385,6 +385,99 @@ export async function getMapStats(supabase: SupabaseClient): Promise<MapStats> {
   };
 }
 
+/** Próximas cirurgias ativas (confirmada ou prevista, a partir de hoje)
+ * — usado no dashboard geral. Reaproveita a mesma janela OR de
+ * confirmed_date/expected_date da Agenda, só limitada aos próximos N
+ * dias, e corta pro `limit` pedido depois de ordenar pela data efetiva. */
+export async function listUpcomingSurgeries(
+  supabase: SupabaseClient,
+  limit: number,
+  windowDays = 60
+): Promise<ScheduleSurgeryItem[]> {
+  const today = new Date();
+  const windowEnd = new Date(today);
+  windowEnd.setDate(windowEnd.getDate() + windowDays);
+  const todayISO = today.toISOString().slice(0, 10);
+  const windowEndISO = windowEnd.toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("surgeries")
+    .select(SCHEDULE_COLUMNS)
+    .eq("status", "active")
+    .or(
+      `and(confirmed_date.gte.${todayISO},confirmed_date.lte.${windowEndISO}),` +
+        `and(confirmed_date.is.null,expected_date.gte.${todayISO},expected_date.lte.${windowEndISO})`
+    );
+  if (error) throw error;
+
+  const items = (data as unknown as (ScheduleSurgeryItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as ScheduleSurgeryItem[];
+
+  return items
+    .sort((a, b) => {
+      const dateA = a.confirmed_date ?? a.expected_date ?? "";
+      const dateB = b.confirmed_date ?? b.expected_date ?? "";
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return (a.confirmed_time ?? "").localeCompare(b.confirmed_time ?? "");
+    })
+    .slice(0, limit);
+}
+
+/** Cirurgias realizadas por mês, últimos `months` meses (incluindo o
+ * atual) — usado no gráfico do dashboard geral. Agrupa por confirmed_date
+ * (não existe um "completed_at" separado no schema). */
+export async function getCompletedSurgeriesByMonth(
+  supabase: SupabaseClient,
+  months: number
+): Promise<{ month: string; label: string; count: number }[]> {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
+  const startISO = toLocalISODate(start);
+
+  const { data, error } = await supabase
+    .from("surgeries")
+    .select("confirmed_date")
+    .eq("status", "completed")
+    .gte("confirmed_date", startISO);
+  if (error) throw error;
+
+  const MONTH_LABELS = [
+    "Jan",
+    "Fev",
+    "Mar",
+    "Abr",
+    "Mai",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Set",
+    "Out",
+    "Nov",
+    "Dez",
+  ];
+
+  const buckets: { month: string; label: string; count: number }[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    buckets.push({ month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: MONTH_LABELS[d.getMonth()], count: 0 });
+  }
+  const indexByMonth = new Map(buckets.map((b, idx) => [b.month, idx]));
+
+  for (const row of data ?? []) {
+    if (!row.confirmed_date) continue;
+    const monthKey = row.confirmed_date.slice(0, 7);
+    const idx = indexByMonth.get(monthKey);
+    if (idx !== undefined) buckets[idx].count += 1;
+  }
+
+  return buckets;
+}
+
+function toLocalISODate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export async function listSurgeriesForSelect(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("surgeries")

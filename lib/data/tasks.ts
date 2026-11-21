@@ -43,6 +43,17 @@ export async function listTasks(supabase: SupabaseClient, filters: TaskFilters =
   return data as unknown as Task[];
 }
 
+/** Total de pendências abertas (qualquer cirurgia, ou sem cirurgia
+ * vinculada) — usado no card de indicador do dashboard geral. */
+export async function countOpenTasks(supabase: SupabaseClient): Promise<number> {
+  const { count, error } = await supabase
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .not("status", "in", "(done,cancelled)");
+  if (error) throw error;
+  return count ?? 0;
+}
+
 /**
  * Quantidade de pendências ainda abertas (não concluídas/canceladas) por
  * cirurgia — usado nos cartões do Mapa Cirúrgico.
