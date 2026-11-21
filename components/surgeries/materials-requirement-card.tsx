@@ -11,7 +11,8 @@ import { RequirementCardShell, type RequirementTone } from "@/components/surgeri
 
 export function MaterialsRequirementCard({
   surgeryId,
-  procedureId,
+  procedureIds,
+  primaryProcedureId,
   items,
   materials,
   suppliers,
@@ -21,7 +22,8 @@ export function MaterialsRequirementCard({
   onToggle,
 }: {
   surgeryId: string;
-  procedureId: string;
+  procedureIds: string[];
+  primaryProcedureId: string;
   items: SurgeryMaterialItem[];
   materials: { id: string; name: string }[];
   suppliers: { id: string; company_name: string }[];
@@ -64,7 +66,8 @@ export function MaterialsRequirementCard({
     >
       <SurgeryMaterialsCard
         surgeryId={surgeryId}
-        procedureId={procedureId}
+        procedureIds={procedureIds}
+        primaryProcedureId={primaryProcedureId}
         items={items}
         materials={materials}
         suppliers={suppliers}

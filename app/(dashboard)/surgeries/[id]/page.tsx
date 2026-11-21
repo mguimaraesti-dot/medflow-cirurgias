@@ -18,7 +18,7 @@ import {
 } from "@/lib/data/operations";
 import { listActiveMaterialsForSelect } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
-import { listDefaultMaterials } from "@/lib/data/procedure-materials";
+import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,9 @@ export default async function SurgeryDetailPage({
     getFinancialRecord(supabase, id),
   ]);
 
+  const procedureIds = surgery.procedures.map((p) => p.id);
+  const primaryProcedureId = surgery.primary_procedure?.id ?? procedureIds[0];
+
   const [
     authorization,
     orReservation,
@@ -84,7 +87,7 @@ export default async function SurgeryDetailPage({
     getOrCreateChecklist(supabase, id),
     listActiveMaterialsForSelect(supabase),
     listActiveSuppliersForSelect(supabase),
-    listDefaultMaterials(supabase, surgery.primary_procedure_id),
+    listDefaultMaterialsForProcedures(supabase, procedureIds),
   ]);
 
   const [preoperativeItems, materialItems, documents] = await Promise.all([
@@ -116,8 +119,15 @@ export default async function SurgeryDetailPage({
             <Badge variant="outline">{PRIORITY_LABEL[surgery.priority]}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {surgery.patient?.full_name} · {surgery.hospital?.name} ·{" "}
-            {surgery.primary_procedure?.name}
+            {surgery.patient?.full_name} · {surgery.hospital?.name}
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm">
+            {surgery.procedures.map((p) => (
+              <Badge key={p.id} variant={p.is_primary ? "secondary" : "outline"}>
+                {p.is_primary ? "★ " : ""}
+                {p.name}
+              </Badge>
+            ))}
           </p>
         </div>
         <Link href={`/surgeries/${surgery.id}/edit`}>
@@ -188,7 +198,8 @@ export default async function SurgeryDetailPage({
         <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
         <SurgeryRequirementsPanel
           surgeryId={surgery.id}
-          procedureId={surgery.primary_procedure_id}
+          procedureIds={procedureIds}
+          primaryProcedureId={primaryProcedureId}
           hospitalId={surgery.hospital_id}
           insuranceProviderId={surgery.insurance_provider_id}
           requirements={requirements}

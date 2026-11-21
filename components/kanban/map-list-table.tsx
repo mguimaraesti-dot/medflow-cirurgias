@@ -81,7 +81,10 @@ export function MapListTable({
                   <td className="px-4 py-3 text-muted-foreground">{surgery.patient?.full_name ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     <p>{surgery.hospital?.name ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">{surgery.primary_procedure?.name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {surgery.primary_procedure?.name ?? "—"}
+                      {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {surgery.attendance_type === "particular"

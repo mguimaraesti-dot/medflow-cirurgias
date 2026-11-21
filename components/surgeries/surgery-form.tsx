@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
 import { HospitalFormDialog } from "@/components/hospitals/hospital-form-dialog";
+import { ProceduresMultiSelect } from "@/components/surgeries/procedures-multi-select";
 
 const initialState: SurgeryFormState = {};
 
@@ -124,21 +125,10 @@ export function SurgeryForm({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="primary_procedure_id">Procedimento principal *</Label>
-        <Select name="primary_procedure_id" defaultValue={surgery?.primary_procedure_id} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o procedimento" />
-          </SelectTrigger>
-          <SelectContent>
-            {procedures.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ProceduresMultiSelect
+        procedures={procedures}
+        defaultSelected={surgery?.procedures.map((p) => ({ id: p.id, name: p.name, is_primary: p.is_primary }))}
+      />
 
       <div className={attendanceType === "convenio" ? "grid grid-cols-2 gap-3" : ""}>
         <div className="flex flex-col gap-1.5">

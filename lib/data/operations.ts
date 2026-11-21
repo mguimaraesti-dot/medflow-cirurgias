@@ -308,22 +308,33 @@ export async function removeSurgeryMaterialItem(supabase: SupabaseClient, id: st
 }
 
 /**
- * Carrega na cirurgia o kit de materiais padrão cadastrado no procedimento
- * (substitui o antigo "importar de um protocolo aprovado").
+ * Carrega na cirurgia o kit de materiais padrão cadastrado no(s)
+ * procedimento(s) (substitui o antigo "importar de um protocolo
+ * aprovado"). Quando a cirurgia tem mais de um procedimento, os kits são
+ * somados e, se o mesmo material aparecer em mais de um, entra uma única
+ * vez (fica com a maior quantidade pedida entre os procedimentos).
  */
 export async function importProcedureDefaultMaterials(
   supabase: SupabaseClient,
   surgeryId: string,
-  procedureId: string
+  procedureIds: string[]
 ) {
   const { data: items, error } = await supabase
     .from("procedure_default_materials")
     .select("material_id,quantity,unit,preferred_supplier_id")
-    .eq("procedure_id", procedureId);
+    .in("procedure_id", procedureIds);
   if (error) throw error;
   if (!items || items.length === 0) return 0;
 
-  const rows = items.map((item) => ({
+  const byMaterial = new Map<string, (typeof items)[number]>();
+  for (const item of items) {
+    const existing = byMaterial.get(item.material_id);
+    if (!existing || item.quantity > existing.quantity) {
+      byMaterial.set(item.material_id, item);
+    }
+  }
+
+  const rows = Array.from(byMaterial.values()).map((item) => ({
     surgery_id: surgeryId,
     material_id: item.material_id,
     supplier_id: item.preferred_supplier_id,

@@ -97,14 +97,19 @@ const initialState: SurgeryMaterialFormState = {};
 
 export function SurgeryMaterialsCard({
   surgeryId,
-  procedureId,
+  procedureIds,
+  primaryProcedureId,
   items,
   materials,
   suppliers,
   defaultMaterials,
 }: {
   surgeryId: string;
-  procedureId: string;
+  /** Todos os procedimentos da cirurgia — os kits padrão são somados. */
+  procedureIds: string[];
+  /** Procedimento principal — é o kit atualizado pelo botão "Atualizar
+   * padrão com esta lista" quando há mais de um procedimento. */
+  primaryProcedureId: string;
   items: SurgeryMaterialItem[];
   materials: { id: string; name: string }[];
   suppliers: { id: string; company_name: string }[];
@@ -129,7 +134,8 @@ export function SurgeryMaterialsCard({
       {defaultMaterials.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted p-3">
           <p className="text-sm text-muted-foreground">
-            Kit padrão deste procedimento tem {defaultMaterials.length} material
+            {procedureIds.length > 1 ? "Kits padrão somados dos procedimentos têm" : "Kit padrão deste procedimento tem"}{" "}
+            {defaultMaterials.length} material
             {defaultMaterials.length === 1 ? "" : "is"}.
           </p>
           <Button
@@ -138,7 +144,7 @@ export function SurgeryMaterialsCard({
             disabled={importPending}
             onClick={() =>
               startImport(async () => {
-                await importProcedureDefaultMaterialsAction(surgeryId, procedureId);
+                await importProcedureDefaultMaterialsAction(surgeryId, procedureIds);
                 toast.success("Materiais padrão carregados.");
               })
             }
@@ -151,7 +157,7 @@ export function SurgeryMaterialsCard({
       {differsFromDefault ? (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3">
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            Esta lista é diferente do kit padrão do procedimento.
+            Esta lista é diferente do kit padrão {procedureIds.length > 1 ? "somado dos procedimentos" : "do procedimento"}.
           </p>
           <Button
             variant="outline"
@@ -159,8 +165,12 @@ export function SurgeryMaterialsCard({
             disabled={updatePending}
             onClick={() =>
               startUpdate(async () => {
-                await updateProcedureDefaultMaterialsAction(procedureId, surgeryId);
-                toast.success("Kit padrão do procedimento atualizado.");
+                await updateProcedureDefaultMaterialsAction(primaryProcedureId, surgeryId);
+                toast.success(
+                  procedureIds.length > 1
+                    ? "Kit padrão do procedimento principal atualizado."
+                    : "Kit padrão do procedimento atualizado."
+                );
               })
             }
           >

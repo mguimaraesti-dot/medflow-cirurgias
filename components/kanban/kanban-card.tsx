@@ -84,6 +84,7 @@ export function KanbanCard({
       <p className="mt-1 truncate text-foreground">{surgery.patient?.full_name ?? "—"}</p>
       <p className="mt-0.5 truncate text-xs text-muted-foreground">
         {surgery.hospital?.name ?? "—"} · {surgery.primary_procedure?.name ?? "—"}
+        {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
       </p>
       <p className="mt-0.5 truncate text-xs text-muted-foreground">{attendanceLabel}</p>
 

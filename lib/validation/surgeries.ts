@@ -25,7 +25,6 @@ export const surgerySchema = z.object({
   hospital_id: z.string().uuid("Selecione um hospital."),
   insurance_provider_id: optionalUuid,
   attendance_type: z.enum(["particular", "convenio"]),
-  primary_procedure_id: z.string().uuid("Selecione o procedimento principal."),
   indication_date: optionalDate,
   expected_date: optionalDate,
   confirmed_date: optionalDate,
@@ -35,6 +34,22 @@ export const surgerySchema = z.object({
 });
 
 export type SurgeryInput = z.infer<typeof surgerySchema>;
+
+// Os procedimentos da cirurgia não são mais uma coluna em `surgeries` —
+// viram linhas em `surgery_procedures`, validadas separadamente porque vêm
+// de `FormData.getAll("procedure_ids")` (múltiplos valores, não um campo
+// único que o surgerySchema consiga mapear direto).
+export const surgeryProceduresSchema = z
+  .object({
+    procedure_ids: z.array(z.string().uuid()).min(1, "Selecione ao menos um procedimento."),
+    primary_procedure_id: z.string().uuid("Selecione qual é o procedimento principal."),
+  })
+  .refine((data) => data.procedure_ids.includes(data.primary_procedure_id), {
+    message: "O procedimento principal precisa estar entre os selecionados.",
+    path: ["primary_procedure_id"],
+  });
+
+export type SurgeryProceduresInput = z.infer<typeof surgeryProceduresSchema>;
 
 export const requirementUpdateSchema = z.object({
   is_satisfied: z.boolean(),

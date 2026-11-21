@@ -10,6 +10,12 @@ export type WorkflowStage = {
   sort_order: number;
 };
 
+export type SurgeryProcedureLink = {
+  id: string;
+  is_primary: boolean;
+  procedure: { id: string; name: string } | null;
+};
+
 export type SurgeryListItem = {
   id: string;
   code: string;
@@ -21,10 +27,32 @@ export type SurgeryListItem = {
   status: string;
   patient: { id: string; full_name: string } | null;
   hospital: { id: string; name: string } | null;
+  /** Procedimento marcado como principal — usado como rótulo curto no
+   * Kanban e na lista. */
   primary_procedure: { id: string; name: string } | null;
+  /** Todos os procedimentos da cirurgia (principal + adicionais). */
+  procedures: { id: string; name: string; is_primary: boolean }[];
   insurance_provider: { id: string; name: string } | null;
   requirements: { requirement_key: string; is_satisfied: boolean; waived: boolean }[];
 };
+
+function withDerivedProcedures<T extends { surgery_procedures: SurgeryProcedureLink[] }>(
+  row: T
+): Omit<T, "surgery_procedures"> & {
+  primary_procedure: { id: string; name: string } | null;
+  procedures: { id: string; name: string; is_primary: boolean }[];
+} {
+  const { surgery_procedures, ...rest } = row;
+  const procedures = (surgery_procedures ?? [])
+    .filter((link) => link.procedure)
+    .map((link) => ({ id: link.procedure!.id, name: link.procedure!.name, is_primary: link.is_primary }));
+  const primary = procedures.find((p) => p.is_primary) ?? procedures[0] ?? null;
+  return {
+    ...rest,
+    primary_procedure: primary ? { id: primary.id, name: primary.name } : null,
+    procedures,
+  };
+}
 
 export type SurgeryMapFilters = {
   q?: string;
@@ -54,7 +82,6 @@ export type Surgery = SurgeryListItem & {
   hospital_id: string;
   insurance_provider_id: string | null;
   insurance_provider: { id: string; name: string } | null;
-  primary_procedure_id: string;
   indication_date: string;
   confirmed_time: string | null;
   admin_notes: string | null;
@@ -109,14 +136,15 @@ const AUTHORIZATION_STATUS_LABEL: Record<string, string> = {
 
 const LIST_COLUMNS =
   "id,code,stage_id,attendance_type,priority,expected_date,confirmed_date,status," +
-  "patient:patients(id,full_name),hospital:hospitals(id,name),primary_procedure:procedures(id,name)," +
+  "patient:patients(id,full_name),hospital:hospitals(id,name)," +
+  "surgery_procedures(id,is_primary,procedure:procedures(id,name))," +
   "insurance_provider:insurance_providers(id,name)," +
   "requirements:surgery_requirements(requirement_key,is_satisfied,waived)";
 
 const DETAIL_COLUMNS =
   LIST_COLUMNS +
   ",patient_id,hospital_id,insurance_provider_id," +
-  "primary_procedure_id,indication_date,confirmed_time,admin_notes,cancelled_reason,created_at";
+  "indication_date,confirmed_time,admin_notes,cancelled_reason,created_at";
 
 export async function listWorkflowStages(supabase: SupabaseClient) {
   const { data, error } = await supabase
@@ -144,7 +172,19 @@ export async function listSurgeriesForMap(
     .order("expected_date", { ascending: true, nullsFirst: false });
 
   if (filters.q) query = query.ilike("code", `%${filters.q}%`);
-  if (filters.procedureId) query = query.eq("primary_procedure_id", filters.procedureId);
+  if (filters.procedureId) {
+    // Filtra por cirurgias que tenham esse procedimento (principal ou
+    // adicional) — resolve os ids antes, já que o filtro é numa tabela
+    // ligada (surgery_procedures), não numa coluna direta de surgeries.
+    const { data: links, error: linksError } = await supabase
+      .from("surgery_procedures")
+      .select("surgery_id")
+      .eq("procedure_id", filters.procedureId);
+    if (linksError) throw linksError;
+    const ids = (links ?? []).map((l) => l.surgery_id);
+    if (ids.length === 0) return [];
+    query = query.in("id", ids);
+  }
   if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
   if (filters.priority) query = query.eq("priority", filters.priority);
   if (filters.status) query = query.eq("status", filters.status);
@@ -162,7 +202,9 @@ export async function listSurgeriesForMap(
 
   const { data, error } = await query;
   if (error) throw error;
-  return data as unknown as SurgeryListItem[];
+  return (data as unknown as (SurgeryListItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as SurgeryListItem[];
 }
 
 /**
@@ -240,7 +282,9 @@ export async function listSurgeries(supabase: SupabaseClient, search?: string) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return data as unknown as SurgeryListItem[];
+  return (data as unknown as (SurgeryListItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as SurgeryListItem[];
 }
 
 export async function getSurgery(supabase: SupabaseClient, id: string) {
@@ -250,7 +294,35 @@ export async function getSurgery(supabase: SupabaseClient, id: string) {
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data as unknown as Surgery;
+  return withDerivedProcedures(
+    data as unknown as Surgery & { surgery_procedures: SurgeryProcedureLink[] }
+  ) as unknown as Surgery;
+}
+
+/**
+ * Substitui a lista de procedimentos de uma cirurgia (apaga e recria) —
+ * mais simples e seguro que calcular diffs, já que o volume por cirurgia é
+ * sempre pequeno (poucas unidades).
+ */
+export async function setSurgeryProcedures(
+  supabase: SupabaseClient,
+  surgeryId: string,
+  procedureIds: string[],
+  primaryProcedureId: string
+) {
+  const { error: deleteError } = await supabase
+    .from("surgery_procedures")
+    .delete()
+    .eq("surgery_id", surgeryId);
+  if (deleteError) throw deleteError;
+
+  const rows = procedureIds.map((procedureId) => ({
+    surgery_id: surgeryId,
+    procedure_id: procedureId,
+    is_primary: procedureId === primaryProcedureId,
+  }));
+  const { error: insertError } = await supabase.from("surgery_procedures").insert(rows);
+  if (insertError) throw insertError;
 }
 
 // Mesmo padrão de lib/data/patients.ts: `insurance_provider_id` aceita

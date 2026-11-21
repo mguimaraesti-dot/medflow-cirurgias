@@ -250,10 +250,10 @@ export async function removeSurgeryMaterialItemAction(itemId: string, surgeryId:
 
 export async function importProcedureDefaultMaterialsAction(
   surgeryId: string,
-  procedureId: string
+  procedureIds: string[]
 ) {
   const supabase = await createClient();
-  await importProcedureDefaultMaterials(supabase, surgeryId, procedureId);
+  await importProcedureDefaultMaterials(supabase, surgeryId, procedureIds);
   revalidateSurgery(surgeryId);
 }
 

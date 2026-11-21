@@ -11,10 +11,12 @@ import {
   cancelSurgery,
   updateRequirement,
   upsertParticularFinancialRecord,
+  setSurgeryProcedures,
   type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
 import {
   surgerySchema,
+  surgeryProceduresSchema,
   requirementUpdateSchema,
   particularFinancialSchema,
   type SurgeryInput,
@@ -30,13 +32,19 @@ function parseForm(formData: FormData) {
     hospital_id: formData.get("hospital_id"),
     insurance_provider_id: formData.get("insurance_provider_id"),
     attendance_type: formData.get("attendance_type"),
-    primary_procedure_id: formData.get("primary_procedure_id"),
     indication_date: formData.get("indication_date"),
     expected_date: formData.get("expected_date"),
     confirmed_date: formData.get("confirmed_date"),
     confirmed_time: formData.get("confirmed_time"),
     priority: formData.get("priority") || "normal",
     admin_notes: formData.get("admin_notes"),
+  });
+}
+
+function parseProcedures(formData: FormData) {
+  return surgeryProceduresSchema.safeParse({
+    procedure_ids: formData.getAll("procedure_ids"),
+    primary_procedure_id: formData.get("primary_procedure_id"),
   });
 }
 
@@ -60,12 +68,22 @@ export async function createSurgeryAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  const parsedProcedures = parseProcedures(formData);
+  if (!parsedProcedures.success) {
+    return { error: parsedProcedures.error.issues[0]?.message ?? "Selecione os procedimentos." };
+  }
 
   const supabase = await createClient();
   let surgeryId: string;
   try {
     const result = await createSurgery(supabase, clearInsuranceIfParticular(formData, parsed.data));
     surgeryId = result.id;
+    await setSurgeryProcedures(
+      supabase,
+      surgeryId,
+      parsedProcedures.data.procedure_ids,
+      parsedProcedures.data.primary_procedure_id
+    );
   } catch {
     return { error: "Não foi possível criar a cirurgia. Tente novamente." };
   }
@@ -84,10 +102,20 @@ export async function updateSurgeryAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
+  const parsedProcedures = parseProcedures(formData);
+  if (!parsedProcedures.success) {
+    return { error: parsedProcedures.error.issues[0]?.message ?? "Selecione os procedimentos." };
+  }
 
   const supabase = await createClient();
   try {
     await updateSurgery(supabase, id, clearInsuranceIfParticular(formData, parsed.data));
+    await setSurgeryProcedures(
+      supabase,
+      id,
+      parsedProcedures.data.procedure_ids,
+      parsedProcedures.data.primary_procedure_id
+    );
   } catch {
     return { error: "Não foi possível salvar a cirurgia. Tente novamente." };
   }

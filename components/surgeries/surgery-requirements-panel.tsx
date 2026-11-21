@@ -16,7 +16,8 @@ type RequirementKey = SurgeryRequirement["requirement_key"] | "hospital_request"
 
 export function SurgeryRequirementsPanel({
   surgeryId,
-  procedureId,
+  procedureIds,
+  primaryProcedureId,
   hospitalId,
   insuranceProviderId,
   requirements,
@@ -30,7 +31,8 @@ export function SurgeryRequirementsPanel({
   documents,
 }: {
   surgeryId: string;
-  procedureId: string;
+  procedureIds: string[];
+  primaryProcedureId: string;
   hospitalId: string;
   insuranceProviderId: string | null;
   requirements: SurgeryRequirement[];
@@ -77,7 +79,8 @@ export function SurgeryRequirementsPanel({
       {materialsReq ? (
         <MaterialsRequirementCard
           surgeryId={surgeryId}
-          procedureId={procedureId}
+          procedureIds={procedureIds}
+          primaryProcedureId={primaryProcedureId}
           items={materialItems}
           materials={materials}
           suppliers={suppliers}

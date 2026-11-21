@@ -36,6 +36,35 @@ export async function listDefaultMaterials(supabase: SupabaseClient, procedureId
   return data as unknown as ProcedureDefaultMaterial[];
 }
 
+/**
+ * Kits padrão de vários procedimentos combinados — usado quando a cirurgia
+ * tem mais de um procedimento. Some os kits e, se o mesmo material
+ * aparecer em mais de um procedimento, mantém só 1 linha (a de maior
+ * quantidade), pra exibição/comparação na ficha da cirurgia.
+ */
+export async function listDefaultMaterialsForProcedures(
+  supabase: SupabaseClient,
+  procedureIds: string[]
+) {
+  if (procedureIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("procedure_default_materials")
+    .select(COLUMNS)
+    .in("procedure_id", procedureIds)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  const rows = data as unknown as ProcedureDefaultMaterial[];
+  const byMaterial = new Map<string, ProcedureDefaultMaterial>();
+  for (const row of rows) {
+    const existing = byMaterial.get(row.material_id);
+    if (!existing || row.quantity > existing.quantity) {
+      byMaterial.set(row.material_id, row);
+    }
+  }
+  return Array.from(byMaterial.values());
+}
+
 export async function addDefaultMaterial(
   supabase: SupabaseClient,
   procedureId: string,
