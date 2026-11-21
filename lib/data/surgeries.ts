@@ -668,7 +668,7 @@ export async function getSurgeryAuthorizationRequestData(
     .filter((item) => item.material)
     .map((item) => ({
       name: item.material!.name,
-      code: item.material!.internal_code ?? item.material!.tuss_code,
+      code: item.material!.tuss_code,
       quantity: item.quantity,
     }));
 

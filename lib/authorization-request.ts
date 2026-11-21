@@ -44,7 +44,7 @@ export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestD
   const materialRows =
     data.materials.length > 0
       ? data.materials
-          .map((m) => `| ${m.name} | ${m.code ?? "—"} | ${m.quantity} |`)
+          .map((m) => `| ${m.name} | ${m.code ?? ""} | ${m.quantity} |`)
           .join("\n")
       : "| [Descrição do material] | [Código] | [Qtd.] |";
 
