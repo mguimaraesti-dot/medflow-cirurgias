@@ -1,23 +1,55 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { getMapStats, listUpcomingSurgeries, getCompletedSurgeriesByMonth } from "@/lib/data/surgeries";
+import { getMapStats, listUpcomingSurgeries } from "@/lib/data/surgeries";
 import { countOpenTasks } from "@/lib/data/tasks";
-import { getFinancialTotals } from "@/lib/data/financial";
+import { getFinancialReport, getProductivityReport } from "@/lib/data/reports";
 import { DashboardKpiCards } from "@/components/dashboard/dashboard-kpi-cards";
+import { DashboardPeriodFilter } from "@/components/dashboard/dashboard-period-filter";
 import { UpcomingSurgeriesList } from "@/components/dashboard/upcoming-surgeries-list";
 import { CompletedByMonthChart } from "@/components/dashboard/completed-by-month-chart";
 import { FinancialSummaryCards } from "@/components/financial/financial-summary-cards";
 
-export default async function DashboardPage() {
+type SearchParams = {
+  from?: string;
+  to?: string;
+};
+
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function toISODate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function formatDateLabel(value: string) {
+  return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireModuleView("dashboard");
+  const params = await searchParams;
   const supabase = await createClient();
 
-  const [mapStats, openTasks, financialTotals, upcomingSurgeries, completedByMonth] = await Promise.all([
+  // Sem período na URL (primeira visita), financeiro e gráfico cobrem os
+  // últimos 6 meses — era o comportamento fixo do Dashboard antes do
+  // filtro existir, então vira só o padrão agora.
+  const today = new Date();
+  const defaultFrom = toISODate(new Date(today.getFullYear(), today.getMonth() - 5, 1));
+  const defaultTo = toISODate(today);
+  const from = params.from || defaultFrom;
+  const to = params.to || defaultTo;
+
+  const [mapStats, openTasks, financialReport, upcomingSurgeries, completedByMonth] = await Promise.all([
     getMapStats(supabase),
     countOpenTasks(supabase),
-    getFinancialTotals(supabase, "particular"),
+    getFinancialReport(supabase, { from, to }),
     listUpcomingSurgeries(supabase, 6),
-    getCompletedSurgeriesByMonth(supabase, 6),
+    getProductivityReport(supabase, { from, to }),
   ]);
 
   const kpis = [
@@ -41,8 +73,13 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-lg font-medium text-foreground">Dashboard</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Indicadores operacionais e financeiros gerais.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-medium text-foreground">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Indicadores operacionais e financeiros gerais.</p>
+        </div>
+        <DashboardPeriodFilter />
+      </div>
 
       <div className="mt-4">
         <DashboardKpiCards kpis={kpis} />
@@ -50,9 +87,9 @@ export default async function DashboardPage() {
 
       <div className="mt-6">
         <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Financeiro (particular)
+          Financeiro (particular) — {formatDateLabel(from)} até {formatDateLabel(to)}
         </h2>
-        <FinancialSummaryCards totals={financialTotals} />
+        <FinancialSummaryCards totals={financialReport.totals} />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
