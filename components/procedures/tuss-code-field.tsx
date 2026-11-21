@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useTransition, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Search } from "lucide-react";
 
 import { searchTussCodesAction } from "@/app/(dashboard)/catalog/procedures/actions";
 import type { TussResult } from "@/lib/tuss";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -25,12 +24,20 @@ export function TussCodeField({
   const [query, setQuery] = useState(defaultQuery ?? "");
   const [results, setResults] = useState<TussResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
-  function handleSearch() {
+  // Contador para ignorar respostas de buscas antigas que chegam depois de
+  // uma busca mais recente (evita sobrescrever o resultado atual com um
+  // resultado desatualizado quando o usuário digita rápido).
+  const requestIdRef = useRef(0);
+
+  function runSearch(term: string) {
+    const requestId = ++requestIdRef.current;
     setError(null);
-    startTransition(async () => {
-      const res = await searchTussCodesAction(query);
+    setPending(true);
+    searchTussCodesAction(term).then((res) => {
+      if (requestId !== requestIdRef.current) return; // resposta obsoleta
+      setPending(false);
       if (res.error) {
         setError(res.error);
         setResults(null);
@@ -39,6 +46,21 @@ export function TussCodeField({
       }
     });
   }
+
+  // Busca automática conforme digita, com debounce de 500ms.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 3) {
+      requestIdRef.current++; // invalida qualquer busca em andamento
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setResults(null);
+      setError(null);
+      setPending(false);
+      return;
+    }
+    const timer = setTimeout(() => runSearch(trimmed), 500);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   function handlePick(result: TussResult) {
     setCode(result.code);
@@ -59,30 +81,26 @@ export function TussCodeField({
         placeholder="Ex: 40201082"
       />
 
-      <div className="mt-1 flex gap-2">
+      <div className="relative mt-1">
+        <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSearch();
+              const trimmed = query.trim();
+              if (trimmed.length >= 3) runSearch(trimmed);
             }
           }}
           placeholder="Buscar na tabela TUSS (ANS) pelo nome..."
-          className="text-xs"
+          className="pl-7 text-xs"
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleSearch}
-          disabled={pending || query.trim().length < 3}
-        >
-          <Search className="h-3.5 w-3.5" />
-          {pending ? "Buscando..." : "Buscar"}
-        </Button>
       </div>
+      {pending ? <p className="text-xs text-muted-foreground">Buscando...</p> : null}
+      {!pending && query.trim().length > 0 && query.trim().length < 3 ? (
+        <p className="text-xs text-muted-foreground">Digite ao menos 3 letras.</p>
+      ) : null}
 
       {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
 
