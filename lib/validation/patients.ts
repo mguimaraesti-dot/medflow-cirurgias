@@ -1,17 +1,21 @@
 import { z } from "zod";
 
+// `v === null` acontece quando o campo nem existe mais no FormData (ex:
+// campos de convênio somem do formulário quando o atendimento vira
+// "particular") — sem esse tratamento, o zod reclama "expected string,
+// received null" em vez de tratar como "não informado".
 const optionalText = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().optional()
 );
 
 const optionalDate = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().optional()
 );
 
 const optionalUuid = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().uuid().optional()
 );
 
@@ -22,7 +26,7 @@ export const patientSchema = z.object({
   phone: optionalText,
   whatsapp: optionalText,
   email: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().email("E-mail inválido.").optional()
   ),
   address: optionalText,

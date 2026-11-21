@@ -17,7 +17,7 @@ export const insuranceProviderSchema = z.object({
   code: optionalText,
   contacts: optionalText,
   email: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().email("E-mail inválido.").optional()
   ),
   phone: optionalText,

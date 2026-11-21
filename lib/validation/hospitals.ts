@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const optionalText = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().optional()
 );
 
@@ -13,7 +13,7 @@ export const hospitalSchema = z.object({
   admin_contact: optionalText,
   or_contact: optionalText,
   email: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().email("E-mail inválido.").optional()
   ),
   notes: optionalText,

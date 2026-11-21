@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const optionalText = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().optional()
 );
 
@@ -12,7 +12,7 @@ export const supplierSchema = z.object({
   contact_name: optionalText,
   phone: optionalText,
   email: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().email("E-mail inválido.").optional()
   ),
   address: optionalText,
