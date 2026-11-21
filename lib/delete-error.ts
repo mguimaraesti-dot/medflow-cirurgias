@@ -3,10 +3,16 @@
  * entende. Código 23503 = violação de chave estrangeira (existe algo
  * vinculado a este registro) — nunca mostramos esse erro cru pro usuário.
  */
-export function toDeleteErrorMessage(e: unknown, linkedToMessage: string): string {
+export function toDeleteErrorMessage(
+  e: unknown,
+  linkedToMessage: string,
+  options?: { suggestDeactivate?: boolean }
+): string {
   const code = (e as { code?: string } | null)?.code;
   if (code === "23503") {
-    return `Não é possível excluir: ${linkedToMessage}. Você pode inativar em vez de excluir.`;
+    const suggestion =
+      options?.suggestDeactivate === false ? "" : " Você pode inativar em vez de excluir.";
+    return `Não é possível excluir: ${linkedToMessage}.${suggestion}`;
   }
   return "Não foi possível excluir. Tente novamente.";
 }

@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { createPatient, updatePatient, type PatientUpdateInput } from "@/lib/data/patients";
+import { createPatient, updatePatient, deletePatient, type PatientUpdateInput } from "@/lib/data/patients";
 import { patientSchema } from "@/lib/validation/patients";
+import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type PatientFormState = {
   error?: string;
@@ -86,6 +87,23 @@ export async function updatePatientAction(
     await updatePatient(supabase, id, clearInsuranceIfParticular(formData, parsed.data));
   } catch (e) {
     return { error: toUserMessage(e) };
+  }
+
+  revalidatePath("/surgeries/patients");
+  return {};
+}
+
+export async function deletePatientAction(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+
+  try {
+    await deletePatient(supabase, id);
+  } catch (e) {
+    return {
+      error: toDeleteErrorMessage(e, "este paciente tem cirurgias cadastradas", {
+        suggestDeactivate: false,
+      }),
+    };
   }
 
   revalidatePath("/surgeries/patients");

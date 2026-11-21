@@ -4,6 +4,7 @@ import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyRow } from "@/components/shared/empty-row";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
+import { PatientRowActions } from "@/components/patients/patient-row-actions";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -82,7 +83,9 @@ export default async function PatientsPage({
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatDate(patient.birth_date)}
                       </td>
-                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3">
+                        <PatientRowActions patient={patient} />
+                      </td>
                     </tr>
                   }
                 />

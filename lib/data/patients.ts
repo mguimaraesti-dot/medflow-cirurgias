@@ -82,3 +82,8 @@ export async function updatePatient(
   const { error } = await supabase.from("patients").update(input).eq("id", id);
   if (error) throw error;
 }
+
+export async function deletePatient(supabase: SupabaseClient, id: string) {
+  const { error } = await supabase.from("patients").delete().eq("id", id);
+  if (error) throw error;
+}
