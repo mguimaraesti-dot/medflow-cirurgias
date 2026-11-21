@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -17,16 +18,22 @@ export type ProgressStep = {
  */
 export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
   return (
-    // Cada etapa tem largura fixa (w-20) em vez de flex-1: num container
-    // flex comum, o texto de cada rótulo se recusa a encolher abaixo da
-    // palavra mais larga (min-content), o que, com 8 etapas espremidas
-    // numa tela de celular, fazia os rótulos vazarem um por cima do
-    // outro. Com largura fixa, sobra garantido pra cada rótulo quebrar em
-    // 2-3 linhas; se a soma não couber na tela, a faixa toda rola de lado
-    // (overflow-x-auto) em vez de sobrepor texto.
+    // O círculo+rótulo de cada etapa tem largura fixa (w-20): num container
+    // flex comum, o texto do rótulo se recusa a encolher abaixo da palavra
+    // mais larga (min-content), o que, com várias etapas espremidas numa
+    // tela de celular, fazia os rótulos vazarem um por cima do outro. Com
+    // largura fixa, sobra garantido pra cada rótulo quebrar em 2-3 linhas.
+    //
+    // Já o traço conector entre as etapas é flex-1 (cresce), não largura
+    // fixa — assim a faixa toda se espalha e ocupa a largura disponível da
+    // tela (em vez de ficar agrupada à esquerda com um vão vazio à
+    // direita, como ficou depois de reduzir o número de etapas). Numa tela
+    // estreita, o conector encolhe até o mínimo (min-w) antes de qualquer
+    // rótulo ser espremido; se ainda assim não couber, a faixa rola de
+    // lado (overflow-x-auto) em vez de sobrepor texto.
     <div className="-mx-1 flex items-start overflow-x-auto px-1 py-1">
       {steps.map((step, index) => (
-        <div key={step.label} className="flex shrink-0 items-start">
+        <Fragment key={step.label}>
           <div className="flex w-20 shrink-0 flex-col items-center gap-1.5">
             <div
               className={cn(
@@ -53,12 +60,12 @@ export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
           {index < steps.length - 1 ? (
             <div
               className={cn(
-                "mx-1 mt-3.5 h-0.5 w-6 shrink-0 rounded",
+                "mx-1 mt-3.5 h-0.5 min-w-4 flex-1 rounded",
                 step.state === "done" ? "bg-emerald-500 dark:bg-emerald-400" : "bg-border"
               )}
             />
           ) : null}
-        </div>
+        </Fragment>
       ))}
     </div>
   );
