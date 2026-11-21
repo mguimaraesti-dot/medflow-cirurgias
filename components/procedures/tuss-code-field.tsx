@@ -37,10 +37,15 @@ export function TussCodeField({
   const [slow, setSlow] = useState(false);
   const requestIdRef = useRef(0);
 
-  function fillNameIfEmpty(name: string) {
-    if (nameInputRef?.current && !nameInputRef.current.value.trim()) {
-      nameInputRef.current.value = name;
-    }
+  // Só sobrescreve o campo Nome depois que o usuário efetivamente mexeu
+  // nesses campos (digitou um código novo ou buscou/escolheu outro item).
+  // Na primeira renderização de um registro já existente, a confirmação
+  // automática do código salvo não deve apagar um nome que o usuário já
+  // personalizou.
+  const userInteractedRef = useRef(false);
+
+  function applyName(name: string) {
+    if (nameInputRef?.current) nameInputRef.current.value = name;
   }
 
   // Busca automática pelo código digitado direto no campo 1.
@@ -63,11 +68,11 @@ export function TussCodeField({
         const match = res.results?.find((r) => r.code === trimmed) ?? null;
         setCodeMatch(match);
         setCodeNotFound(!match && !res.error);
-        if (match) fillNameIfEmpty(match.name);
+        if (match && userInteractedRef.current) applyName(match.name);
       });
     }, 500);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fillNameIfEmpty só lê a ref, é estável entre renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyName só lê a ref, é estável entre renders
   }, [code]);
 
   // Busca automática pelo nome digitado no campo 2, com debounce.
@@ -110,12 +115,13 @@ export function TussCodeField({
   }, [query]);
 
   function handlePick(result: TussResult) {
+    userInteractedRef.current = true;
     setCode(result.code);
     setCodeMatch(result);
     setCodeNotFound(false);
     setResults(null);
     setQuery("");
-    fillNameIfEmpty(result.name);
+    applyName(result.name);
   }
 
   return (
@@ -126,7 +132,10 @@ export function TussCodeField({
           id="tuss_code"
           name="tuss_code"
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={(e) => {
+            userInteractedRef.current = true;
+            setCode(e.target.value);
+          }}
           placeholder="Ex: 40201082"
         />
         {codePending ? <p className="text-xs text-muted-foreground">Verificando código...</p> : null}
