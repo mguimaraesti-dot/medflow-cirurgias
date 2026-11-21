@@ -23,6 +23,8 @@ export type SurgeryListItem = {
   id: string;
   code: string;
   stage_id: string;
+  /** Ordem manual dentro da coluna do Kanban (menor = mais acima). */
+  board_position: number;
   attendance_type: "particular" | "convenio";
   priority: "low" | "normal" | "high" | "urgent";
   indication_date: string;
@@ -143,7 +145,7 @@ const AUTHORIZATION_STATUS_LABEL: Record<string, string> = {
 };
 
 const LIST_COLUMNS =
-  "id,code,stage_id,attendance_type,priority,indication_date,expected_date,confirmed_date,status," +
+  "id,code,stage_id,board_position,attendance_type,priority,indication_date,expected_date,confirmed_date,status," +
   "patient:patients(id,full_name),hospital:hospitals(id,name)," +
   "surgery_procedures(id,is_primary,procedure:procedures(id,name))," +
   "insurance_provider:insurance_providers(id,name)," +
@@ -173,11 +175,14 @@ export async function listSurgeriesForMap(
   supabase: SupabaseClient,
   filters: SurgeryMapFilters = {}
 ) {
+  // board_position é a ordem manual dentro da coluna do Kanban (arrastar
+  // e soltar pra reordenar) — prioridade/data continuam disponíveis como
+  // colunas ordenáveis na visão em Lista, mas não decidem mais a ordem
+  // "de fábrica" dos cards no board.
   let query = supabase
     .from("surgeries")
     .select(LIST_COLUMNS)
-    .order("priority", { ascending: false })
-    .order("expected_date", { ascending: true, nullsFirst: false });
+    .order("board_position", { ascending: true });
 
   if (filters.q?.trim()) {
     // Busca tanto pelo código da cirurgia quanto pelo nome do paciente —
@@ -653,7 +658,9 @@ export async function createSurgery(supabase: SupabaseClient, input: SurgeryUpda
 
   const { data, error } = await supabase
     .from("surgeries")
-    .insert({ ...input, stage_id: firstStage.id })
+    // Nasce no fim da coluna (maior board_position) — Date.now() cresce
+    // monotonicamente, então sempre fica depois do que já existe.
+    .insert({ ...input, stage_id: firstStage.id, board_position: Date.now() })
     .select("id")
     .single();
   if (error) throw error;
@@ -669,12 +676,38 @@ export async function updateSurgery(
   if (error) throw error;
 }
 
+/**
+ * Move um card pro fim de uma etapa (sem controle fino de posição) —
+ * usada pelo botão "Avançar para a próxima etapa" do painel de detalhe.
+ * Pra reordenar dentro da mesma coluna ou soltar entre dois cards
+ * específicos (drag-and-drop do board), ver moveSurgeryCard.
+ */
 export async function moveSurgeryStage(
   supabase: SupabaseClient,
   id: string,
   stageId: string
 ) {
-  const { error } = await supabase.from("surgeries").update({ stage_id: stageId }).eq("id", id);
+  const { error } = await supabase
+    .from("surgeries")
+    .update({ stage_id: stageId, board_position: Date.now() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Move/reordena um card do Kanban pra uma posição específica (entre dois
+ * outros cards, ou no início/fim da coluna) — usada pelo
+ * drag-and-drop do board, que já calcula board_position como o ponto
+ * médio entre os vizinhos de destino. */
+export async function moveSurgeryCard(
+  supabase: SupabaseClient,
+  id: string,
+  stageId: string,
+  boardPosition: number
+) {
+  const { error } = await supabase
+    .from("surgeries")
+    .update({ stage_id: stageId, board_position: boardPosition })
+    .eq("id", id);
   if (error) throw error;
 }
 

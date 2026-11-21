@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { KanbanCard } from "@/components/kanban/kanban-card";
@@ -56,14 +57,16 @@ export function KanbanColumn({
           isOver && "bg-accent"
         )}
       >
-        {surgeries.map((surgery) => (
-          <KanbanCard
-            key={surgery.id}
-            surgery={surgery}
-            stages={stages}
-            openTasksCount={openTasksBySurgery[surgery.id] ?? 0}
-          />
-        ))}
+        <SortableContext items={surgeries.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          {surgeries.map((surgery) => (
+            <KanbanCard
+              key={surgery.id}
+              surgery={surgery}
+              stages={stages}
+              openTasksCount={openTasksBySurgery[surgery.id] ?? 0}
+            />
+          ))}
+        </SortableContext>
         {surgeries.length === 0 ? (
           <p className="px-2 py-4 text-center text-xs text-muted-foreground">Nenhuma cirurgia</p>
         ) : null}

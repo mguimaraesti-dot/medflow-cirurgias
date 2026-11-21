@@ -8,6 +8,7 @@ import {
   createSurgery,
   updateSurgery,
   moveSurgeryStage,
+  moveSurgeryCard,
   cancelSurgery,
   updateRequirement,
   setRequirementSatisfied,
@@ -130,6 +131,20 @@ export async function updateSurgeryAction(
 export async function moveSurgeryStageAction(surgeryId: string, stageId: string) {
   const supabase = await createClient();
   await moveSurgeryStage(supabase, surgeryId, stageId);
+  revalidatePath("/kanban");
+  revalidatePath(`/surgeries/${surgeryId}`);
+}
+
+/** Drag-and-drop do board: move e/ou reordena um card pra uma posição
+ * específica dentro de uma coluna (entre dois vizinhos, ou no
+ * início/fim). */
+export async function moveSurgeryCardAction(
+  surgeryId: string,
+  stageId: string,
+  boardPosition: number
+) {
+  const supabase = await createClient();
+  await moveSurgeryCard(supabase, surgeryId, stageId, boardPosition);
   revalidatePath("/kanban");
   revalidatePath(`/surgeries/${surgeryId}`);
 }

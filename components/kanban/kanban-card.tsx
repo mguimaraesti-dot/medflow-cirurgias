@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ListTodo, Building2, Clock, Stethoscope, CalendarClock } from "lucide-react";
 
@@ -50,13 +50,15 @@ export function KanbanCard({
   openTasksCount?: number;
 }) {
   const [open, setOpen] = useState(false);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: surgery.id,
   });
 
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform), zIndex: 10 }
-    : undefined;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+  };
 
   const date = surgery.confirmed_date
     ? formatDate(surgery.confirmed_date)
