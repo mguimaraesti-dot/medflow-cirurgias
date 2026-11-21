@@ -17,6 +17,7 @@ import { moveSurgeryCardAction } from "@/app/(dashboard)/surgeries/actions";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { getStageColor } from "@/components/kanban/stage-palette";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 function StageOptionLabel({
   name,
@@ -43,23 +44,6 @@ function StageOptionLabel({
       </span>
     </span>
   );
-}
-
-/** As 8 colunas lado a lado não cabem numa tela de celular — abaixo de
- * `md` o board mostra uma etapa por vez, selecionada por abas. O valor
- * em px bate com o breakpoint `md` do Tailwind (768px). */
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mql = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobile(mql.matches);
-    update();
-    mql.addEventListener("change", update);
-    return () => mql.removeEventListener("change", update);
-  }, []);
-
-  return isMobile;
 }
 
 export function KanbanBoard({
