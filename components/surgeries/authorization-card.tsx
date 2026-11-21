@@ -31,10 +31,12 @@ const initialState: AuthorizationFormState = {};
 
 export function AuthorizationCard({
   surgeryId,
+  procedureLabel,
   insuranceProviderId,
   authorization,
 }: {
   surgeryId: string;
+  procedureLabel: string;
   insuranceProviderId: string | null;
   authorization: AuthorizationRequest | null;
 }) {
@@ -81,8 +83,12 @@ export function AuthorizationCard({
         <Input
           id="requested_procedure"
           name="requested_procedure"
-          defaultValue={authorization?.requested_procedure ?? ""}
+          defaultValue={authorization?.requested_procedure ?? procedureLabel}
         />
+        <p className="text-xs text-muted-foreground">
+          Preenchido com o(s) procedimento(s) da cirurgia — ajuste aqui só se o nome enviado ao
+          convênio precisar ser diferente.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

@@ -209,6 +209,7 @@ export default async function SurgeryDetailPage({
         <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
         <SurgeryRequirementsPanel
           surgeryId={surgery.id}
+          procedureLabel={surgery.procedures.map((p) => p.name).join(", ")}
           hospitalId={surgery.hospital_id}
           insuranceProviderId={surgery.insurance_provider_id}
           requirements={requirements}
