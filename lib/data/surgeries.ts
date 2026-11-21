@@ -533,6 +533,22 @@ export async function listSurgeriesByPatient(
   ) as unknown as ScheduleSurgeryItem[];
 }
 
+/**
+ * Quantidade de cirurgias (qualquer status) por paciente — usado na
+ * listagem de Pacientes, no lugar da data de nascimento.
+ */
+export async function countSurgeriesByPatient(supabase: SupabaseClient): Promise<Record<string, number>> {
+  const { data, error } = await supabase.from("surgeries").select("patient_id").not("patient_id", "is", null);
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (!row.patient_id) continue;
+    counts[row.patient_id] = (counts[row.patient_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function listSurgeriesForSelect(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("surgeries")

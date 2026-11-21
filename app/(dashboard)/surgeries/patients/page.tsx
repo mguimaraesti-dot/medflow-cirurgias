@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
 import { listPatients } from "@/lib/data/patients";
+import { countSurgeriesByPatient } from "@/lib/data/surgeries";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { SearchInput } from "@/components/shared/search-input";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
@@ -14,9 +15,10 @@ export default async function PatientsPage({
   await requireModuleView("patients");
   const { q } = await searchParams;
   const supabase = await createClient();
-  const [patients, insuranceProviders] = await Promise.all([
+  const [patients, insuranceProviders, surgeryCountByPatient] = await Promise.all([
     listPatients(supabase, q),
     listInsuranceProviders(supabase).then((rows) => rows.filter((r) => r.active)),
+    countSurgeriesByPatient(supabase),
   ]);
 
   return (
@@ -40,6 +42,7 @@ export default async function PatientsPage({
 
       <PatientsTable
         patients={patients}
+        surgeryCountByPatient={surgeryCountByPatient}
         emptyMessage={q ? "Nenhum paciente encontrado para essa busca." : "Nenhum paciente cadastrado ainda."}
       />
     </div>
