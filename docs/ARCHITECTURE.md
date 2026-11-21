@@ -127,19 +127,27 @@ têm RLS habilitado sem exceção.
 
 ## Backlog (fases)
 
-1. **Fundação** — ✅ em andamento nesta entrega: projeto Next.js, Supabase
-   configurado, GitHub conectado, estrutura de pastas, autenticação,
-   layout principal, schema inicial com RLS.
-2. **Banco e cadastros** — telas de pacientes, hospitais, operadoras,
-   procedimentos, materiais, fornecedores.
-3. **Gestão cirúrgica** — ficha da cirurgia, Kanban, histórico, anexos,
-   valor particular básico.
-4. **Operação cirúrgica** — autorizações, protocolos versionados, reserva
-   de centro cirúrgico, checklist pré-operatório, pendências/alertas.
-5. **Financeiro completo** — convênio, glosas, parcelas, dashboard e
-   relatórios financeiros.
+1. **Fundação** — ✅ concluída: projeto Next.js, Supabase configurado,
+   GitHub conectado, estrutura de pastas, autenticação, layout principal,
+   schema inicial com RLS.
+2. **Banco e cadastros** — ✅ concluída: telas de pacientes, hospitais,
+   operadoras, procedimentos, materiais, fornecedores.
+3. **Gestão cirúrgica** — ✅ concluída: ficha da cirurgia, Kanban, histórico,
+   anexos, valor particular básico.
+4. **Operação cirúrgica** — ✅ quase concluída: autorizações, reserva de
+   centro cirúrgico, checklist pré-operatório, materiais/OPME, pendências
+   (tarefas). Falta só **protocolos versionados** (hoje os materiais padrão
+   por procedimento são uma tabela simples — `procedure_default_materials`
+   — sem o fluxo draft → pending_approval → approved → archived descrito
+   no modelo de dados original).
+5. **Financeiro completo** — ✅ concluída: particular com parcelas e
+   recebimentos parciais, convênio com faturamento e glosas (identificação
+   → recurso → recuperada/mantida), dashboard `/financial` com totais e
+   filtros. Relatórios exportáveis (PDF/Excel) ainda não existem — hoje é
+   só a visão em tela.
 6. **Gestão e indicadores** — dashboard geral, agenda, relatórios,
-   exportações.
+   exportações. Ainda não iniciada (`/dashboard`, `/schedule` e `/reports`
+   continuam como placeholder).
 7. **Segurança e produção** — revisão de permissões (quando os perfis
    granulares forem criados), testes, homologação, publicação.
 
@@ -156,17 +164,13 @@ têm RLS habilitado sem exceção.
   mas registrar aqui para não gerar confusão numa máquina onde o CLI
   funcione e alguém tente rodar `init` de novo.
 
-## Status desta entrega (Fase 1)
+## Status atual (pós Fase 5)
 
-Concluído: scaffold Next.js + TypeScript + Tailwind, dependências
-(Supabase, zod, Recharts, dnd-kit), helpers de cliente Supabase
-(browser/server/admin), middleware de sessão, login com Supabase Auth,
-layout com menu lateral (12 módulos, todos com página placeholder honesta —
-sem dado fictício), migrations do schema completo com RLS, validadas
-localmente.
+Em produção (Vercel + Supabase reais, usuário único criado): Fases 1 a 3
+completas, Fase 4 completa à exceção de protocolos versionados, e Fase 5
+(financeiro completo) completa — particular com parcelas, convênio com
+faturamento e glosas, dashboard `/financial`.
 
-Pendente para destravar o próximo passo: aplicar as migrations no projeto
-Supabase real (`supabase link` + `supabase db push`, ou colar o SQL no SQL
-Editor do painel), configurar as variáveis de ambiente (`.env.local` e nas
-envs do Vercel) e criar o usuário único no Supabase Auth (ver
-`supabase/seed/README.md`).
+Próximos passos possíveis: fechar a Fase 4 (protocolos versionados) ou
+avançar pra Fase 6 (dashboard geral, agenda, relatórios e exportações —
+hoje só placeholders).
