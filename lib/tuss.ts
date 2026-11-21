@@ -28,9 +28,21 @@ type TussApiItem = {
   extras?: { fim_vigencia?: string };
 };
 
+// Cache em memória (por instância/lambda "quente" da Vercel) para evitar
+// repetir a mesma consulta lenta várias vezes em pouco tempo — útil porque
+// vários usuários tendem a buscar os mesmos termos comuns (ex: "endoscopia").
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+const cache = new Map<string, { expires: number; results: TussResult[] }>();
+
 export async function searchTussProcedures(query: string): Promise<TussResult[]> {
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
+
+  const cacheKey = trimmed.toLowerCase();
+  const cached = cache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return cached.results;
+  }
 
   // A base da ANS pode demorar bastante (observado ~8-15s em termos mais
   // genéricos), então damos uma margem generosa antes de desistir.
@@ -47,7 +59,7 @@ export async function searchTussProcedures(query: string): Promise<TussResult[]>
   const data = (await response.json()) as TussApiItem[];
   if (!Array.isArray(data)) return [];
 
-  return data
+  const results = data
     .filter((item) => item.id && item.display_name)
     .map((item) => ({
       code: item.id,
@@ -55,4 +67,7 @@ export async function searchTussProcedures(query: string): Promise<TussResult[]>
       active: !item.extras?.fim_vigencia || item.extras.fim_vigencia === "-",
     }))
     .slice(0, 20);
+
+  cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, results });
+  return results;
 }
