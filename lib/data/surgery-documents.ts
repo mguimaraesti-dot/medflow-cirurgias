@@ -43,6 +43,22 @@ export async function listSurgeryDocuments(
   return withUrls;
 }
 
+/** Quantidade de documentos anexados por cirurgia — usado na visão em
+ * lista do Mapa Cirúrgico, pra mostrar a situação da "Solicitação
+ * hospitalar" sem precisar de uma consulta por linha. */
+export async function countSurgeryDocumentsBySurgery(
+  supabase: SupabaseClient
+): Promise<Record<string, number>> {
+  const { data, error } = await supabase.from("surgery_documents").select("surgery_id");
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    counts[row.surgery_id] = (counts[row.surgery_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function addSurgeryDocument(
   supabase: SupabaseClient,
   surgeryId: string,

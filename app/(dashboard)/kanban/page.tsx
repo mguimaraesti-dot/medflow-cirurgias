@@ -9,6 +9,7 @@ import {
   type SurgeryMapFilters,
 } from "@/lib/data/surgeries";
 import { countOpenTasksBySurgery } from "@/lib/data/tasks";
+import { countSurgeryDocumentsBySurgery } from "@/lib/data/surgery-documents";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { listActiveProceduresForSelect } from "@/lib/data/procedures";
 import { listActiveInsuranceProvidersForSelect } from "@/lib/data/insurance-providers";
@@ -56,16 +57,25 @@ export default async function KanbanPage({
     scheduledOnly: params.scheduled === "1",
   };
 
-  const [stages, surgeries, stats, openTasksBySurgery, hospitals, procedures, insuranceProviders] =
-    await Promise.all([
-      listWorkflowStages(supabase),
-      listSurgeriesForMap(supabase, filters),
-      getMapStats(supabase),
-      countOpenTasksBySurgery(supabase),
-      listActiveHospitalsForSelect(supabase),
-      listActiveProceduresForSelect(supabase),
-      listActiveInsuranceProvidersForSelect(supabase),
-    ]);
+  const [
+    stages,
+    surgeries,
+    stats,
+    openTasksBySurgery,
+    documentsBySurgery,
+    hospitals,
+    procedures,
+    insuranceProviders,
+  ] = await Promise.all([
+    listWorkflowStages(supabase),
+    listSurgeriesForMap(supabase, filters),
+    getMapStats(supabase),
+    countOpenTasksBySurgery(supabase),
+    countSurgeryDocumentsBySurgery(supabase),
+    listActiveHospitalsForSelect(supabase),
+    listActiveProceduresForSelect(supabase),
+    listActiveInsuranceProvidersForSelect(supabase),
+  ]);
 
   // O board só mostra cirurgias ativas (abaixo) — qualquer filtro de
   // situação diferente de "ativa" (ex: clicar no indicador "Realizadas")
@@ -104,7 +114,11 @@ export default async function KanbanPage({
 
       <div className="mt-4">
         {isListView ? (
-          <MapListTable surgeries={surgeries} openTasksBySurgery={openTasksBySurgery} />
+          <MapListTable
+            surgeries={surgeries}
+            openTasksBySurgery={openTasksBySurgery}
+            documentsBySurgery={documentsBySurgery}
+          />
         ) : activeSurgeries.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Nenhuma cirurgia ativa para esse filtro.
