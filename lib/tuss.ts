@@ -176,43 +176,26 @@ function accentWildcardVariants(term: string): string[] {
   return variants;
 }
 
-/**
- * Busca "ampla" na base da ANS: além da frase completa digitada, busca
- * também cada palavra significativa separadamente, mais variações com
- * curinga no lugar de vogais/cedilha (pra não depender do usuário acertar
- * os acentos) — e junta tudo. A base da ANS não lida bem com buscas de
- * várias palavras — "fio guia roadrunner" pode não achar nada mesmo
- * quando "fio guia" ou "roadrunner" sozinhos acham — e com milhares de
- * itens na tabela, a ordem que a ANS devolve nem sempre traz o mais
- * provável primeiro. Por isso os resultados juntados são reordenados por
- * relevância (quantas palavras da busca aparecem no nome do item, frase
- * exata primeiro, acentos e caixa ignorados) antes de voltar pra tela.
- */
-async function searchTuss(table: TussTable, query: string): Promise<TussResult[]> {
-  const trimmed = query.trim();
-  if (trimmed.length < 3) return [];
-
-  const tokens = significantTokens(trimmed);
-  // Cada termo-base (frase completa + cada palavra) ganha sua própria cota
-  // de variações com curinga — em vez de um teto global só pra tudo, que
-  // na prática era consumido inteiro pelas primeiras vogais da primeira
-  // palavra, deixando palavras mais pra frente (ex: "pancreática" em
-  // "protese pancreatica") sem nenhuma variação testada.
-  const baseTerms = Array.from(new Set([trimmed, ...tokens]));
-  const wildcardTerms = Array.from(new Set(baseTerms.flatMap((term) => accentWildcardVariants(term))));
-  const searchTerms = Array.from(new Set([...baseTerms, ...wildcardTerms]));
-
-  const settled = await Promise.allSettled(searchTerms.map((term) => fetchTussPage(table, term)));
+/** Dispara várias buscas em paralelo e devolve as páginas que deram certo
+ * (ignora as que falharam) — e se TODAS falharem, o primeiro erro, pra
+ * quem chama decidir se propaga ou segue com o que já tem. */
+async function fetchTussPages(
+  table: TussTable,
+  terms: string[]
+): Promise<{ pages: TussResult[][]; error: unknown }> {
+  const settled = await Promise.allSettled(terms.map((term) => fetchTussPage(table, term)));
   const pages = settled
     .filter((s): s is PromiseFulfilledResult<TussResult[]> => s.status === "fulfilled")
     .map((s) => s.value);
+  const firstRejected = settled.find((s): s is PromiseRejectedResult => s.status === "rejected");
+  return { pages, error: firstRejected?.reason };
+}
 
-  if (pages.length === 0) {
-    const firstRejected = settled.find((s): s is PromiseRejectedResult => s.status === "rejected");
-    if (firstRejected) throw firstRejected.reason;
-    return [];
-  }
-
+/** Junta, remove duplicados e reordena por relevância (quantas palavras
+ * da busca aparecem no nome do item, frase exata primeiro, acentos e
+ * caixa ignorados) — a ordem que a ANS devolve nem sempre traz o mais
+ * provável primeiro, ainda mais com milhares de itens na tabela. */
+function rankResults(pages: TussResult[][], trimmed: string, tokens: string[]): TussResult[] {
   const byCode = new Map<string, TussResult>();
   for (const page of pages) {
     for (const item of page) {
@@ -239,6 +222,52 @@ async function searchTuss(table: TussTable, query: string): Promise<TussResult[]
     .sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name, "pt-BR"))
     .slice(0, 30)
     .map(({ item }) => item);
+}
+
+/** Já achou o suficiente sem precisar da 2ª rodada (mais lenta, com
+ * variações de acento)? Considera "suficiente" ter uma lista com um bom
+ * tanto de opções, ou já ter achado algo com o termo exato digitado. */
+function isGoodEnough(ranked: TussResult[], trimmed: string): boolean {
+  if (ranked.length >= 8) return true;
+  const normalizedQuery = normalize(trimmed);
+  return ranked.some((item) => normalize(item.name).includes(normalizedQuery));
+}
+
+/**
+ * Busca "ampla" na base da ANS, em 2 rodadas pra não deixar toda busca
+ * lenta por causa de um caso específico:
+ *
+ * 1ª rodada (rápida): a frase completa digitada + cada palavra
+ * significativa separadamente — a base da ANS não lida bem com buscas de
+ * várias palavras ("fio guia roadrunner" pode não achar nada mesmo
+ * quando "fio guia" ou "roadrunner" sozinhos acham), então já busca os 2
+ * jeitos. Se isso já trouxer um resultado bom, para por aqui.
+ *
+ * 2ª rodada (só quando a 1ª veio fraca/vazia): variações com curinga no
+ * lugar de vogais/cedilha, pra achar o item mesmo quando a busca ou o
+ * nome oficial tem acento e o outro não (confirmado testando contra a
+ * base real: buscar "protese" não achava nada escrito "Prótese"). Mais
+ * lenta (bem mais requisições em paralelo), então só roda quando precisa.
+ */
+async function searchTuss(table: TussTable, query: string): Promise<TussResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return [];
+
+  const tokens = significantTokens(trimmed);
+  const baseTerms = Array.from(new Set([trimmed, ...tokens]));
+
+  const base = await fetchTussPages(table, baseTerms);
+  if (base.pages.length === 0) {
+    if (base.error) throw base.error;
+    return [];
+  }
+
+  const baseRanked = rankResults(base.pages, trimmed, tokens);
+  if (isGoodEnough(baseRanked, trimmed)) return baseRanked;
+
+  const wildcardTerms = Array.from(new Set(baseTerms.flatMap((term) => accentWildcardVariants(term))));
+  const wildcard = await fetchTussPages(table, wildcardTerms);
+  return rankResults([...base.pages, ...wildcard.pages], trimmed, tokens);
 }
 
 export function searchTussProcedures(query: string): Promise<TussResult[]> {
