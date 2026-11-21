@@ -3,7 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { ListTodo, ShieldAlert, PackageX, Building2, ClipboardX, Clock } from "lucide-react";
+import {
+  ListTodo,
+  ShieldAlert,
+  PackageX,
+  Building2,
+  ClipboardX,
+  Clock,
+  Stethoscope,
+  CalendarClock,
+} from "lucide-react";
 
 import type { SurgeryListItem } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +48,16 @@ function formatDate(value: string | null) {
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
+/** Dias corridos desde a solicitação (indication_date), pra mostrar no
+ * canto do card quanto tempo essa cirurgia já está esperando. */
+function daysSinceIndication(value: string): number {
+  const start = new Date(value + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffMs = today.getTime() - start.getTime();
+  return Math.max(0, Math.round(diffMs / 86_400_000));
+}
+
 function pendingRequirements(requirements: SurgeryListItem["requirements"]) {
   return requirements
     .filter((r) => !r.is_satisfied && !r.waived)
@@ -69,6 +88,7 @@ export function KanbanCard({
   const pending = pendingRequirements(surgery.requirements);
   const attendanceLabel =
     surgery.attendance_type === "particular" ? "Particular" : surgery.insurance_provider?.name ?? "Convênio";
+  const waitingDays = daysSinceIndication(surgery.indication_date);
 
   return (
     <div
@@ -86,17 +106,28 @@ export function KanbanCard({
     >
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <span className="whitespace-nowrap font-medium text-foreground">{surgery.code}</span>
-        <Badge
-          className={cn("shrink-0 border", PRIORITY_CLASS[surgery.priority])}
-          variant="outline"
-        >
-          {PRIORITY_LABEL[surgery.priority]}
-        </Badge>
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            className="flex items-center gap-0.5 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+            title={`${waitingDays} dia${waitingDays === 1 ? "" : "s"} desde a solicitação`}
+          >
+            <CalendarClock className="h-2.5 w-2.5" />
+            {waitingDays}d
+          </span>
+          <Badge className={cn("border", PRIORITY_CLASS[surgery.priority])} variant="outline">
+            {PRIORITY_LABEL[surgery.priority]}
+          </Badge>
+        </div>
       </div>
       <p className="mt-1 truncate text-foreground">{surgery.patient?.full_name ?? "—"}</p>
-      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-        {surgery.hospital?.name ?? "—"} · {surgery.primary_procedure?.name ?? "—"}
+      <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-medium text-foreground">
+        <Stethoscope className="h-3 w-3 shrink-0 text-muted-foreground" />
+        {surgery.primary_procedure?.name ?? "—"}
         {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
+      </p>
+      <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
+        <Building2 className="h-3 w-3 shrink-0" />
+        {surgery.hospital?.name ?? "—"}
       </p>
       <p className="mt-0.5 truncate text-xs text-muted-foreground">{attendanceLabel}</p>
 
