@@ -29,17 +29,6 @@ export function FinancialFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Select value={searchParams.get("attendance") ?? "all"} onValueChange={(v) => setParam("attendance", v)}>
-        <SelectTrigger className="w-[150px]">
-          <SelectValue placeholder="Atendimento" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="particular">Particular</SelectItem>
-          <SelectItem value="convenio">Convênio</SelectItem>
-        </SelectContent>
-      </Select>
-
       <Select value={searchParams.get("hospital") ?? "all"} onValueChange={(v) => setParam("hospital", v)}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Hospital" />

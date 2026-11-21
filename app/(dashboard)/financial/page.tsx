@@ -6,9 +6,12 @@ import { FinancialFilters } from "@/components/financial/financial-filters";
 import { FinancialOverviewTable } from "@/components/financial/financial-overview-table";
 
 type SearchParams = {
-  attendance?: string;
   hospital?: string;
 };
+
+// Por enquanto o financeiro só cobre particular (ver financial-panel.tsx)
+// — convênio fica fora dos totais e da lista até ser ativado.
+const ATTENDANCE: FinancialOverviewFilters["attendance"] = "particular";
 
 export default async function FinancialPage({
   searchParams,
@@ -19,12 +22,12 @@ export default async function FinancialPage({
   const supabase = await createClient();
 
   const filters: FinancialOverviewFilters = {
-    attendance: params.attendance as FinancialOverviewFilters["attendance"],
+    attendance: ATTENDANCE,
     hospitalId: params.hospital,
   };
 
   const [totals, rows, hospitals] = await Promise.all([
-    getFinancialTotals(supabase),
+    getFinancialTotals(supabase, ATTENDANCE),
     listFinancialOverview(supabase, filters),
     listActiveHospitalsForSelect(supabase),
   ]);
@@ -33,7 +36,7 @@ export default async function FinancialPage({
     <div>
       <h1 className="text-lg font-medium text-foreground">Financeiro</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Particulares e convênios — valores previstos, recebidos, glosas e saldo por cirurgia.
+        Particulares — valores previstos, recebidos e saldo por cirurgia.
       </p>
 
       <div className="mt-4">

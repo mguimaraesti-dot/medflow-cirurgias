@@ -19,12 +19,7 @@ import { listActiveMaterialsForSelect } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
-import {
-  getOrCreateFinancialRecord,
-  listInstallments,
-  getInsuranceBilling,
-  listGlosas,
-} from "@/lib/data/financial";
+import { getOrCreateFinancialRecord, listInstallments } from "@/lib/data/financial";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -104,15 +99,10 @@ export default async function SurgeryDetailPage({
     getOrCreateFinancialRecord(supabase, id, surgery.attendance_type),
   ]);
 
-  const [installments, insuranceBilling, glosas] = await Promise.all([
-    surgery.attendance_type === "particular"
-      ? listInstallments(supabase, financialRecord.id)
-      : Promise.resolve([]),
-    surgery.attendance_type === "convenio"
-      ? getInsuranceBilling(supabase, financialRecord.id)
-      : Promise.resolve(null),
-    surgery.attendance_type === "convenio" ? listGlosas(supabase, financialRecord.id) : Promise.resolve([]),
-  ]);
+  // Convênio (faturamento/glosas) está fora de escopo por ora — só
+  // particular busca parcelas de verdade.
+  const installments =
+    surgery.attendance_type === "particular" ? await listInstallments(supabase, financialRecord.id) : [];
 
   const progressSteps = computeSurgeryProgressSteps(stages, surgery);
 
@@ -248,12 +238,8 @@ export default async function SurgeryDetailPage({
       <FinancialPanel
         surgeryId={surgery.id}
         attendanceType={surgery.attendance_type}
-        insuranceProviderId={surgery.insurance_provider_id}
-        particularRecord={surgery.attendance_type === "particular" ? financialRecord : null}
         financialRecord={financialRecord}
         installments={installments}
-        billing={insuranceBilling}
-        glosas={glosas}
       />
 
       {/* Histórico compacto */}

@@ -434,10 +434,19 @@ export type FinancialTotals = {
   openGlosasValue: number;
 };
 
-export async function getFinancialTotals(supabase: SupabaseClient): Promise<FinancialTotals> {
-  const { data, error } = await supabase
+/** `attendance` restringe os totais a um tipo de atendimento — hoje o
+ * dashboard sempre passa "particular" (convênio está fora de escopo por
+ * ora: ver financial-panel.tsx); deixar o parâmetro opcional é só pra não
+ * precisar mexer aqui de novo quando convênio voltar a ser calculado. */
+export async function getFinancialTotals(
+  supabase: SupabaseClient,
+  attendance?: "particular" | "convenio"
+): Promise<FinancialTotals> {
+  let query = supabase
     .from("financial_records")
     .select("attendance_type,expected_value,agreed_value,billed_value,received_value,glossed_value");
+  if (attendance) query = query.eq("attendance_type", attendance);
+  const { data, error } = await query;
   if (error) throw error;
 
   let expected = 0;
@@ -453,15 +462,20 @@ export async function getFinancialTotals(supabase: SupabaseClient): Promise<Fina
     glossed += Number(row.glossed_value) || 0;
   }
 
-  const { data: openGlosas, error: glosasError } = await supabase
-    .from("insurance_glosas")
-    .select("glosa_value,recovered_value,status")
-    .not("status", "in", "(recovered,cancelled)");
-  if (glosasError) throw glosasError;
-  const openGlosasValue = (openGlosas ?? []).reduce(
-    (sum, g) => sum + (Number(g.glosa_value) || 0) - (Number(g.recovered_value) || 0),
-    0
-  );
+  // Glosa é exclusiva de convênio — não vale a pena consultar
+  // insurance_glosas quando só particular está sendo somado.
+  let openGlosasValue = 0;
+  if (attendance !== "particular") {
+    const { data: openGlosas, error: glosasError } = await supabase
+      .from("insurance_glosas")
+      .select("glosa_value,recovered_value,status")
+      .not("status", "in", "(recovered,cancelled)");
+    if (glosasError) throw glosasError;
+    openGlosasValue = (openGlosas ?? []).reduce(
+      (sum, g) => sum + (Number(g.glosa_value) || 0) - (Number(g.recovered_value) || 0),
+      0
+    );
+  }
 
   return {
     expected,

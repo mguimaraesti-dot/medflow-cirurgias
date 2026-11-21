@@ -7,14 +7,13 @@ function formatBRL(value: number) {
 
 export function FinancialSummaryCards({ totals }: { totals: FinancialTotals }) {
   const items = [
-    { label: "Previsto/faturado", value: totals.expected, className: "text-foreground" },
+    { label: "Valor acordado", value: totals.expected, className: "text-foreground" },
     { label: "Recebido", value: totals.received, className: "text-emerald-600 dark:text-emerald-400" },
     { label: "Em aberto", value: totals.outstanding, className: "text-amber-600 dark:text-amber-400" },
-    { label: "Em glosa (não resolvida)", value: totals.openGlosasValue, className: "text-red-600 dark:text-red-400" },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       {items.map((item) => (
         <Card key={item.label}>
           <CardContent className="p-4">
