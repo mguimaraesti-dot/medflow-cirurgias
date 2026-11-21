@@ -43,15 +43,21 @@ export function CurrencyInput({
   );
   const hiddenRef = useRef<HTMLInputElement>(null);
 
-  function commit(raw: string) {
+  // Mantém o input oculto sempre em dia com o que foi digitado, a cada
+  // tecla — não só no blur/Enter. Assim, se o clique em "Salvar" acontecer
+  // antes do navegador disparar o blur do campo, o valor já está lá mesmo
+  // assim; o blur/Enter só cuida de deixar o texto visível bonito.
+  function syncHidden(raw: string) {
     const parsed = parseCurrencyInput(raw);
-    setDisplay(parsed !== null ? formatBRL(parsed) : "");
-    // Atualiza o DOM diretamente (não via state) pra garantir que o valor
-    // já esteja correto no input hidden antes do form ser enviado, mesmo
-    // se o Enter disparar o submit antes do próximo render do React.
     if (hiddenRef.current) {
       hiddenRef.current.value = parsed !== null ? parsed.toFixed(2) : "";
     }
+  }
+
+  function commit(raw: string) {
+    const parsed = parseCurrencyInput(raw);
+    setDisplay(parsed !== null ? formatBRL(parsed) : "");
+    syncHidden(raw);
   }
 
   return (
@@ -60,7 +66,10 @@ export function CurrencyInput({
         id={id}
         inputMode="decimal"
         value={display}
-        onChange={(e) => setDisplay(e.target.value)}
+        onChange={(e) => {
+          setDisplay(e.target.value);
+          syncHidden(e.target.value);
+        }}
         onBlur={(e: FocusEvent<HTMLInputElement>) => commit(e.target.value)}
         onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
           if (e.key === "Enter") commit(e.currentTarget.value);
