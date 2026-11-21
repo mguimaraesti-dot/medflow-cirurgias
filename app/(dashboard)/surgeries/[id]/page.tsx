@@ -14,11 +14,7 @@ import {
   getOrReservation,
   getOrCreateChecklist,
   listPreoperativeItems,
-  listSurgeryMaterialItems,
 } from "@/lib/data/operations";
-import { listActiveMaterialsForSelect } from "@/lib/data/materials";
-import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
-import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
 import { getOrCreateFinancialRecord, listInstallments } from "@/lib/data/financial";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
@@ -75,28 +71,14 @@ export default async function SurgeryDetailPage({
     getSurgeryHistoryTimeline(supabase, id),
   ]);
 
-  const procedureIds = surgery.procedures.map((p) => p.id);
-  const primaryProcedureId = surgery.primary_procedure?.id ?? procedureIds[0];
-
-  const [
-    authorization,
-    orReservation,
-    checklistId,
-    materials,
-    suppliers,
-    defaultMaterials,
-  ] = await Promise.all([
+  const [authorization, orReservation, checklistId] = await Promise.all([
     getAuthorizationRequest(supabase, id),
     getOrReservation(supabase, id),
     getOrCreateChecklist(supabase, id),
-    listActiveMaterialsForSelect(supabase),
-    listActiveSuppliersForSelect(supabase),
-    listDefaultMaterialsForProcedures(supabase, procedureIds),
   ]);
 
-  const [preoperativeItems, materialItems, documents, financialRecord] = await Promise.all([
+  const [preoperativeItems, documents, financialRecord] = await Promise.all([
     listPreoperativeItems(supabase, checklistId),
-    listSurgeryMaterialItems(supabase, id),
     listSurgeryDocuments(supabase, id),
     getOrCreateFinancialRecord(supabase, id, surgery.attendance_type),
   ]);
@@ -227,18 +209,12 @@ export default async function SurgeryDetailPage({
         <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
         <SurgeryRequirementsPanel
           surgeryId={surgery.id}
-          procedureIds={procedureIds}
-          primaryProcedureId={primaryProcedureId}
           hospitalId={surgery.hospital_id}
           insuranceProviderId={surgery.insurance_provider_id}
           requirements={requirements}
           authorization={authorization}
           orReservation={orReservation}
           preoperativeItems={preoperativeItems}
-          materialItems={materialItems}
-          materials={materials}
-          suppliers={suppliers}
-          defaultMaterials={defaultMaterials}
           documents={documents}
         />
       </div>

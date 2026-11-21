@@ -2,47 +2,38 @@
 
 import { useState } from "react";
 
-import type { AuthorizationRequest, OrReservation, PreoperativeItem, SurgeryMaterialItem } from "@/lib/data/operations";
-import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
+import type { AuthorizationRequest, OrReservation, PreoperativeItem } from "@/lib/data/operations";
 import type { SurgeryRequirement } from "@/lib/data/surgeries";
 import type { SurgeryDocument } from "@/lib/data/surgery-documents";
 import { AuthorizationRequirementCard } from "@/components/surgeries/authorization-requirement-card";
 import { OrReservationRequirementCard } from "@/components/surgeries/or-reservation-requirement-card";
 import { PreoperativeRequirementCard } from "@/components/surgeries/preoperative-requirement-card";
-import { MaterialsRequirementCard } from "@/components/surgeries/materials-requirement-card";
 import { HospitalRequestCard } from "@/components/surgeries/hospital-request-card";
 
+// "materials" (Materiais/OPME) saiu deste painel por pedido do usuário —
+// não aparece mais na ficha da cirurgia, nem é mais criado automaticamente
+// pro banco quando uma cirurgia nova é criada (migration 0021). Cirurgias
+// antigas que já tinham essa linha preenchida mantêm os dados no banco,
+// só não são mais exibidos aqui.
 type RequirementKey = SurgeryRequirement["requirement_key"] | "hospital_request";
 
 export function SurgeryRequirementsPanel({
   surgeryId,
-  procedureIds,
-  primaryProcedureId,
   hospitalId,
   insuranceProviderId,
   requirements,
   authorization,
   orReservation,
   preoperativeItems,
-  materialItems,
-  materials,
-  suppliers,
-  defaultMaterials,
   documents,
 }: {
   surgeryId: string;
-  procedureIds: string[];
-  primaryProcedureId: string;
   hospitalId: string;
   insuranceProviderId: string | null;
   requirements: SurgeryRequirement[];
   authorization: AuthorizationRequest | null;
   orReservation: OrReservation | null;
   preoperativeItems: PreoperativeItem[];
-  materialItems: SurgeryMaterialItem[];
-  materials: { id: string; name: string }[];
-  suppliers: { id: string; company_name: string }[];
-  defaultMaterials: ProcedureDefaultMaterial[];
   documents: SurgeryDocument[];
 }) {
   const [openKey, setOpenKey] = useState<RequirementKey | null>(null);
@@ -54,7 +45,6 @@ export function SurgeryRequirementsPanel({
   const authorizationReq = byKey("authorization");
   const orReservationReq = byKey("or_reservation");
   const preoperativeReq = byKey("preoperative");
-  const materialsReq = byKey("materials");
 
   return (
     <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
@@ -73,21 +63,6 @@ export function SurgeryRequirementsPanel({
           requirement={authorizationReq}
           open={openKey === "authorization"}
           onToggle={() => toggle("authorization")}
-        />
-      ) : null}
-
-      {materialsReq ? (
-        <MaterialsRequirementCard
-          surgeryId={surgeryId}
-          procedureIds={procedureIds}
-          primaryProcedureId={primaryProcedureId}
-          items={materialItems}
-          materials={materials}
-          suppliers={suppliers}
-          defaultMaterials={defaultMaterials}
-          requirement={materialsReq}
-          open={openKey === "materials"}
-          onToggle={() => toggle("materials")}
         />
       ) : null}
 
