@@ -262,6 +262,46 @@ export async function listSurgeriesForMap(
   ) as unknown as SurgeryListItem[];
 }
 
+export type ScheduleFilters = {
+  from: string;
+  to: string;
+  hospitalId?: string;
+};
+
+export type ScheduleSurgeryItem = SurgeryListItem & { confirmed_time: string | null };
+
+const SCHEDULE_COLUMNS = LIST_COLUMNS + ",confirmed_time";
+
+/**
+ * Lista usada pela Agenda (/schedule). A "data da cirurgia" pro
+ * calendário é a mesma regra usada na lista do Mapa Cirúrgico —
+ * confirmed_date quando tem, senão expected_date — então o filtro de
+ * período precisa olhar pra esse valor efetivo, não só uma coluna: traz
+ * cirurgias com confirmed_date no intervalo OU (sem confirmed_date e)
+ * expected_date no intervalo. Cancelada não entra — não ocupa agenda.
+ */
+export async function listSurgeriesForSchedule(
+  supabase: SupabaseClient,
+  filters: ScheduleFilters
+): Promise<ScheduleSurgeryItem[]> {
+  let query = supabase
+    .from("surgeries")
+    .select(SCHEDULE_COLUMNS)
+    .neq("status", "cancelled")
+    .or(
+      `and(confirmed_date.gte.${filters.from},confirmed_date.lte.${filters.to}),` +
+        `and(confirmed_date.is.null,expected_date.gte.${filters.from},expected_date.lte.${filters.to})`
+    );
+
+  if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as unknown as (ScheduleSurgeryItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as ScheduleSurgeryItem[];
+}
+
 /**
  * Números dos cards do topo do Mapa Cirúrgico. Calculados separadamente
  * dos filtros da barra de busca (são a visão geral, não dependem do que
