@@ -15,7 +15,6 @@ export type ProcedureDefaultMaterial = {
   material_id: string;
   quantity: number;
   unit: string | null;
-  specs: string | null;
   preferred_supplier_id: string | null;
   notes: string | null;
   updated_at: string;
@@ -24,7 +23,7 @@ export type ProcedureDefaultMaterial = {
 };
 
 const COLUMNS =
-  "id,procedure_id,material_id,quantity,unit,specs,preferred_supplier_id,notes,updated_at," +
+  "id,procedure_id,material_id,quantity,unit,preferred_supplier_id,notes,updated_at," +
   "material:materials_catalog(id,name),preferred_supplier:suppliers(id,company_name)";
 
 export async function listDefaultMaterials(supabase: SupabaseClient, procedureId: string) {

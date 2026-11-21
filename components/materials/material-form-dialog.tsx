@@ -94,26 +94,20 @@ export function MaterialFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="unit">Unidade de medida</Label>
-              <Select name="unit" defaultValue={material?.unit ?? undefined}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MATERIAL_UNITS.map((unit) => (
-                    <SelectItem key={unit} value={unit}>
-                      {unit}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="specs">Especificações técnicas</Label>
-              <Input id="specs" name="specs" defaultValue={material?.specs ?? ""} />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="unit">Unidade de medida</Label>
+            <Select name="unit" defaultValue={material?.unit ?? undefined}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {MATERIAL_UNITS.map((unit) => (
+                  <SelectItem key={unit} value={unit}>
+                    {unit}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">

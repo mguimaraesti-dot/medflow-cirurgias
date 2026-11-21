@@ -11,7 +11,6 @@ export const materialSchema = z.object({
   category: optionalText,
   description: optionalText,
   unit: optionalText,
-  specs: optionalText,
   notes: optionalText,
   active: z
     .union([z.literal("on"), z.literal("true"), z.literal(true), z.undefined(), z.null()])

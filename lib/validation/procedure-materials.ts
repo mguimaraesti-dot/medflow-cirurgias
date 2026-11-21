@@ -14,7 +14,6 @@ export const procedureDefaultMaterialSchema = z.object({
   material_id: z.string().uuid("Selecione um material."),
   quantity: z.preprocess((v) => Number(v), z.number().positive().default(1)),
   unit: optionalText,
-  specs: optionalText,
   preferred_supplier_id: optionalUuid,
   notes: optionalText,
 });

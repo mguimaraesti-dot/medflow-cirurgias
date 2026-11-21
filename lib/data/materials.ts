@@ -9,7 +9,6 @@ export type Material = {
   category: string | null;
   description: string | null;
   unit: string | null;
-  specs: string | null;
   notes: string | null;
   active: boolean;
   created_at: string;
@@ -26,7 +25,7 @@ export type MaterialSupplierRow = {
 export async function listMaterials(supabase: SupabaseClient, search?: string) {
   let query = supabase
     .from("materials_catalog")
-    .select("id,internal_code,name,category,description,unit,specs,notes,active,created_at")
+    .select("id,internal_code,name,category,description,unit,notes,active,created_at")
     .order("name", { ascending: true });
 
   if (search) {
@@ -51,7 +50,7 @@ export async function listActiveMaterialsForSelect(supabase: SupabaseClient) {
 export async function getMaterial(supabase: SupabaseClient, id: string) {
   const { data, error } = await supabase
     .from("materials_catalog")
-    .select("id,internal_code,name,category,description,unit,specs,notes,active,created_at")
+    .select("id,internal_code,name,category,description,unit,notes,active,created_at")
     .eq("id", id)
     .single();
   if (error) throw error;

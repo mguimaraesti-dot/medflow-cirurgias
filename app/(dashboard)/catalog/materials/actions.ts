@@ -26,7 +26,6 @@ function parseForm(formData: FormData) {
     category: formData.get("category"),
     description: formData.get("description"),
     unit: formData.get("unit"),
-    specs: formData.get("specs"),
     notes: formData.get("notes"),
     active: formData.get("active"),
   });

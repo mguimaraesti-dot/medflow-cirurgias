@@ -318,7 +318,7 @@ export async function importProcedureDefaultMaterials(
 ) {
   const { data: items, error } = await supabase
     .from("procedure_default_materials")
-    .select("material_id,quantity,unit,specs,preferred_supplier_id")
+    .select("material_id,quantity,unit,preferred_supplier_id")
     .eq("procedure_id", procedureId);
   if (error) throw error;
   if (!items || items.length === 0) return 0;
@@ -329,7 +329,6 @@ export async function importProcedureDefaultMaterials(
     supplier_id: item.preferred_supplier_id,
     quantity: item.quantity,
     unit: item.unit,
-    notes: item.specs,
     status: "suggested",
   }));
 
