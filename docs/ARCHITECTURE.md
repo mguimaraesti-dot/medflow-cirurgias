@@ -146,8 +146,10 @@ têm RLS habilitado sem exceção.
    filtros. Relatórios exportáveis (PDF/Excel) ainda não existem — hoje é
    só a visão em tela.
 6. **Gestão e indicadores** — dashboard geral, agenda, relatórios,
-   exportações. Ainda não iniciada (`/dashboard`, `/schedule` e `/reports`
-   continuam como placeholder).
+   exportações. ✅ Agenda (`/schedule`) concluída: calendário mensal com as
+   cirurgias do período (confirmada ou prevista), navegação entre meses e
+   filtro por hospital. `/dashboard` (indicadores gerais) e `/reports`
+   (relatórios/exportações) continuam como placeholder.
 7. **Segurança e produção** — revisão de permissões (quando os perfis
    granulares forem criados), testes, homologação, publicação.
 
