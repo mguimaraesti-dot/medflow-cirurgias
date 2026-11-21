@@ -38,13 +38,14 @@ export const TASK_STATUSES = [
 ] as const;
 
 export const taskSchema = z.object({
-  title: z.string().trim().min(1, "Dê um título à pendência."),
+  title: z.string().trim().min(1, "Dê um título à tarefa."),
   description: optionalText,
   category: z.enum(TASK_CATEGORIES),
   priority: z.enum(TASK_PRIORITIES).default("normal"),
   status: z.enum(TASK_STATUSES).default("open"),
   due_date: optionalDate,
   surgery_id: optionalUuid,
+  assigned_to: optionalUuid,
 });
 
 export type TaskInput = z.infer<typeof taskSchema>;

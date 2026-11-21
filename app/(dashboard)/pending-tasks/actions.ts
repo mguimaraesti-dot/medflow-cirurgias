@@ -17,6 +17,7 @@ function parseForm(formData: FormData) {
     status: formData.get("status") || "open",
     due_date: formData.get("due_date"),
     surgery_id: formData.get("surgery_id"),
+    assigned_to: formData.get("assigned_to"),
   });
 }
 
@@ -33,7 +34,7 @@ export async function createTaskAction(
   try {
     await createTask(supabase, parsed.data);
   } catch {
-    return { error: "Não foi possível criar a pendência." };
+    return { error: "Não foi possível criar a tarefa." };
   }
 
   revalidatePath("/pending-tasks");
@@ -54,7 +55,7 @@ export async function updateTaskAction(
   try {
     await updateTask(supabase, id, parsed.data);
   } catch {
-    return { error: "Não foi possível salvar a pendência." };
+    return { error: "Não foi possível salvar a tarefa." };
   }
 
   revalidatePath("/pending-tasks");

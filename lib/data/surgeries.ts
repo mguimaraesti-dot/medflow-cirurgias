@@ -549,14 +549,20 @@ export async function countSurgeriesByPatient(supabase: SupabaseClient): Promise
   return counts;
 }
 
-export async function listSurgeriesForSelect(supabase: SupabaseClient) {
+export type SurgerySelectOption = {
+  id: string;
+  code: string;
+  patient: { full_name: string } | null;
+};
+
+export async function listSurgeriesForSelect(supabase: SupabaseClient): Promise<SurgerySelectOption[]> {
   const { data, error } = await supabase
     .from("surgeries")
-    .select("id,code")
+    .select("id,code,patient:patients(full_name)")
     .eq("status", "active")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data as { id: string; code: string }[];
+  return data as unknown as SurgerySelectOption[];
 }
 
 export async function listSurgeries(supabase: SupabaseClient, search?: string) {

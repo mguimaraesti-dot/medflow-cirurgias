@@ -11,7 +11,7 @@ export const MODULE_LABELS: Record<string, string> = {
   surgeries: "Cirurgias",
   patients: "Pacientes",
   schedule: "Agenda",
-  pending_tasks: "Pendências",
+  pending_tasks: "Tarefas",
   procedures: "Procedimentos",
   materials: "Materiais",
   suppliers: "Fornecedores",

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 
 import { createTaskAction, updateTaskAction, type TaskFormState } from "@/app/(dashboard)/pending-tasks/actions";
 import type { Task } from "@/lib/data/tasks";
+import type { SurgerySelectOption } from "@/lib/data/surgeries";
 import { TASK_CATEGORIES, TASK_PRIORITIES, TASK_STATUSES } from "@/lib/validation/tasks";
 import { CATEGORY_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "@/components/tasks/task-filters";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,11 @@ const initialState: TaskFormState = {};
 export function TaskFormDialog({
   task,
   surgeries,
+  users,
 }: {
   task?: Task;
-  surgeries: { id: string; code: string }[];
+  surgeries: SurgerySelectOption[];
+  users: { id: string; full_name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const action = task ? updateTaskAction.bind(null, task.id) : createTaskAction;
@@ -46,12 +49,12 @@ export function TaskFormDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant={task ? "outline" : "default"} size={task ? "sm" : "default"}>
-          {task ? "Editar" : "Nova pendência"}
+          {task ? "Editar" : "Nova tarefa"}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{task ? "Editar pendência" : "Nova pendência"}</DialogTitle>
+          <DialogTitle>{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
           <DialogDescription>
             Tarefas administrativas e alertas, ligados ou não a uma cirurgia específica.
           </DialogDescription>
@@ -118,20 +121,38 @@ export function TaskFormDialog({
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="surgery_id">Cirurgia relacionada (opcional)</Label>
-            <Select name="surgery_id" defaultValue={task?.surgery_id ?? undefined}>
-              <SelectTrigger>
-                <SelectValue placeholder="Nenhuma" />
-              </SelectTrigger>
-              <SelectContent>
-                {surgeries.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="surgery_id">Cirurgia relacionada (opcional)</Label>
+              <Select name="surgery_id" defaultValue={task?.surgery_id ?? undefined}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  {surgeries.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.code}
+                      {s.patient ? ` — ${s.patient.full_name}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="assigned_to">Atribuir a (opcional)</Label>
+              <Select name="assigned_to" defaultValue={task?.assigned_to ?? undefined}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ninguém" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import type { Task } from "@/lib/data/tasks";
+import type { SurgerySelectOption } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "@/components/tasks/task-filters";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
@@ -31,10 +32,12 @@ function isOverdue(dueDate: string | null, status: string) {
 export function PendingTasksTable({
   tasks,
   surgeries,
+  users,
   emptyMessage,
 }: {
   tasks: Task[];
-  surgeries: { id: string; code: string }[];
+  surgeries: SurgerySelectOption[];
+  users: { id: string; full_name: string }[];
   emptyMessage: string;
 }) {
   const columns: SortableColumn<Task>[] = [
@@ -75,6 +78,22 @@ export function PendingTasksTable({
       ),
     },
     {
+      key: "patient",
+      label: "Paciente",
+      accessor: (task) => task.surgery?.patient?.full_name ?? null,
+      cell: (task) => (
+        <span className="text-muted-foreground">{task.surgery?.patient?.full_name ?? "—"}</span>
+      ),
+    },
+    {
+      key: "assigned_to",
+      label: "Atribuído a",
+      accessor: (task) => task.assigned_user?.full_name ?? null,
+      cell: (task) => (
+        <span className="text-muted-foreground">{task.assigned_user?.full_name ?? "—"}</span>
+      ),
+    },
+    {
       key: "due_date",
       label: "Prazo",
       accessor: (task) => task.due_date,
@@ -99,7 +118,7 @@ export function PendingTasksTable({
     {
       key: "actions",
       label: "",
-      cell: (task) => <TaskFormDialog task={task} surgeries={surgeries} />,
+      cell: (task) => <TaskFormDialog task={task} surgeries={surgeries} users={users} />,
     },
   ];
 

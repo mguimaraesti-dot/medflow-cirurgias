@@ -13,7 +13,9 @@ export type Task = {
   due_date: string | null;
   completed_at: string | null;
   created_at: string;
-  surgery: { id: string; code: string } | null;
+  assigned_to: string | null;
+  surgery: { id: string; code: string; patient: { full_name: string } | null } | null;
+  assigned_user: { id: string; full_name: string } | null;
 };
 
 export type TaskFilters = {
@@ -24,7 +26,7 @@ export type TaskFilters = {
 };
 
 const TASK_COLUMNS =
-  "id,surgery_id,title,description,category,priority,status,due_date,completed_at,created_at,surgery:surgeries(id,code)";
+  "id,surgery_id,title,description,category,priority,status,due_date,completed_at,created_at,assigned_to,surgery:surgeries(id,code,patient:patients(full_name)),assigned_user:profiles(id,full_name)";
 
 export async function listTasks(supabase: SupabaseClient, filters: TaskFilters = {}) {
   let query = supabase
