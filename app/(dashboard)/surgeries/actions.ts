@@ -16,8 +16,10 @@ import {
   setRequirementSatisfied,
   upsertParticularFinancialRecord,
   setSurgeryProcedures,
+  getSurgeryAuthorizationRequestData,
   type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
+import { buildAuthorizationRequestText } from "@/lib/authorization-request";
 import {
   surgerySchema,
   surgeryProceduresSchema,
@@ -225,6 +227,17 @@ export async function toggleRequirementSatisfiedAction(
   await setRequirementSatisfied(supabase, requirementId, isSatisfied);
   revalidatePath("/kanban");
   revalidatePath(`/surgeries/${surgeryId}`);
+}
+
+/**
+ * Gera o texto pronto pra copiar e enviar à central de autorizações do
+ * convênio/hospital (botão no painel rápido do Kanban) — só leitura, não
+ * precisa de revalidatePath.
+ */
+export async function getAuthorizationRequestTextAction(surgeryId: string): Promise<string> {
+  const supabase = await createClient();
+  const data = await getSurgeryAuthorizationRequestData(supabase, surgeryId);
+  return buildAuthorizationRequestText(data);
 }
 
 export type FinancialFormState = { error?: string };

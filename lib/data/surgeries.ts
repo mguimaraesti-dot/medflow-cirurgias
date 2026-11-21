@@ -601,6 +601,74 @@ export async function getSurgery(supabase: SupabaseClient, id: string) {
   ) as unknown as Surgery;
 }
 
+export type SurgeryAuthorizationRequestData = {
+  code: string;
+  patient_name: string;
+  patient_insurance_card_number: string | null;
+  hospital_name: string | null;
+  insurance_provider_name: string | null;
+  attendance_type: "particular" | "convenio";
+  priority: SurgeryListItem["priority"];
+  procedures: { name: string; tuss_code: string | null; is_primary: boolean }[];
+};
+
+/**
+ * Dados pra montar o texto de solicitação de autorização à central do
+ * convênio/hospital (botão "Copiar solicitação" no painel rápido do
+ * Kanban) — uma seleção enxuta e específica pra isso, incluindo campos
+ * (carteirinha, código TUSS) que a listagem/Kanban normal não carrega.
+ */
+export async function getSurgeryAuthorizationRequestData(
+  supabase: SupabaseClient,
+  surgeryId: string
+): Promise<SurgeryAuthorizationRequestData> {
+  const { data, error } = await supabase
+    .from("surgeries")
+    .select(
+      "code,attendance_type,priority," +
+        "patient:patients(full_name,insurance_card_number)," +
+        "hospital:hospitals(name)," +
+        "insurance_provider:insurance_providers(name)," +
+        "surgery_procedures(is_primary,procedure:procedures(name,tuss_code))"
+    )
+    .eq("id", surgeryId)
+    .single();
+  if (error) throw error;
+
+  const row = data as unknown as {
+    code: string;
+    attendance_type: "particular" | "convenio";
+    priority: SurgeryListItem["priority"];
+    patient: { full_name: string; insurance_card_number: string | null } | null;
+    hospital: { name: string } | null;
+    insurance_provider: { name: string } | null;
+    surgery_procedures: {
+      is_primary: boolean;
+      procedure: { name: string; tuss_code: string | null } | null;
+    }[];
+  };
+
+  const procedures = (row.surgery_procedures ?? [])
+    .filter((link) => link.procedure)
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+    .map((link) => ({
+      name: link.procedure!.name,
+      tuss_code: link.procedure!.tuss_code,
+      is_primary: link.is_primary,
+    }));
+
+  return {
+    code: row.code,
+    patient_name: row.patient?.full_name ?? "—",
+    patient_insurance_card_number: row.patient?.insurance_card_number ?? null,
+    hospital_name: row.hospital?.name ?? null,
+    insurance_provider_name: row.insurance_provider?.name ?? null,
+    attendance_type: row.attendance_type,
+    priority: row.priority,
+    procedures,
+  };
+}
+
 /**
  * Substitui a lista de procedimentos de uma cirurgia (apaga e recria) —
  * mais simples e seguro que calcular diffs, já que o volume por cirurgia é

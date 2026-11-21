@@ -19,6 +19,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { getStageColor } from "@/components/kanban/stage-palette";
+import { CopyAuthorizationRequestButton } from "@/components/surgeries/copy-authorization-request-button";
 import {
   REQUIREMENT_ICON,
   REQUIREMENT_LABEL,
@@ -262,8 +263,8 @@ export function SurgeryDetailSheet({
           </div>
         </div>
 
-        <SheetFooter className="flex-row justify-between gap-2 sm:justify-between">
-          <div className="flex gap-2">
+        <SheetFooter className="flex-row flex-wrap justify-between gap-2 sm:justify-between">
+          <div className="flex flex-wrap gap-2">
             <Link href={`/surgeries/${surgery.id}`}>
               <Button type="button" variant="outline" size="sm">
                 Ver completo
@@ -274,6 +275,7 @@ export function SurgeryDetailSheet({
                 Editar
               </Button>
             </Link>
+            <CopyAuthorizationRequestButton surgeryId={surgery.id} />
           </div>
           {nextStage ? (
             <Button
