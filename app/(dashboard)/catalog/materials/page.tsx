@@ -25,7 +25,7 @@ export default async function MaterialsCatalogPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">Materiais</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -35,7 +35,7 @@ export default async function MaterialsCatalogPage({
         <MaterialFormDialog />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <SearchInput placeholder="Buscar por nome..." />
         <p className="text-sm text-muted-foreground">
           {materials.length} material{materials.length === 1 ? "" : "is"}

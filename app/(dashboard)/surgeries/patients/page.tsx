@@ -23,7 +23,7 @@ export default async function PatientsPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">Pacientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -33,7 +33,7 @@ export default async function PatientsPage({
         <PatientFormDialog insuranceProviders={insuranceProviders} />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <SearchInput placeholder="Buscar por nome, CPF ou telefone..." />
         <p className="text-sm text-muted-foreground">
           {patients.length} paciente{patients.length === 1 ? "" : "s"}

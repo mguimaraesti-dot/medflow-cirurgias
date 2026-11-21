@@ -25,7 +25,7 @@ export default async function PendingTasksPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">Tarefas</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -35,7 +35,7 @@ export default async function PendingTasksPage({
         <TaskFormDialog surgeries={surgeries} users={users} />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <TaskFilters />
         <p className="whitespace-nowrap text-sm text-muted-foreground">
           {tasks.length} tarefa{tasks.length === 1 ? "" : "s"}

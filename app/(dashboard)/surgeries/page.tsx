@@ -20,7 +20,7 @@ export default async function SurgeriesPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">Cirurgias</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -43,7 +43,7 @@ export default async function SurgeriesPage({
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <SearchInput placeholder="Buscar por código (ex: CIR-2026-0001)..." />
         <p className="text-sm text-muted-foreground">
           {surgeries.length} cirurgia{surgeries.length === 1 ? "" : "s"}

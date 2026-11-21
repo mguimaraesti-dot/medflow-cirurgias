@@ -28,7 +28,7 @@ export default async function HospitalsPage({
         Configurações
       </Link>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">Hospitais</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -38,7 +38,7 @@ export default async function HospitalsPage({
         <HospitalFormDialog />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <SearchInput placeholder="Buscar por nome..." />
         <p className="text-sm text-muted-foreground">
           {hospitals.length} hospital{hospitals.length === 1 ? "" : "is"}

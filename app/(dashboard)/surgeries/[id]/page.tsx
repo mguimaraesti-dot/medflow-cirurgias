@@ -119,8 +119,8 @@ export default async function SurgeryDetailPage({
       </Link>
 
       {/* Cabeçalho compacto */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-medium text-foreground">{surgery.code}</h1>
             <Badge variant={surgery.status === "cancelled" ? "destructive" : "secondary"}>

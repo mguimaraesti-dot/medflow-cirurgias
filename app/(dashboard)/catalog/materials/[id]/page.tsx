@@ -34,7 +34,7 @@ export default async function MaterialDetailPage({
         Materiais
       </Link>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">{material.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">

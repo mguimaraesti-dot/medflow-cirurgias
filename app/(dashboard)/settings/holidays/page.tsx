@@ -30,7 +30,7 @@ export default async function HolidaysPage({
         Configurações
       </Link>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-medium text-foreground">Feriados</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -42,7 +42,7 @@ export default async function HolidaysPage({
         <HolidayFormDialog />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
           <Link href={`/settings/holidays?year=${year - 1}`}>
             <Button type="button" variant="outline" size="sm">
