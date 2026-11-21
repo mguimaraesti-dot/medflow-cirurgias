@@ -10,6 +10,8 @@ import {
   deleteMaterial,
   addMaterialSupplier,
   removeMaterialSupplier,
+  listMaterialSuppliers,
+  type MaterialSupplierRow,
 } from "@/lib/data/materials";
 import { materialSchema, materialSupplierSchema } from "@/lib/validation/materials";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
@@ -122,6 +124,14 @@ export type MaterialSupplierFormState = {
   error?: string;
 };
 
+// Usado pelo painel lateral de "Fornecedores" na própria listagem de
+// materiais, que busca os vínculos sob demanda ao abrir (em vez de
+// carregar os fornecedores de todos os materiais de uma vez na listagem).
+export async function getMaterialSuppliersAction(materialId: string): Promise<MaterialSupplierRow[]> {
+  const supabase = await createClient();
+  return listMaterialSuppliers(supabase, materialId);
+}
+
 export async function addMaterialSupplierAction(
   materialId: string,
   _prevState: MaterialSupplierFormState,
@@ -154,11 +164,13 @@ export async function addMaterialSupplierAction(
   }
 
   revalidatePath("/catalog/materials");
+  revalidatePath(`/catalog/materials/${materialId}`);
   return {};
 }
 
-export async function removeMaterialSupplierAction(linkId: string) {
+export async function removeMaterialSupplierAction(linkId: string, materialId?: string) {
   const supabase = await createClient();
   await removeMaterialSupplier(supabase, linkId);
   revalidatePath("/catalog/materials");
+  if (materialId) revalidatePath(`/catalog/materials/${materialId}`);
 }

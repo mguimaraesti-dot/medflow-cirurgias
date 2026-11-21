@@ -6,10 +6,8 @@ import { requireModuleView } from "@/lib/auth/guard";
 import { getMaterial, listMaterialSuppliers } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ActiveBadge } from "@/components/shared/active-badge";
-import { AddMaterialSupplierForm } from "@/components/materials/add-material-supplier-form";
-import { RemoveMaterialSupplierButton } from "@/components/materials/remove-material-supplier-button";
+import { MaterialSuppliersCard } from "@/components/materials/material-suppliers-card";
 
 export default async function MaterialDetailPage({
   params,
@@ -25,9 +23,6 @@ export default async function MaterialDetailPage({
     listMaterialSuppliers(supabase, id),
     listActiveSuppliersForSelect(supabase),
   ]);
-
-  const linkedSupplierIds = new Set(links.map((l) => l.supplier_id));
-  const availableSuppliers = activeSuppliers.filter((s) => !linkedSupplierIds.has(s.id));
 
   return (
     <div>
@@ -62,31 +57,8 @@ export default async function MaterialDetailPage({
         <CardHeader>
           <CardTitle>Fornecedores vinculados</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {links.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum fornecedor vinculado ainda.</p>
-          ) : (
-            <ul className="divide-y divide-border rounded-md border border-border">
-              {links.map((link) => (
-                <li key={link.id} className="flex items-center justify-between px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-foreground">
-                      {link.supplier?.company_name ?? "Fornecedor removido"}
-                    </span>
-                    {link.preferred ? <Badge variant="outline">Preferencial</Badge> : null}
-                    {link.supplier && !link.supplier.active ? (
-                      <Badge variant="secondary">Fornecedor inativo</Badge>
-                    ) : null}
-                  </div>
-                  <RemoveMaterialSupplierButton linkId={link.id} />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="border-t border-border pt-4">
-            <AddMaterialSupplierForm materialId={material.id} availableSuppliers={availableSuppliers} />
-          </div>
+        <CardContent>
+          <MaterialSuppliersCard materialId={material.id} links={links} activeSuppliers={activeSuppliers} />
         </CardContent>
       </Card>
     </div>

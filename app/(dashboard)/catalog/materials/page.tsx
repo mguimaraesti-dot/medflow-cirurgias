@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
 import { listMaterials } from "@/lib/data/materials";
+import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { SearchInput } from "@/components/shared/search-input";
 import { MaterialFormDialog } from "@/components/materials/material-form-dialog";
 import { MaterialsTable } from "@/components/materials/materials-table";
@@ -17,7 +18,10 @@ export default async function MaterialsCatalogPage({
   await requireModuleView("materials");
   const { q } = await searchParams;
   const supabase = await createClient();
-  const materials = await listMaterials(supabase, q);
+  const [materials, activeSuppliers] = await Promise.all([
+    listMaterials(supabase, q),
+    listActiveSuppliersForSelect(supabase),
+  ]);
 
   return (
     <div>
@@ -40,6 +44,7 @@ export default async function MaterialsCatalogPage({
 
       <MaterialsTable
         materials={materials}
+        activeSuppliers={activeSuppliers}
         emptyMessage={
           q ? "Nenhum material encontrado para essa busca." : "Nenhum material cadastrado ainda."
         }
