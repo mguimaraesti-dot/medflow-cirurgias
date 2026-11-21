@@ -75,23 +75,16 @@ export default async function KanbanPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-medium text-foreground">Mapa Cirúrgico</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhe todo o ciclo da cirurgia, da indicação ao faturamento.
-          </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <MapStatsRow stats={stats} />
         </div>
-        <Link href="/surgeries/new">
+        <Link href="/surgeries/new" className="shrink-0">
           <Button>
             <Plus className="h-4 w-4" />
             Nova cirurgia
           </Button>
         </Link>
-      </div>
-
-      <div className="mt-4">
-        <MapStatsRow stats={stats} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">

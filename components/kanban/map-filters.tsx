@@ -1,12 +1,155 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchInput } from "@/components/shared/search-input";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function toISODate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function startOfWeek(d: Date) {
+  const date = new Date(d);
+  const day = date.getDay(); // 0 = domingo
+  const diff = day === 0 ? -6 : 1 - day; // volta até a segunda-feira
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+function endOfWeek(d: Date) {
+  const start = startOfWeek(d);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return end;
+}
+
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function endOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
+/** Calcula o intervalo de um atalho de período, com base na data de hoje. */
+function presetRange(preset: string): { from: string; to: string } | null {
+  const today = new Date();
+  if (preset === "week") {
+    return { from: toISODate(startOfWeek(today)), to: toISODate(endOfWeek(today)) };
+  }
+  if (preset === "month") {
+    return { from: toISODate(startOfMonth(today)), to: toISODate(endOfMonth(today)) };
+  }
+  if (preset === "last_month") {
+    const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    return { from: toISODate(startOfMonth(prev)), to: toISODate(endOfMonth(prev)) };
+  }
+  return null;
+}
+
+const PRESETS = ["week", "month", "last_month"] as const;
+
+/** Período: menu com atalhos (esta semana / este mês / mês anterior) em
+ * vez de dois campos de data sempre visíveis — "Personalizado" ainda
+ * revela os dois campos pra quem quiser escolher datas específicas. */
+function DateRangeFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
+
+  function matchedPreset(): string {
+    if (!from && !to) return "all";
+    const match = PRESETS.find((p) => {
+      const range = presetRange(p);
+      return range && range.from === from && range.to === to;
+    });
+    return match ?? "custom";
+  }
+
+  const [selected, setSelected] = useState(matchedPreset);
+
+  // Só re-sincroniza quando as datas na URL baterem com um atalho
+  // conhecido (inclusive "nenhuma data" = "all") — assim, ao escolher
+  // "Personalizado" e ainda não ter digitado nada, não volta sozinho pra
+  // "Todo período" só porque os campos estão vazios.
+  useEffect(() => {
+    const match = matchedPreset();
+    if (match !== "custom") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza com a URL (back/forward, "Limpar filtros"), não é estado derivável em render
+      setSelected(match);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to]);
+
+  function applyRange(next: { from: string; to: string }) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.from) params.set("from", next.from);
+    else params.delete("from");
+    if (next.to) params.set("to", next.to);
+    else params.delete("to");
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`);
+    });
+  }
+
+  function handlePresetChange(value: string) {
+    setSelected(value);
+    if (value === "all") {
+      applyRange({ from: "", to: "" });
+      return;
+    }
+    if (value === "custom") return; // espera o usuário preencher as datas
+    const range = presetRange(value);
+    if (range) applyRange(range);
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Select value={selected} onValueChange={handlePresetChange}>
+        <SelectTrigger className="w-[160px] shrink-0">
+          <SelectValue placeholder="Período" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todo período</SelectItem>
+          <SelectItem value="week">Esta semana</SelectItem>
+          <SelectItem value="month">Este mês</SelectItem>
+          <SelectItem value="last_month">Mês anterior</SelectItem>
+          <SelectItem value="custom">Personalizado</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {selected === "custom" ? (
+        <>
+          <Input
+            type="date"
+            className="w-[150px] shrink-0"
+            value={from}
+            onChange={(e) => applyRange({ from: e.target.value, to })}
+          />
+          <span className="shrink-0 text-xs text-muted-foreground">até</span>
+          <Input
+            type="date"
+            className="w-[150px] shrink-0"
+            value={to}
+            onChange={(e) => applyRange({ from, to: e.target.value })}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 const PRIORITY_LABEL: Record<string, string> = {
   low: "Baixa",
@@ -135,22 +278,7 @@ export function MapFilters({
         </SelectContent>
       </Select>
 
-      <div className="flex items-center gap-1.5">
-        <Input
-          type="date"
-          className="w-[150px] shrink-0"
-          value={searchParams.get("from") ?? ""}
-          onChange={(e) => setParam("from", e.target.value)}
-        />
-        <span className="shrink-0 text-xs text-muted-foreground">até</span>
-        <Input
-          type="date"
-          className="w-[150px] shrink-0"
-          value={searchParams.get("to") ?? ""}
-          onChange={(e) => setParam("to", e.target.value)}
-        />
-      </div>
-
+      <DateRangeFilter />
     </div>
   );
 }

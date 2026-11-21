@@ -60,7 +60,7 @@ const CARDS: {
 
 export function MapStatsRow({ stats }: { stats: MapStats }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       {CARDS.map(({ key, label, icon: Icon, accent, href }) => {
         const content = (
           <>
