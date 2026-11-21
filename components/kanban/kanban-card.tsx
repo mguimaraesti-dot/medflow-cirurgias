@@ -84,8 +84,8 @@ export function KanbanCard({
         isDragging && "opacity-50"
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 flex-1 truncate font-medium text-foreground">{surgery.code}</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <span className="whitespace-nowrap font-medium text-foreground">{surgery.code}</span>
         <Badge
           className={cn("shrink-0 border", PRIORITY_CLASS[surgery.priority])}
           variant="outline"
