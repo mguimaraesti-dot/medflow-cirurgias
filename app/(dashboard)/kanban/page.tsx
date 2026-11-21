@@ -14,7 +14,7 @@ import { listActiveProceduresForSelect } from "@/lib/data/procedures";
 import { listActiveInsuranceProvidersForSelect } from "@/lib/data/insurance-providers";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { MapStatsRow } from "@/components/kanban/map-stats";
-import { MapFilters } from "@/components/kanban/map-filters";
+import { MapFilters, ClearFiltersButton } from "@/components/kanban/map-filters";
 import { MapListTable } from "@/components/kanban/map-list-table";
 import { ViewToggle } from "@/components/kanban/view-toggle";
 import { Button } from "@/components/ui/button";
@@ -100,7 +100,13 @@ export default async function KanbanPage({
           hospitals={hospitals}
           insuranceProviders={insuranceProviders}
         />
-        <ViewToggle />
+        {/* Ficam juntos de propósito — a linha de filtros já quebra bastante
+         * por conta própria, então "Limpar filtros" e o toggle Kanban/Lista
+         * sempre aparecem lado a lado, numa linha só. */}
+        <div className="flex shrink-0 items-center gap-2">
+          <ClearFiltersButton />
+          <ViewToggle />
+        </div>
       </div>
 
       <div className="mt-4">

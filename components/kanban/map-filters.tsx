@@ -48,19 +48,6 @@ export function MapFilters({
     });
   }
 
-  const hasFilters =
-    searchParams.get("procedure") ||
-    searchParams.get("hospital") ||
-    searchParams.get("attendance") ||
-    searchParams.get("priority") ||
-    searchParams.get("status") ||
-    searchParams.get("from") ||
-    searchParams.get("to") ||
-    searchParams.get("q") ||
-    searchParams.get("overdue") ||
-    searchParams.get("pending") ||
-    searchParams.get("scheduled");
-
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
       <SearchInput placeholder="Buscar por código..." className="min-w-[200px] max-w-[260px]" />
@@ -164,30 +151,50 @@ export function MapFilters({
         />
       </div>
 
-      {hasFilters ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="shrink-0"
-          onClick={() => {
-            const params = new URLSearchParams(searchParams.toString());
-            params.delete("procedure");
-            params.delete("hospital");
-            params.delete("attendance");
-            params.delete("priority");
-            params.delete("status");
-            params.delete("from");
-            params.delete("to");
-            params.delete("q");
-            params.delete("overdue");
-            params.delete("pending");
-            params.delete("scheduled");
-            router.replace(`${pathname}?${params.toString()}`);
-          }}
-        >
-          Limpar filtros
-        </Button>
-      ) : null}
     </div>
+  );
+}
+
+const FILTER_PARAM_KEYS = [
+  "procedure",
+  "hospital",
+  "attendance",
+  "priority",
+  "status",
+  "from",
+  "to",
+  "q",
+  "overdue",
+  "pending",
+  "scheduled",
+];
+
+/**
+ * Separado de `MapFilters` de propósito: fica ao lado do ViewToggle
+ * (Kanban/Lista) em vez de dentro da linha de filtros, que já quebra
+ * bastante — assim os dois sempre ficam juntos na mesma linha, sem
+ * desperdiçar uma linha inteira só pro botão de limpar.
+ */
+export function ClearFiltersButton() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const hasFilters = FILTER_PARAM_KEYS.some((key) => searchParams.get(key));
+  if (!hasFilters) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="shrink-0"
+      onClick={() => {
+        const params = new URLSearchParams(searchParams.toString());
+        FILTER_PARAM_KEYS.forEach((key) => params.delete(key));
+        router.replace(`${pathname}?${params.toString()}`);
+      }}
+    >
+      Limpar filtros
+    </Button>
   );
 }
