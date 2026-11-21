@@ -273,9 +273,9 @@ export type ScheduleFilters = {
   hospitalId?: string;
 };
 
-export type ScheduleSurgeryItem = SurgeryListItem & { confirmed_time: string | null };
+export type ScheduleSurgeryItem = SurgeryListItem & { confirmed_time: string | null; created_at: string };
 
-const SCHEDULE_COLUMNS = LIST_COLUMNS + ",confirmed_time";
+const SCHEDULE_COLUMNS = LIST_COLUMNS + ",confirmed_time,created_at";
 
 /**
  * Lista usada pela Agenda (/schedule). A "data da cirurgia" pro
@@ -707,6 +707,21 @@ export async function moveSurgeryCard(
   const { error } = await supabase
     .from("surgeries")
     .update({ stage_id: stageId, board_position: boardPosition })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Confirma ou remarca a data/horário da cirurgia — usado pelos botões
+ * rápidos "Confirmar cirurgia" e "Remarcar" do painel da Agenda. Não mexe
+ * em mais nada (etapa, requisitos etc.), só na data/horário confirmados. */
+export async function setSurgerySchedule(
+  supabase: SupabaseClient,
+  id: string,
+  input: { confirmedDate: string; confirmedTime: string | null }
+) {
+  const { error } = await supabase
+    .from("surgeries")
+    .update({ confirmed_date: input.confirmedDate, confirmed_time: input.confirmedTime })
     .eq("id", id);
   if (error) throw error;
 }

@@ -10,6 +10,8 @@ import {
   moveSurgeryStage,
   moveSurgeryCard,
   cancelSurgery,
+  setSurgerySchedule,
+  getSurgeryHistoryTimeline,
   updateRequirement,
   setRequirementSatisfied,
   upsertParticularFinancialRecord,
@@ -154,7 +156,30 @@ export async function cancelSurgeryAction(surgeryId: string, reason: string) {
   await cancelSurgery(supabase, surgeryId, reason);
   revalidatePath("/kanban");
   revalidatePath("/surgeries");
+  revalidatePath("/schedule");
   revalidatePath(`/surgeries/${surgeryId}`);
+}
+
+/** Confirmar/remarcar rápido pelo painel lateral da Agenda — só a
+ * data/horário, sem abrir o formulário completo de edição. */
+export async function setSurgeryScheduleAction(
+  surgeryId: string,
+  confirmedDate: string,
+  confirmedTime: string | null
+) {
+  const supabase = await createClient();
+  await setSurgerySchedule(supabase, surgeryId, { confirmedDate, confirmedTime });
+  revalidatePath("/schedule");
+  revalidatePath("/kanban");
+  revalidatePath(`/surgeries/${surgeryId}`);
+}
+
+/** Histórico de alterações, buscado só quando o painel lateral da Agenda
+ * é aberto (não vem junto com a lista do mês inteiro, pra não pesar o
+ * carregamento normal da Agenda). */
+export async function getSurgeryHistoryAction(surgeryId: string) {
+  const supabase = await createClient();
+  return getSurgeryHistoryTimeline(supabase, surgeryId);
 }
 
 export type RequirementFormState = { error?: string };

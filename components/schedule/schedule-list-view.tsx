@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
-
 import { Badge } from "@/components/ui/badge";
 import type { ScheduleSurgeryItem } from "@/lib/data/surgeries";
 import { deriveScheduleStatus, SCHEDULE_STATUS_COLOR, SCHEDULE_STATUS_LABEL } from "@/lib/schedule-status";
+import { ScheduleDetailSheet } from "@/components/schedule/schedule-detail-sheet";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 function formatDate(value: string | null) {
@@ -83,9 +82,14 @@ export function ScheduleListView({
       label: "Paciente",
       accessor: (surgery) => surgery.patient?.full_name ?? null,
       cell: (surgery) => (
-        <Link href={`/surgeries/${surgery.id}`} className="font-medium text-foreground hover:underline">
-          {surgery.patient?.full_name ?? "—"}
-        </Link>
+        <ScheduleDetailSheet
+          surgery={surgery}
+          trigger={
+            <button type="button" className="font-medium text-foreground hover:underline">
+              {surgery.patient?.full_name ?? "—"}
+            </button>
+          }
+        />
       ),
     },
     {

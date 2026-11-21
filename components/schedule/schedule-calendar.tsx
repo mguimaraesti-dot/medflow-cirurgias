@@ -1,9 +1,12 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
 import { CalendarHeart } from "lucide-react";
 
 import type { ScheduleSurgeryItem } from "@/lib/data/surgeries";
 import type { Holiday } from "@/lib/data/holidays";
 import { deriveScheduleStatus, SCHEDULE_STATUS_COLOR, SCHEDULE_STATUS_LABEL } from "@/lib/schedule-status";
+import { ScheduleDetailSheet } from "@/components/schedule/schedule-detail-sheet";
 import { cn } from "@/lib/utils";
 
 export type ScheduleDay = {
@@ -23,34 +26,39 @@ function formatTime(value: string | null) {
 }
 
 function SurgeryChip({ surgery }: { surgery: ScheduleSurgeryItem }) {
+  const [open, setOpen] = useState(false);
   const scheduleStatus = deriveScheduleStatus(surgery);
   const color = SCHEDULE_STATUS_COLOR[scheduleStatus];
   const time = formatTime(surgery.confirmed_time);
   const procedureLabel = surgery.primary_procedure?.name;
 
   return (
-    <Link
-      href={`/surgeries/${surgery.id}`}
-      className={cn(
-        "flex flex-col gap-0 truncate rounded-r-sm border-l-2 bg-muted/60 px-1.5 py-1 text-[11px] leading-tight hover:bg-muted",
-        color.border
-      )}
-      title={[
-        surgery.patient?.full_name,
-        procedureLabel,
-        surgery.hospital?.name,
-        SCHEDULE_STATUS_LABEL[scheduleStatus],
-      ]
-        .filter(Boolean)
-        .join(" — ")}
-    >
-      <span className="flex items-center gap-1 truncate font-medium text-foreground">
-        {time ? <span className="shrink-0 text-muted-foreground">{time}</span> : null}
-        <span className="truncate">{surgery.patient?.full_name ?? "—"}</span>
-      </span>
-      {procedureLabel ? <span className="truncate text-muted-foreground">{procedureLabel}</span> : null}
-      <span className="truncate text-muted-foreground">{surgery.hospital?.name ?? "—"}</span>
-    </Link>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          "flex w-full flex-col gap-0 truncate rounded-r-sm border-l-2 bg-muted/60 px-1.5 py-1 text-left text-[11px] leading-tight hover:bg-muted",
+          color.border
+        )}
+        title={[
+          surgery.patient?.full_name,
+          procedureLabel,
+          surgery.hospital?.name,
+          SCHEDULE_STATUS_LABEL[scheduleStatus],
+        ]
+          .filter(Boolean)
+          .join(" — ")}
+      >
+        <span className="flex items-center gap-1 truncate font-medium text-foreground">
+          {time ? <span className="shrink-0 text-muted-foreground">{time}</span> : null}
+          <span className="truncate">{surgery.patient?.full_name ?? "—"}</span>
+        </span>
+        {procedureLabel ? <span className="truncate text-muted-foreground">{procedureLabel}</span> : null}
+        <span className="truncate text-muted-foreground">{surgery.hospital?.name ?? "—"}</span>
+      </button>
+      <ScheduleDetailSheet surgery={surgery} open={open} onOpenChange={setOpen} />
+    </>
   );
 }
 
