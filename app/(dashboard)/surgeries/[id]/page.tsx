@@ -19,6 +19,7 @@ import {
 import { listActiveMaterialsForSelect } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { listDefaultMaterials } from "@/lib/data/procedure-materials";
+import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,10 @@ import { SurgeryProgressBar } from "@/components/surgeries/surgery-progress-bar"
 import { SurgeryRequirementsPanel } from "@/components/surgeries/surgery-requirements-panel";
 import { FinancialForm } from "@/components/surgeries/financial-form";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
+
+// O upload de documentos (Solicitação hospitalar) pode levar mais que o
+// padrão de 10s das Server Actions na Vercel — damos mais margem aqui.
+export const maxDuration = 30;
 
 const PRIORITY_LABEL: Record<string, string> = {
   low: "Baixa",
@@ -82,9 +87,10 @@ export default async function SurgeryDetailPage({
     listDefaultMaterials(supabase, surgery.primary_procedure_id),
   ]);
 
-  const [preoperativeItems, materialItems] = await Promise.all([
+  const [preoperativeItems, materialItems, documents] = await Promise.all([
     listPreoperativeItems(supabase, checklistId),
     listSurgeryMaterialItems(supabase, id),
+    listSurgeryDocuments(supabase, id),
   ]);
 
   const progressSteps = computeSurgeryProgressSteps(stages, surgery);
@@ -193,6 +199,7 @@ export default async function SurgeryDetailPage({
           materials={materials}
           suppliers={suppliers}
           defaultMaterials={defaultMaterials}
+          documents={documents}
         />
       </div>
 
