@@ -1,9 +1,8 @@
 import Link from "next/link";
 
 import type { SurgeryListItem } from "@/lib/data/surgeries";
-import { EmptyRow } from "@/components/shared/empty-row";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 const STATUS_LABEL: Record<string, string> = {
   active: "Ativa",
@@ -26,6 +25,8 @@ const PRIORITY_LABEL: Record<string, string> = {
   urgent: "Urgente",
 };
 
+const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
@@ -43,6 +44,15 @@ function StageBadge({ req }: { req: { is_satisfied: boolean; waived: boolean } |
   return <span className="text-xs text-red-600 dark:text-red-400">Pendente</span>;
 }
 
+/** Status de requisito traduzido pra número, pra ordenação da coluna poder
+ * comparar: Pendente < Dispensado < OK (quanto mais "resolvido", maior). */
+function requirementRank(req: { is_satisfied: boolean; waived: boolean } | undefined) {
+  if (!req) return -1;
+  if (req.is_satisfied) return 2;
+  if (req.waived) return 1;
+  return 0;
+}
+
 export function MapListTable({
   surgeries,
   openTasksBySurgery,
@@ -52,103 +62,144 @@ export function MapListTable({
   openTasksBySurgery: Record<string, number>;
   documentsBySurgery: Record<string, number>;
 }) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const columns: SortableColumn<SurgeryListItem>[] = [
+    {
+      key: "code",
+      label: "Código",
+      accessor: (s) => s.code,
+      cell: (surgery) => (
+        <Link href={`/surgeries/${surgery.id}`} className="font-medium text-foreground hover:underline">
+          {surgery.code}
+        </Link>
+      ),
+    },
+    {
+      key: "patient",
+      label: "Paciente",
+      accessor: (s) => s.patient?.full_name ?? null,
+      cell: (surgery) => <span className="text-muted-foreground">{surgery.patient?.full_name ?? "—"}</span>,
+    },
+    {
+      key: "hospital",
+      label: "Hospital / Procedimento",
+      accessor: (s) => s.hospital?.name ?? null,
+      cell: (surgery) => (
+        <div className="text-muted-foreground">
+          <p>{surgery.hospital?.name ?? "—"}</p>
+          <p className="text-xs text-muted-foreground">
+            {surgery.primary_procedure?.name ?? "—"}
+            {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "insurance",
+      label: "Convênio",
+      accessor: (s) => (s.attendance_type === "particular" ? "Particular" : s.insurance_provider?.name ?? "Convênio"),
+      cell: (surgery) => (
+        <span className="text-muted-foreground">
+          {surgery.attendance_type === "particular" ? "Particular" : surgery.insurance_provider?.name ?? "Convênio"}
+        </span>
+      ),
+    },
+    {
+      key: "date",
+      label: "Data",
+      accessor: (s) => s.confirmed_date ?? s.expected_date ?? null,
+      cell: (surgery) => {
+        const isOverdue =
+          surgery.status === "active" &&
+          !surgery.confirmed_date &&
+          surgery.expected_date &&
+          surgery.expected_date < today;
+        return (
+          <span className={isOverdue ? "font-medium text-red-600 dark:text-red-400" : "text-muted-foreground"}>
+            {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
+            {isOverdue ? " (atrasada)" : ""}
+          </span>
+        );
+      },
+    },
+    {
+      key: "priority",
+      label: "Prioridade",
+      accessor: (s) => PRIORITY_ORDER[s.priority] ?? 9,
+      cell: (surgery) => <span className="text-muted-foreground">{PRIORITY_LABEL[surgery.priority]}</span>,
+    },
+    {
+      key: "documents",
+      label: "Solic. hospitalar",
+      className: "px-3",
+      accessor: (s) => ((documentsBySurgery[s.id] ?? 0) > 0 ? 1 : 0),
+      cell: (surgery) => {
+        const hasDocuments = (documentsBySurgery[surgery.id] ?? 0) > 0;
+        return hasDocuments ? (
+          <span className="text-xs text-emerald-600 dark:text-emerald-400">OK</span>
+        ) : (
+          <span className="text-xs text-red-600 dark:text-red-400">Pendente</span>
+        );
+      },
+    },
+    {
+      key: "authorization",
+      label: "Autorização",
+      className: "px-3",
+      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "authorization")),
+      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "authorization")} />,
+    },
+    {
+      key: "materials",
+      label: "Materiais",
+      className: "px-3",
+      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "materials")),
+      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "materials")} />,
+    },
+    {
+      key: "or_reservation",
+      label: "Reserva",
+      className: "px-3",
+      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "or_reservation")),
+      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "or_reservation")} />,
+    },
+    {
+      key: "preoperative",
+      label: "Pré-op",
+      className: "px-3",
+      accessor: (s) => requirementRank(s.requirements.find((r) => r.requirement_key === "preoperative")),
+      cell: (surgery) => <StageBadge req={surgery.requirements.find((r) => r.requirement_key === "preoperative")} />,
+    },
+    {
+      key: "tasks",
+      label: "Tarefas",
+      className: "px-3",
+      accessor: (s) => openTasksBySurgery[s.id] ?? 0,
+      cell: (surgery) => (
+        <span className="text-muted-foreground">{openTasksBySurgery[surgery.id] ?? "—"}</span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Situação",
+      accessor: (s) => STATUS_LABEL[s.status] ?? s.status,
+      cell: (surgery) => (
+        <Badge variant={STATUS_VARIANT[surgery.status] ?? "outline"}>
+          {STATUS_LABEL[surgery.status] ?? surgery.status}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3">Código</th>
-            <th className="px-4 py-3">Paciente</th>
-            <th className="px-4 py-3">Hospital / Procedimento</th>
-            <th className="px-4 py-3">Convênio</th>
-            <th className="px-4 py-3">Data</th>
-            <th className="px-4 py-3">Prioridade</th>
-            <th className="px-3 py-3">Solic. hospitalar</th>
-            <th className="px-3 py-3">Autorização</th>
-            <th className="px-3 py-3">Materiais</th>
-            <th className="px-3 py-3">Reserva</th>
-            <th className="px-3 py-3">Pré-op</th>
-            <th className="px-3 py-3">Tarefas</th>
-            <th className="px-4 py-3">Situação</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {surgeries.length === 0 ? (
-            <EmptyRow colSpan={13} message="Nenhuma cirurgia encontrada para esse filtro." />
-          ) : (
-            surgeries.map((surgery) => {
-              const authorization = surgery.requirements.find((r) => r.requirement_key === "authorization");
-              const materials = surgery.requirements.find((r) => r.requirement_key === "materials");
-              const orReservation = surgery.requirements.find((r) => r.requirement_key === "or_reservation");
-              const preoperative = surgery.requirements.find((r) => r.requirement_key === "preoperative");
-              const hasDocuments = (documentsBySurgery[surgery.id] ?? 0) > 0;
-              const openTasks = openTasksBySurgery[surgery.id] ?? 0;
-              const today = new Date().toISOString().slice(0, 10);
-              const isOverdue =
-                surgery.status === "active" &&
-                !surgery.confirmed_date &&
-                surgery.expected_date &&
-                surgery.expected_date < today;
-
-              return (
-                <tr key={surgery.id} className="hover:bg-muted">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/surgeries/${surgery.id}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {surgery.code}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{surgery.patient?.full_name ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    <p>{surgery.hospital?.name ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {surgery.primary_procedure?.name ?? "—"}
-                      {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {surgery.attendance_type === "particular"
-                      ? "Particular"
-                      : surgery.insurance_provider?.name ?? "Convênio"}
-                  </td>
-                  <td className={cn("px-4 py-3", isOverdue ? "font-medium text-red-600 dark:text-red-400" : "text-muted-foreground")}>
-                    {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
-                    {isOverdue ? " (atrasada)" : ""}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{PRIORITY_LABEL[surgery.priority]}</td>
-                  <td className="px-3 py-3">
-                    {hasDocuments ? (
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400">OK</span>
-                    ) : (
-                      <span className="text-xs text-red-600 dark:text-red-400">Pendente</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
-                    <StageBadge req={authorization} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StageBadge req={materials} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StageBadge req={orReservation} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StageBadge req={preoperative} />
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">{openTasks || "—"}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={STATUS_VARIANT[surgery.status] ?? "outline"}>
-                      {STATUS_LABEL[surgery.status] ?? surgery.status}
-                    </Badge>
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+      <SortableTable
+        columns={columns}
+        rows={surgeries}
+        rowKey={(s) => s.id}
+        emptyMessage="Nenhuma cirurgia encontrada para esse filtro."
+      />
     </div>
   );
 }

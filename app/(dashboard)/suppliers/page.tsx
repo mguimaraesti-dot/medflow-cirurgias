@@ -1,11 +1,45 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { listSuppliers } from "@/lib/data/suppliers";
+import { listSuppliers, type Supplier } from "@/lib/data/suppliers";
 import { SearchInput } from "@/components/shared/search-input";
-import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 import { SupplierRowActions } from "@/components/suppliers/supplier-row-actions";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
+
+const columns: SortableColumn<Supplier>[] = [
+  {
+    key: "company_name",
+    label: "Razão social",
+    accessor: (supplier) => supplier.company_name,
+    cell: (supplier) => <span className="font-medium text-foreground">{supplier.company_name}</span>,
+  },
+  {
+    key: "trade_name",
+    label: "Nome fantasia",
+    accessor: (supplier) => supplier.trade_name,
+    cell: (supplier) => <span className="text-muted-foreground">{supplier.trade_name || "—"}</span>,
+  },
+  {
+    key: "contact",
+    label: "Contato",
+    accessor: (supplier) => supplier.contact_name ?? supplier.phone,
+    cell: (supplier) => (
+      <span className="text-muted-foreground">{supplier.contact_name || supplier.phone || "—"}</span>
+    ),
+  },
+  {
+    key: "active",
+    label: "Status",
+    accessor: (supplier) => (supplier.active ? 1 : 0),
+    cell: (supplier) => <ActiveBadge active={supplier.active} />,
+  },
+  {
+    key: "actions",
+    label: "",
+    cell: (supplier) => <SupplierRowActions supplier={supplier} />,
+  },
+];
 
 export default async function SuppliersPage({
   searchParams,
@@ -38,55 +72,18 @@ export default async function SuppliersPage({
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Razão social</th>
-              <th className="px-4 py-3">Nome fantasia</th>
-              <th className="px-4 py-3">Contato</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {suppliers.length === 0 ? (
-              <EmptyRow
-                colSpan={5}
-                message={
-                  q
-                    ? "Nenhum fornecedor encontrado para essa busca."
-                    : "Nenhum fornecedor cadastrado ainda."
-                }
-              />
-            ) : (
-              suppliers.map((supplier) => (
-                <SupplierFormDialog
-                  key={supplier.id}
-                  supplier={supplier}
-                  trigger={
-                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        {supplier.company_name}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {supplier.trade_name || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {supplier.contact_name || supplier.phone || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ActiveBadge active={supplier.active} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <SupplierRowActions supplier={supplier} />
-                      </td>
-                    </tr>
-                  }
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+        <SortableTable
+          columns={columns}
+          rows={suppliers}
+          rowKey={(supplier) => supplier.id}
+          emptyMessage={
+            q ? "Nenhum fornecedor encontrado para essa busca." : "Nenhum fornecedor cadastrado ainda."
+          }
+          rowClassName={() => "cursor-pointer transition-colors hover:bg-muted/60"}
+          wrapRow={(supplier, rowNode) => (
+            <SupplierFormDialog key={supplier.id} supplier={supplier} trigger={rowNode} />
+          )}
+        />
       </div>
     </div>
   );

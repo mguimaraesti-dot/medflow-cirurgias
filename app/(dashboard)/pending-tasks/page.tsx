@@ -2,13 +2,13 @@ import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { listTasks } from "@/lib/data/tasks";
+import { listTasks, type Task } from "@/lib/data/tasks";
 import { listSurgeriesForSelect } from "@/lib/data/surgeries";
-import { EmptyRow } from "@/components/shared/empty-row";
 import { Badge } from "@/components/ui/badge";
-import { TaskFilters, CATEGORY_LABEL, PRIORITY_LABEL } from "@/components/tasks/task-filters";
+import { TaskFilters, CATEGORY_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "@/components/tasks/task-filters";
 import { TaskFormDialog } from "@/components/tasks/task-form-dialog";
 import { TaskStatusSelect } from "@/components/tasks/task-status-select";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 const PRIORITY_VARIANT: Record<string, "outline" | "secondary" | "destructive"> = {
   low: "outline",
@@ -16,6 +16,8 @@ const PRIORITY_VARIANT: Record<string, "outline" | "secondary" | "destructive"> 
   high: "secondary",
   urgent: "destructive",
 };
+
+const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -62,68 +64,85 @@ export default async function PendingTasksPage({
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Título</th>
-              <th className="px-4 py-3">Categoria</th>
-              <th className="px-4 py-3">Prioridade</th>
-              <th className="px-4 py-3">Cirurgia</th>
-              <th className="px-4 py-3">Prazo</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {tasks.length === 0 ? (
-              <EmptyRow
-                colSpan={7}
-                message={
-                  hasActiveFilters
-                    ? "Nenhuma pendência encontrada para esses filtros."
-                    : "Nenhuma pendência cadastrada ainda."
-                }
-              />
-            ) : (
-              tasks.map((task) => (
-                <tr key={task.id}>
-                  <td className="px-4 py-3 font-medium text-foreground">{task.title}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{CATEGORY_LABEL[task.category]}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={PRIORITY_VARIANT[task.priority]}>
-                      {PRIORITY_LABEL[task.priority]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {task.surgery ? (
-                      <Link href={`/surgeries/${task.surgery.id}`} className="hover:underline">
-                        {task.surgery.code}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td
-                    className={
-                      isOverdue(task.due_date, task.status)
-                        ? "px-4 py-3 font-medium text-red-600 dark:text-red-400"
-                        : "px-4 py-3 text-muted-foreground"
-                    }
-                  >
-                    {formatDate(task.due_date)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <TaskStatusSelect task={task} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <TaskFormDialog task={task} surgeries={surgeries} />
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <SortableTable
+          columns={buildColumns(surgeries)}
+          rows={tasks}
+          rowKey={(task) => task.id}
+          emptyMessage={
+            hasActiveFilters
+              ? "Nenhuma pendência encontrada para esses filtros."
+              : "Nenhuma pendência cadastrada ainda."
+          }
+        />
       </div>
     </div>
   );
+}
+
+function buildColumns(surgeries: Awaited<ReturnType<typeof listSurgeriesForSelect>>): SortableColumn<Task>[] {
+  return [
+    {
+      key: "title",
+      label: "Título",
+      accessor: (task) => task.title,
+      cell: (task) => <span className="font-medium text-foreground">{task.title}</span>,
+    },
+    {
+      key: "category",
+      label: "Categoria",
+      accessor: (task) => CATEGORY_LABEL[task.category] ?? task.category,
+      cell: (task) => <span className="text-muted-foreground">{CATEGORY_LABEL[task.category]}</span>,
+    },
+    {
+      key: "priority",
+      label: "Prioridade",
+      accessor: (task) => PRIORITY_ORDER[task.priority] ?? 9,
+      cell: (task) => (
+        <Badge variant={PRIORITY_VARIANT[task.priority]}>{PRIORITY_LABEL[task.priority]}</Badge>
+      ),
+    },
+    {
+      key: "surgery",
+      label: "Cirurgia",
+      accessor: (task) => task.surgery?.code ?? null,
+      cell: (task) => (
+        <span className="text-muted-foreground">
+          {task.surgery ? (
+            <Link href={`/surgeries/${task.surgery.id}`} className="hover:underline">
+              {task.surgery.code}
+            </Link>
+          ) : (
+            "—"
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "due_date",
+      label: "Prazo",
+      accessor: (task) => task.due_date,
+      cell: (task) => (
+        <span
+          className={
+            isOverdue(task.due_date, task.status)
+              ? "font-medium text-red-600 dark:text-red-400"
+              : "text-muted-foreground"
+          }
+        >
+          {formatDate(task.due_date)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      accessor: (task) => STATUS_LABEL[task.status] ?? task.status,
+      cell: (task) => <TaskStatusSelect task={task} />,
+    },
+    {
+      key: "actions",
+      label: "",
+      cell: (task) => <TaskFormDialog task={task} surgeries={surgeries} />,
+    },
+  ];
 }

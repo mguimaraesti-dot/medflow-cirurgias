@@ -3,12 +3,12 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { listHolidays } from "@/lib/data/holidays";
-import { EmptyRow } from "@/components/shared/empty-row";
+import { listHolidays, type Holiday } from "@/lib/data/holidays";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HolidayFormDialog } from "@/components/holidays/holiday-form-dialog";
 import { HolidayRowActions } from "@/components/holidays/holiday-row-actions";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 const SCOPE_LABEL: Record<string, string> = {
   national: "Nacional",
@@ -19,6 +19,45 @@ const SCOPE_LABEL: Record<string, string> = {
 function formatDate(value: string) {
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
 }
+
+const columns: SortableColumn<Holiday>[] = [
+  {
+    key: "date",
+    label: "Data",
+    accessor: (holiday) => holiday.date,
+    cell: (holiday) => <span className="font-medium text-foreground">{formatDate(holiday.date)}</span>,
+  },
+  {
+    key: "name",
+    label: "Nome",
+    accessor: (holiday) => holiday.name,
+    cell: (holiday) => <span className="text-foreground">{holiday.name}</span>,
+  },
+  {
+    key: "scope",
+    label: "Abrangência",
+    accessor: (holiday) => `${SCOPE_LABEL[holiday.scope]} ${holiday.state ?? ""} ${holiday.city ?? ""}`,
+    cell: (holiday) => (
+      <span className="text-muted-foreground">
+        {SCOPE_LABEL[holiday.scope]}
+        {holiday.state ? ` — ${holiday.state}` : ""}
+        {holiday.city ? ` / ${holiday.city}` : ""}
+      </span>
+    ),
+  },
+  {
+    key: "type",
+    label: "Tipo",
+    accessor: (holiday) => (holiday.is_facultative ? 1 : 0),
+    cell: (holiday) =>
+      holiday.is_facultative ? <Badge variant="outline">Facultativo</Badge> : <Badge>Feriado</Badge>,
+  },
+  {
+    key: "actions",
+    label: "",
+    cell: (holiday) => <HolidayRowActions holiday={holiday} />,
+  },
+];
 
 export default async function HolidaysPage({
   searchParams,
@@ -74,50 +113,17 @@ export default async function HolidaysPage({
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Abrangência</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {holidays.length === 0 ? (
-              <EmptyRow colSpan={5} message={`Nenhum feriado cadastrado em ${year}.`} />
-            ) : (
-              holidays.map((holiday) => (
-                <HolidayFormDialog
-                  key={holiday.id}
-                  holiday={holiday}
-                  trigger={
-                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
-                      <td className="px-4 py-3 font-medium text-foreground">{formatDate(holiday.date)}</td>
-                      <td className="px-4 py-3 text-foreground">{holiday.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {SCOPE_LABEL[holiday.scope]}
-                        {holiday.state ? ` — ${holiday.state}` : ""}
-                        {holiday.city ? ` / ${holiday.city}` : ""}
-                      </td>
-                      <td className="px-4 py-3">
-                        {holiday.is_facultative ? (
-                          <Badge variant="outline">Facultativo</Badge>
-                        ) : (
-                          <Badge>Feriado</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <HolidayRowActions holiday={holiday} />
-                      </td>
-                    </tr>
-                  }
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+        <SortableTable
+          columns={columns}
+          rows={holidays}
+          rowKey={(holiday) => holiday.id}
+          emptyMessage={`Nenhum feriado cadastrado em ${year}.`}
+          defaultSort={{ key: "date", direction: "asc" }}
+          rowClassName={() => "cursor-pointer transition-colors hover:bg-muted/60"}
+          wrapRow={(holiday, rowNode) => (
+            <HolidayFormDialog key={holiday.id} holiday={holiday} trigger={rowNode} />
+          )}
+        />
       </div>
     </div>
   );

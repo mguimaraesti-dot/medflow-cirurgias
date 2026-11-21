@@ -4,12 +4,12 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
 import { getPatient, calculateAge } from "@/lib/data/patients";
-import { listSurgeriesByPatient } from "@/lib/data/surgeries";
+import { listSurgeriesByPatient, type ScheduleSurgeryItem } from "@/lib/data/surgeries";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { deriveScheduleStatus, SCHEDULE_STATUS_LABEL, SCHEDULE_STATUS_COLOR } from "@/lib/schedule-status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyRow } from "@/components/shared/empty-row";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -115,56 +115,70 @@ export default async function PatientDetailPage({
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-hidden rounded-b-xl">
-            <table className="w-full text-sm">
-              <thead className="border-b border-t border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3">Código</th>
-                  <th className="px-4 py-3">Procedimento</th>
-                  <th className="px-4 py-3">Hospital</th>
-                  <th className="px-4 py-3">Data</th>
-                  <th className="px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {surgeries.length === 0 ? (
-                  <EmptyRow colSpan={5} message="Nenhuma cirurgia registrada para este paciente ainda." />
-                ) : (
-                  surgeries.map((surgery) => {
-                    const status = deriveScheduleStatus(surgery);
-                    return (
-                      <tr key={surgery.id} className="hover:bg-muted">
-                        <td className="px-4 py-3">
-                          <Link
-                            href={`/surgeries/${surgery.id}`}
-                            className="font-medium text-foreground hover:underline"
-                          >
-                            {surgery.code}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {surgery.primary_procedure?.name ?? "—"}
-                          {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">{surgery.hospital?.name ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SCHEDULE_STATUS_COLOR[status].badge}`}
-                          >
-                            {SCHEDULE_STATUS_LABEL[status]}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+            <SortableTable
+              columns={surgeryColumns}
+              rows={surgeries}
+              rowKey={(surgery) => surgery.id}
+              emptyMessage="Nenhuma cirurgia registrada para este paciente ainda."
+            />
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+const surgeryColumns: SortableColumn<ScheduleSurgeryItem>[] = [
+  {
+    key: "code",
+    label: "Código",
+    accessor: (surgery) => surgery.code,
+    cell: (surgery) => (
+      <Link href={`/surgeries/${surgery.id}`} className="font-medium text-foreground hover:underline">
+        {surgery.code}
+      </Link>
+    ),
+  },
+  {
+    key: "procedure",
+    label: "Procedimento",
+    accessor: (surgery) => surgery.primary_procedure?.name ?? null,
+    cell: (surgery) => (
+      <span className="text-muted-foreground">
+        {surgery.primary_procedure?.name ?? "—"}
+        {surgery.procedures.length > 1 ? ` +${surgery.procedures.length - 1}` : ""}
+      </span>
+    ),
+  },
+  {
+    key: "hospital",
+    label: "Hospital",
+    accessor: (surgery) => surgery.hospital?.name ?? null,
+    cell: (surgery) => <span className="text-muted-foreground">{surgery.hospital?.name ?? "—"}</span>,
+  },
+  {
+    key: "date",
+    label: "Data",
+    accessor: (surgery) => surgery.confirmed_date ?? surgery.expected_date ?? null,
+    cell: (surgery) => (
+      <span className="text-muted-foreground">
+        {formatDate(surgery.confirmed_date ?? surgery.expected_date)}
+      </span>
+    ),
+  },
+  {
+    key: "status",
+    label: "Status",
+    accessor: (surgery) => SCHEDULE_STATUS_LABEL[deriveScheduleStatus(surgery)],
+    cell: (surgery) => {
+      const status = deriveScheduleStatus(surgery);
+      return (
+        <span
+          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SCHEDULE_STATUS_COLOR[status].badge}`}
+        >
+          {SCHEDULE_STATUS_LABEL[status]}
+        </span>
+      );
+    },
+  },
+];

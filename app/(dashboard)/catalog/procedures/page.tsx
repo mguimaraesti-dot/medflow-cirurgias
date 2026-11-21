@@ -1,15 +1,53 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { listProcedures } from "@/lib/data/procedures";
+import { listProcedures, type Procedure } from "@/lib/data/procedures";
 import { SearchInput } from "@/components/shared/search-input";
-import { EmptyRow } from "@/components/shared/empty-row";
 import { ActiveBadge } from "@/components/shared/active-badge";
 import { ProcedureFormDialog } from "@/components/procedures/procedure-form-dialog";
 import { ProcedureRowActions } from "@/components/procedures/procedure-row-actions";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 // A busca de código TUSS (ANS) pode demorar além do padrão de 10s das
 // Server Actions na Vercel — damos mais margem para essa rota.
 export const maxDuration = 30;
+
+const columns: SortableColumn<Procedure>[] = [
+  {
+    key: "name",
+    label: "Nome",
+    accessor: (procedure) => procedure.name,
+    cell: (procedure) => <span className="font-medium text-foreground">{procedure.name}</span>,
+  },
+  {
+    key: "internal_code",
+    label: "Código",
+    accessor: (procedure) => procedure.internal_code,
+    cell: (procedure) => <span className="text-muted-foreground">{procedure.internal_code || "—"}</span>,
+  },
+  {
+    key: "tuss_code",
+    label: "TUSS",
+    accessor: (procedure) => procedure.tuss_code,
+    cell: (procedure) => <span className="text-muted-foreground">{procedure.tuss_code || "—"}</span>,
+  },
+  {
+    key: "specialty",
+    label: "Especialidade",
+    accessor: (procedure) => procedure.specialty,
+    cell: (procedure) => <span className="text-muted-foreground">{procedure.specialty || "—"}</span>,
+  },
+  {
+    key: "active",
+    label: "Status",
+    accessor: (procedure) => (procedure.active ? 1 : 0),
+    cell: (procedure) => <ActiveBadge active={procedure.active} />,
+  },
+  {
+    key: "actions",
+    label: "",
+    cell: (procedure) => <ProcedureRowActions procedure={procedure} />,
+  },
+];
 
 export default async function ProceduresCatalogPage({
   searchParams,
@@ -41,57 +79,18 @@ export default async function ProceduresCatalogPage({
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">TUSS</th>
-              <th className="px-4 py-3">Especialidade</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {procedures.length === 0 ? (
-              <EmptyRow
-                colSpan={6}
-                message={
-                  q
-                    ? "Nenhum procedimento encontrado para essa busca."
-                    : "Nenhum procedimento cadastrado ainda."
-                }
-              />
-            ) : (
-              procedures.map((procedure) => (
-                <ProcedureFormDialog
-                  key={procedure.id}
-                  procedure={procedure}
-                  trigger={
-                    <tr className="cursor-pointer transition-colors hover:bg-muted/60">
-                      <td className="px-4 py-3 font-medium text-foreground">{procedure.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {procedure.internal_code || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {procedure.tuss_code || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {procedure.specialty || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ActiveBadge active={procedure.active} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <ProcedureRowActions procedure={procedure} />
-                      </td>
-                    </tr>
-                  }
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+        <SortableTable
+          columns={columns}
+          rows={procedures}
+          rowKey={(procedure) => procedure.id}
+          emptyMessage={
+            q ? "Nenhum procedimento encontrado para essa busca." : "Nenhum procedimento cadastrado ainda."
+          }
+          rowClassName={() => "cursor-pointer transition-colors hover:bg-muted/60"}
+          wrapRow={(procedure, rowNode) => (
+            <ProcedureFormDialog key={procedure.id} procedure={procedure} trigger={rowNode} />
+          )}
+        />
       </div>
     </div>
   );

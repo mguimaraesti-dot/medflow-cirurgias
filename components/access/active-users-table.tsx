@@ -2,14 +2,19 @@
 
 import { useTransition } from "react";
 
-import { EmptyRow } from "@/components/shared/empty-row";
 import { DeleteRowButton } from "@/components/shared/delete-row-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { changeUserRoleAction, revokeUserAccessAction } from "@/app/(dashboard)/settings/users/actions";
 import type { ActiveUser, Role } from "@/lib/data/access";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("pt-BR");
+}
+
+function roleLabel(role: Role | undefined) {
+  if (!role) return "Sem função";
+  return role.name === "admin_full_access" ? "Acesso total" : role.name;
 }
 
 function RoleSelectCell({ user, roles }: { user: ActiveUser; roles: Role[] }) {
@@ -50,45 +55,55 @@ export function ActiveUsersTable({
   roles: Role[];
   currentUserId: string;
 }) {
+  const columns: SortableColumn<ActiveUser>[] = [
+    {
+      key: "name",
+      label: "Nome",
+      accessor: (user) => user.full_name,
+      cell: (user) => <span className="text-foreground">{user.full_name}</span>,
+    },
+    {
+      key: "email",
+      label: "E-mail",
+      accessor: (user) => user.email,
+      cell: (user) => <span className="text-muted-foreground">{user.email}</span>,
+    },
+    {
+      key: "role",
+      label: "Função",
+      accessor: (user) => roleLabel(roles.find((r) => r.id === user.role_id)),
+      cell: (user) => <RoleSelectCell user={user} roles={roles} />,
+    },
+    {
+      key: "created_at",
+      label: "Desde",
+      accessor: (user) => user.created_at,
+      cell: (user) => <span className="text-muted-foreground">{formatDate(user.created_at)}</span>,
+    },
+    {
+      key: "actions",
+      label: "",
+      className: "text-right",
+      cell: (user) =>
+        user.id === currentUserId ? (
+          <span className="text-xs text-muted-foreground">Você</span>
+        ) : (
+          <DeleteRowButton
+            onDelete={() => revokeUserAccessAction(user.id, user.email)}
+            confirmMessage={`Revogar o acesso de ${user.full_name} (${user.email})? A conta Google dela deixa de conseguir entrar.`}
+          />
+        ),
+    },
+  ];
+
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <tr>
-            <th className="px-4 py-3">Nome</th>
-            <th className="px-4 py-3">E-mail</th>
-            <th className="px-4 py-3">Função</th>
-            <th className="px-4 py-3">Desde</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {users.length === 0 ? (
-            <EmptyRow colSpan={5} message="Nenhum usuário com acesso ainda." />
-          ) : (
-            users.map((user) => (
-              <tr key={user.id} className="hover:bg-muted">
-                <td className="px-4 py-3 text-foreground">{user.full_name}</td>
-                <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                <td className="px-4 py-3">
-                  <RoleSelectCell user={user} roles={roles} />
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{formatDate(user.created_at)}</td>
-                <td className="px-4 py-3 text-right">
-                  {user.id === currentUserId ? (
-                    <span className="text-xs text-muted-foreground">Você</span>
-                  ) : (
-                    <DeleteRowButton
-                      onDelete={() => revokeUserAccessAction(user.id, user.email)}
-                      confirmMessage={`Revogar o acesso de ${user.full_name} (${user.email})? A conta Google dela deixa de conseguir entrar.`}
-                    />
-                  )}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <SortableTable
+        columns={columns}
+        rows={users}
+        rowKey={(user) => user.id}
+        emptyMessage="Nenhum usuário com acesso ainda."
+      />
     </div>
   );
 }

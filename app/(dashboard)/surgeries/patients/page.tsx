@@ -2,17 +2,66 @@ import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
-import { listPatients, calculateAge } from "@/lib/data/patients";
+import { listPatients, calculateAge, type Patient } from "@/lib/data/patients";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { SearchInput } from "@/components/shared/search-input";
-import { EmptyRow } from "@/components/shared/empty-row";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
 import { PatientRowActions } from "@/components/patients/patient-row-actions";
+import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
 }
+
+const columns: SortableColumn<Patient>[] = [
+  {
+    key: "name",
+    label: "Nome",
+    accessor: (patient) => patient.full_name,
+    cell: (patient) => (
+      <Link href={`/surgeries/patients/${patient.id}`} className="font-medium text-foreground hover:underline">
+        {patient.full_name}
+      </Link>
+    ),
+  },
+  {
+    key: "age",
+    label: "Idade",
+    accessor: (patient) => calculateAge(patient.birth_date),
+    cell: (patient) => {
+      const age = calculateAge(patient.birth_date);
+      return <span className="text-muted-foreground">{age !== null ? `${age} anos` : "—"}</span>;
+    },
+  },
+  {
+    key: "phone",
+    label: "Telefone",
+    accessor: (patient) => patient.phone ?? patient.whatsapp,
+    cell: (patient) => (
+      <span className="text-muted-foreground">{patient.phone || patient.whatsapp || "—"}</span>
+    ),
+  },
+  {
+    key: "insurance",
+    label: "Operadora",
+    accessor: (patient) => patient.insurance_provider?.name ?? "Particular",
+    cell: (patient) => (
+      <span className="text-muted-foreground">{patient.insurance_provider?.name || "Particular"}</span>
+    ),
+  },
+  {
+    key: "birth_date",
+    label: "Nascimento",
+    accessor: (patient) => patient.birth_date,
+    cell: (patient) => <span className="text-muted-foreground">{formatDate(patient.birth_date)}</span>,
+  },
+  {
+    key: "actions",
+    label: "",
+    cell: (patient) => <PatientRowActions patient={patient} />,
+  },
+];
 
 export default async function PatientsPage({
   searchParams,
@@ -47,59 +96,14 @@ export default async function PatientsPage({
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Idade</th>
-              <th className="px-4 py-3">Telefone</th>
-              <th className="px-4 py-3">Operadora</th>
-              <th className="px-4 py-3">Nascimento</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {patients.length === 0 ? (
-              <EmptyRow
-                colSpan={6}
-                message={
-                  q
-                    ? "Nenhum paciente encontrado para essa busca."
-                    : "Nenhum paciente cadastrado ainda."
-                }
-              />
-            ) : (
-              patients.map((patient) => {
-                const age = calculateAge(patient.birth_date);
-                return (
-                  <tr key={patient.id} className="hover:bg-muted">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/surgeries/patients/${patient.id}`}
-                        className="font-medium text-foreground hover:underline"
-                      >
-                        {patient.full_name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {age !== null ? `${age} anos` : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {patient.phone || patient.whatsapp || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {patient.insurance_provider?.name || "Particular"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(patient.birth_date)}</td>
-                    <td className="px-4 py-3">
-                      <PatientRowActions patient={patient} />
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+        <SortableTable
+          columns={columns}
+          rows={patients}
+          rowKey={(patient) => patient.id}
+          emptyMessage={
+            q ? "Nenhum paciente encontrado para essa busca." : "Nenhum paciente cadastrado ainda."
+          }
+        />
       </div>
     </div>
   );
