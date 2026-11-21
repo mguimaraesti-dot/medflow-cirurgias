@@ -7,7 +7,6 @@ import {
   listRequirements,
   listWorkflowStages,
   getSurgeryHistoryTimeline,
-  getFinancialRecord,
 } from "@/lib/data/surgeries";
 import {
   getAuthorizationRequest,
@@ -20,13 +19,19 @@ import { listActiveMaterialsForSelect } from "@/lib/data/materials";
 import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
 import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
+import {
+  getOrCreateFinancialRecord,
+  listInstallments,
+  getInsuranceBilling,
+  listGlosas,
+} from "@/lib/data/financial";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SurgeryProgressBar } from "@/components/surgeries/surgery-progress-bar";
 import { SurgeryRequirementsPanel } from "@/components/surgeries/surgery-requirements-panel";
-import { FinancialForm } from "@/components/surgeries/financial-form";
+import { FinancialPanel } from "@/components/surgeries/financial-panel";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
 
 // O upload de documentos (Solicitação hospitalar) pode levar mais que o
@@ -66,12 +71,11 @@ export default async function SurgeryDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [surgery, requirements, stages, history, financialRecord] = await Promise.all([
+  const [surgery, requirements, stages, history] = await Promise.all([
     getSurgery(supabase, id),
     listRequirements(supabase, id),
     listWorkflowStages(supabase),
     getSurgeryHistoryTimeline(supabase, id),
-    getFinancialRecord(supabase, id),
   ]);
 
   const procedureIds = surgery.procedures.map((p) => p.id);
@@ -93,10 +97,21 @@ export default async function SurgeryDetailPage({
     listDefaultMaterialsForProcedures(supabase, procedureIds),
   ]);
 
-  const [preoperativeItems, materialItems, documents] = await Promise.all([
+  const [preoperativeItems, materialItems, documents, financialRecord] = await Promise.all([
     listPreoperativeItems(supabase, checklistId),
     listSurgeryMaterialItems(supabase, id),
     listSurgeryDocuments(supabase, id),
+    getOrCreateFinancialRecord(supabase, id, surgery.attendance_type),
+  ]);
+
+  const [installments, insuranceBilling, glosas] = await Promise.all([
+    surgery.attendance_type === "particular"
+      ? listInstallments(supabase, financialRecord.id)
+      : Promise.resolve([]),
+    surgery.attendance_type === "convenio"
+      ? getInsuranceBilling(supabase, financialRecord.id)
+      : Promise.resolve(null),
+    surgery.attendance_type === "convenio" ? listGlosas(supabase, financialRecord.id) : Promise.resolve([]),
   ]);
 
   const progressSteps = computeSurgeryProgressSteps(stages, surgery);
@@ -230,16 +245,16 @@ export default async function SurgeryDetailPage({
         />
       </div>
 
-      {surgery.attendance_type === "particular" ? (
-        <Card className="mt-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Valores (particular)</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <FinancialForm surgeryId={surgery.id} record={financialRecord} />
-          </CardContent>
-        </Card>
-      ) : null}
+      <FinancialPanel
+        surgeryId={surgery.id}
+        attendanceType={surgery.attendance_type}
+        insuranceProviderId={surgery.insurance_provider_id}
+        particularRecord={surgery.attendance_type === "particular" ? financialRecord : null}
+        financialRecord={financialRecord}
+        installments={installments}
+        billing={insuranceBilling}
+        glosas={glosas}
+      />
 
       {/* Histórico compacto */}
       <Card className="mt-6">
