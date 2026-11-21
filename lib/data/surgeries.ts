@@ -11,6 +11,7 @@ export type WorkflowStage = {
   code: string;
   name: string;
   sort_order: number;
+  is_active: boolean;
 };
 
 export type SurgeryProcedureLink = {
@@ -156,10 +157,17 @@ const DETAIL_COLUMNS =
   ",patient_id,hospital_id,insurance_provider_id," +
   "confirmed_time,admin_notes,cancelled_reason,created_at";
 
+/**
+ * Etapas ativas do fluxo, na ordem do Kanban. Etapas antigas descontinuadas
+ * (ex: "Solicitação hospitalar", "Materiais/OPME") continuam na tabela só
+ * pra manter o histórico de cirurgias antigas legível, mas não entram
+ * aqui — por isso o filtro `is_active`.
+ */
 export async function listWorkflowStages(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("workflow_stages")
-    .select("id,code,name,sort_order")
+    .select("id,code,name,sort_order,is_active")
+    .eq("is_active", true)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data as WorkflowStage[];

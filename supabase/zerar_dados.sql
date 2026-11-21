@@ -64,14 +64,16 @@ alter sequence procedure_code_seq restart with 1;
 alter sequence material_code_seq restart with 1;
 alter sequence insurance_provider_code_seq restart with 1;
 
--- Recria as 8 etapas padrão do Kanban (sem elas o Mapa Cirúrgico fica sem
--- nenhuma coluna) — mesmos nomes/códigos definidos na criação do sistema.
-insert into workflow_stages (code, name, sort_order) values
-  ('new_indication', 'Solicitações recebidas', 1),
-  ('hospital_request', 'Solicitação hospitalar', 2),
-  ('authorization', 'Autorização', 3),
-  ('materials_opme', 'Materiais/OPME', 4),
-  ('or_reservation', 'Reserva do centro cirúrgico', 5),
-  ('preoperative', 'Preparação pré-operatória', 6),
-  ('released', 'Cirurgia liberada', 7),
-  ('completed', 'Realizada/Encerrada', 8);
+-- Recria as etapas padrão do Kanban (sem elas o Mapa Cirúrgico fica sem
+-- nenhuma coluna). "Solicitação hospitalar" e "Materiais/OPME" continuam
+-- existindo só como histórico (is_active = false, cf. migration 0020) —
+-- não aparecem mais como coluna do board.
+insert into workflow_stages (code, name, sort_order, is_active) values
+  ('new_indication', 'Solicitações recebidas', 1, true),
+  ('authorization', 'Autorização', 2, true),
+  ('or_reservation', 'Agendamento', 3, true),
+  ('preoperative', 'Preparação pré-operatória', 4, true),
+  ('released', 'Cirurgia liberada', 5, true),
+  ('completed', 'Realizada/Encerrada', 6, true),
+  ('hospital_request', 'Solicitação hospitalar', 7, false),
+  ('materials_opme', 'Materiais/OPME', 8, false);

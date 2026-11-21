@@ -62,7 +62,7 @@ export function OrReservationRequirementCard({
   return (
     <RequirementCardShell
       icon={Building2}
-      title="Reserva do centro cirúrgico"
+      title="Agendamento"
       tone={tone}
       statusLabel={statusLabel}
       summary={

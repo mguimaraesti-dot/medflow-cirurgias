@@ -19,7 +19,7 @@ export const REQUIREMENT_ICON: Record<string, typeof Shield> = {
 export const REQUIREMENT_LABEL: Record<string, string> = {
   authorization: "Autorização do convênio",
   materials: "Materiais e OPME",
-  or_reservation: "Reserva do centro cirúrgico",
+  or_reservation: "Agendamento",
   preoperative: "Preparação pré-operatória",
 };
 
