@@ -9,6 +9,7 @@ import { toDeleteErrorMessage } from "@/lib/delete-error";
 
 export type PatientFormState = {
   error?: string;
+  created?: { id: string; full_name: string };
 };
 
 function parseForm(formData: FormData) {
@@ -62,14 +63,15 @@ export async function createPatientAction(
   }
 
   const supabase = await createClient();
+  let created;
   try {
-    await createPatient(supabase, clearInsuranceIfParticular(formData, parsed.data));
+    created = await createPatient(supabase, clearInsuranceIfParticular(formData, parsed.data));
   } catch (e) {
     return { error: toUserMessage(e) };
   }
 
   revalidatePath("/surgeries/patients");
-  return {};
+  return { created };
 }
 
 export async function updatePatientAction(

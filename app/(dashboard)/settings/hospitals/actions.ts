@@ -15,6 +15,7 @@ import { toDeleteErrorMessage } from "@/lib/delete-error";
 export type HospitalFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  created?: { id: string; name: string };
 };
 
 function parseForm(formData: FormData) {
@@ -41,14 +42,15 @@ export async function createHospitalAction(
   }
 
   const supabase = await createClient();
+  let created;
   try {
-    await createHospital(supabase, parsed.data);
+    created = await createHospital(supabase, parsed.data);
   } catch {
     return { error: "Não foi possível salvar o hospital. Tente novamente." };
   }
 
   revalidatePath("/settings/hospitals");
-  return {};
+  return { created };
 }
 
 export async function updateHospitalAction(

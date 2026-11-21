@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
   createHospitalAction,
@@ -28,24 +28,32 @@ const initialState: HospitalFormState = {};
 export function HospitalFormDialog({
   hospital,
   trigger,
+  onCreated,
 }: {
   hospital?: Hospital;
   trigger?: ReactNode;
+  /** Chamado uma vez, só no modo de criação, quando um novo hospital é salvo com sucesso. */
+  onCreated?: (hospital: { id: string; name: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const action = hospital
     ? updateHospitalAction.bind(null, hospital.id)
     : createHospitalAction;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const handledCreatedId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!pending && !state.error && open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
     }
+    if (!pending && !hospital && state.created && state.created.id !== handledCreatedId.current) {
+      handledCreatedId.current = state.created.id;
+      onCreated?.(state.created);
+    }
     // Fecha o diálogo automaticamente só depois de um submit bem-sucedido.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending]);
+  }, [pending, state]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -70,8 +70,13 @@ export type PatientUpdateInput = Omit<
 };
 
 export async function createPatient(supabase: SupabaseClient, input: PatientUpdateInput) {
-  const { error } = await supabase.from("patients").insert(input);
+  const { data, error } = await supabase
+    .from("patients")
+    .insert(input)
+    .select("id,full_name")
+    .single();
   if (error) throw error;
+  return data as { id: string; full_name: string };
 }
 
 export async function updatePatient(

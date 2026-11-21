@@ -1,22 +1,22 @@
 import { z } from "zod";
 
 const optionalText = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
 );
 
 const optionalDate = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
 );
 
 const optionalTime = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
 );
 
 const optionalUuid = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().uuid().optional()
 );
 
@@ -44,11 +44,11 @@ export const requirementUpdateSchema = z.object({
 
 export const particularFinancialSchema = z.object({
   expected_value: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : Number(v)),
+    (v) => (typeof v !== "string" || v.trim() === "" ? undefined : Number(v)),
     z.number().nonnegative().optional()
   ),
   agreed_value: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : Number(v)),
+    (v) => (typeof v !== "string" || v.trim() === "" ? undefined : Number(v)),
     z.number().nonnegative().optional()
   ),
   notes: optionalText,

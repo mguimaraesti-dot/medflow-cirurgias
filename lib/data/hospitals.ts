@@ -48,8 +48,9 @@ export async function getHospital(supabase: SupabaseClient, id: string) {
 }
 
 export async function createHospital(supabase: SupabaseClient, input: HospitalInput) {
-  const { error } = await supabase.from("hospitals").insert(input);
+  const { data, error } = await supabase.from("hospitals").insert(input).select("id,name").single();
   if (error) throw error;
+  return data as { id: string; name: string };
 }
 
 export async function updateHospital(

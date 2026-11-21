@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 import {
   createSurgeryAction,
@@ -13,10 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
+import { HospitalFormDialog } from "@/components/hospitals/hospital-form-dialog";
 
 const initialState: SurgeryFormState = {};
 
 type SelectOption = { id: string; name: string };
+type PatientOption = { id: string; full_name: string; cpf: string | null };
 
 export function SurgeryForm({
   surgery,
@@ -26,48 +31,96 @@ export function SurgeryForm({
   procedures,
 }: {
   surgery?: Surgery;
-  patients: { id: string; full_name: string; cpf: string | null }[];
+  patients: PatientOption[];
   hospitals: SelectOption[];
   insuranceProviders: SelectOption[];
   procedures: SelectOption[];
 }) {
   const action = surgery ? updateSurgeryAction.bind(null, surgery.id) : createSurgeryAction;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const router = useRouter();
+
+  const [attendanceType, setAttendanceType] = useState<"particular" | "convenio">(
+    surgery?.attendance_type ?? "particular"
+  );
+
+  const [patientOptions, setPatientOptions] = useState(patients);
+  const [patientId, setPatientId] = useState(surgery?.patient_id ?? "");
+  const [hospitalOptions, setHospitalOptions] = useState(hospitals);
+  const [hospitalId, setHospitalId] = useState(surgery?.hospital_id ?? "");
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPatientOptions(patients);
+  }, [patients]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHospitalOptions(hospitals);
+  }, [hospitals]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="patient_id">Paciente *</Label>
-          <Select name="patient_id" defaultValue={surgery?.patient_id} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o paciente" />
-            </SelectTrigger>
-            <SelectContent>
-              {patients.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.full_name}
-                  {p.cpf ? ` — ${p.cpf}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select name="patient_id" value={patientId} onValueChange={setPatientId} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o paciente" />
+              </SelectTrigger>
+              <SelectContent>
+                {patientOptions.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.full_name}
+                    {p.cpf ? ` — ${p.cpf}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <PatientFormDialog
+              insuranceProviders={insuranceProviders}
+              trigger={
+                <Button type="button" variant="outline" size="icon" title="Cadastrar novo paciente">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              }
+              onCreated={(created) => {
+                setPatientOptions((prev) => [...prev, { ...created, cpf: null }]);
+                setPatientId(created.id);
+                router.refresh();
+              }}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="hospital_id">Hospital *</Label>
-          <Select name="hospital_id" defaultValue={surgery?.hospital_id} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o hospital" />
-            </SelectTrigger>
-            <SelectContent>
-              {hospitals.map((h) => (
-                <SelectItem key={h.id} value={h.id}>
-                  {h.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select name="hospital_id" value={hospitalId} onValueChange={setHospitalId} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o hospital" />
+              </SelectTrigger>
+              <SelectContent>
+                {hospitalOptions.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <HospitalFormDialog
+              trigger={
+                <Button type="button" variant="outline" size="icon" title="Cadastrar novo hospital">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              }
+              onCreated={(created) => {
+                setHospitalOptions((prev) => [...prev, created]);
+                setHospitalId(created.id);
+                router.refresh();
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -87,12 +140,13 @@ export function SurgeryForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={attendanceType === "convenio" ? "grid grid-cols-2 gap-3" : ""}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="attendance_type">Tipo de atendimento *</Label>
           <Select
             name="attendance_type"
-            defaultValue={surgery?.attendance_type ?? "particular"}
+            value={attendanceType}
+            onValueChange={(v) => setAttendanceType(v as "particular" | "convenio")}
             required
           >
             <SelectTrigger>
@@ -105,24 +159,27 @@ export function SurgeryForm({
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="insurance_provider_id">Operadora (se convênio)</Label>
-          <Select
-            name="insurance_provider_id"
-            defaultValue={surgery?.insurance_provider_id ?? undefined}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Particular / não se aplica" />
-            </SelectTrigger>
-            <SelectContent>
-              {insuranceProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {attendanceType === "convenio" ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="insurance_provider_id">Operadora *</Label>
+            <Select
+              name="insurance_provider_id"
+              defaultValue={surgery?.insurance_provider_id ?? undefined}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a operadora" />
+              </SelectTrigger>
+              <SelectContent>
+                {insuranceProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

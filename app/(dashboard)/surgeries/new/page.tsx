@@ -34,10 +34,10 @@ export default async function NewSurgeryPage() {
       </p>
 
       <div className="mt-6 rounded-xl border border-border bg-card p-6">
-        {patients.length === 0 || hospitals.length === 0 || procedures.length === 0 ? (
+        {procedures.length === 0 ? (
           <p className="text-sm text-amber-700 dark:text-amber-400">
-            Cadastre ao menos um paciente, um hospital e um procedimento ativos antes de criar uma
-            cirurgia.
+            Cadastre ao menos um procedimento ativo antes de criar uma cirurgia. Paciente e
+            hospital podem ser cadastrados direto neste formulário.
           </p>
         ) : (
           <SurgeryForm

@@ -11,11 +11,13 @@ import {
   cancelSurgery,
   updateRequirement,
   upsertParticularFinancialRecord,
+  type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
 import {
   surgerySchema,
   requirementUpdateSchema,
   particularFinancialSchema,
+  type SurgeryInput,
 } from "@/lib/validation/surgeries";
 
 export type SurgeryFormState = {
@@ -38,6 +40,18 @@ function parseForm(formData: FormData) {
   });
 }
 
+// Quando o tipo de atendimento é "particular", o campo de operadora não é
+// renderizado no formulário — além de não ser enviado, forçamos
+// explicitamente null aqui para o caso de edição (sem isso, uma cirurgia
+// que já era convênio e virou particular manteria a operadora antiga, já
+// que uma chave ausente no FormData não apaga a coluna, só a deixa intocada).
+function clearInsuranceIfParticular(formData: FormData, data: SurgeryInput): SurgeryUpdateInput {
+  if (formData.get("attendance_type") === "particular") {
+    return { ...data, insurance_provider_id: null };
+  }
+  return data;
+}
+
 export async function createSurgeryAction(
   _prevState: SurgeryFormState,
   formData: FormData
@@ -50,7 +64,7 @@ export async function createSurgeryAction(
   const supabase = await createClient();
   let surgeryId: string;
   try {
-    const result = await createSurgery(supabase, parsed.data);
+    const result = await createSurgery(supabase, clearInsuranceIfParticular(formData, parsed.data));
     surgeryId = result.id;
   } catch {
     return { error: "Não foi possível criar a cirurgia. Tente novamente." };
@@ -73,7 +87,7 @@ export async function updateSurgeryAction(
 
   const supabase = await createClient();
   try {
-    await updateSurgery(supabase, id, parsed.data);
+    await updateSurgery(supabase, id, clearInsuranceIfParticular(formData, parsed.data));
   } catch {
     return { error: "Não foi possível salvar a cirurgia. Tente novamente." };
   }

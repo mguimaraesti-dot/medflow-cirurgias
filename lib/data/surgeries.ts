@@ -253,7 +253,14 @@ export async function getSurgery(supabase: SupabaseClient, id: string) {
   return data as unknown as Surgery;
 }
 
-export async function createSurgery(supabase: SupabaseClient, input: SurgeryInput) {
+// Mesmo padrão de lib/data/patients.ts: `insurance_provider_id` aceita
+// `null` explícito, usado para limpar o dado quando a cirurgia passa a ser
+// particular (campo ausente no FormData só deixaria a coluna intocada).
+export type SurgeryUpdateInput = Omit<SurgeryInput, "insurance_provider_id"> & {
+  insurance_provider_id?: string | null;
+};
+
+export async function createSurgery(supabase: SupabaseClient, input: SurgeryUpdateInput) {
   const { data: firstStage, error: stageError } = await supabase
     .from("workflow_stages")
     .select("id")
@@ -270,7 +277,11 @@ export async function createSurgery(supabase: SupabaseClient, input: SurgeryInpu
   return data as { id: string };
 }
 
-export async function updateSurgery(supabase: SupabaseClient, id: string, input: SurgeryInput) {
+export async function updateSurgery(
+  supabase: SupabaseClient,
+  id: string,
+  input: SurgeryUpdateInput
+) {
   const { error } = await supabase.from("surgeries").update(input).eq("id", id);
   if (error) throw error;
 }

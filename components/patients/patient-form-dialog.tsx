@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
   createPatientAction,
@@ -29,10 +29,13 @@ export function PatientFormDialog({
   patient,
   insuranceProviders,
   trigger,
+  onCreated,
 }: {
   patient?: Patient;
   insuranceProviders: { id: string; name: string }[];
   trigger?: ReactNode;
+  /** Chamado uma vez, só no modo de criação, quando um novo paciente é salvo com sucesso. */
+  onCreated?: (patient: { id: string; full_name: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [attendanceType, setAttendanceType] = useState<"particular" | "convenio">(
@@ -40,13 +43,18 @@ export function PatientFormDialog({
   );
   const action = patient ? updatePatientAction.bind(null, patient.id) : createPatientAction;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const handledCreatedId = useRef<string | null>(null);
 
   useEffect(() => {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!pending && !state.error && open) setOpen(false);
+    if (!pending && !patient && state.created && state.created.id !== handledCreatedId.current) {
+      handledCreatedId.current = state.created.id;
+      onCreated?.(state.created);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending]);
+  }, [pending, state]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
