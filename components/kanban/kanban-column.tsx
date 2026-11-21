@@ -40,17 +40,17 @@ export function KanbanColumn({
 
   return (
     <div
-      className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+      className="flex max-h-[calc(100vh-280px)] w-[272px] shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
       style={{ borderTopColor: accent, borderTopWidth: 3 }}
     >
-      <div className="flex items-center justify-between border-b border-border bg-muted/60 px-3 py-2.5">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/60 px-3 py-2.5">
         <p className="text-sm font-medium text-foreground">{stage.name}</p>
         <span className="text-xs text-muted-foreground">{surgeries.length}</span>
       </div>
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-[200px] flex-1 flex-col gap-2 p-2 transition-colors",
+          "flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto p-2 transition-colors",
           isOver && "bg-accent"
         )}
       >

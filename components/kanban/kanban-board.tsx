@@ -50,10 +50,11 @@ export function KanbanBoard({
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div
-        className="grid gap-4 pb-4"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
-      >
+      {/* items-start: cada coluna só cresce até a altura do seu próprio
+       * conteúdo (uma coluna vazia não fica esticada pra igualar a mais
+       * alta). overflow-x-auto: quando as 8 colunas não cabem, rola na
+       * horizontal em vez de quebrar linha. */}
+      <div className="flex items-start gap-4 overflow-x-auto pb-4">
         {stages.map((stage, index) => (
           <KanbanColumn
             key={stage.id}

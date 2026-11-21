@@ -56,7 +56,10 @@ export function MapFilters({
     searchParams.get("status") ||
     searchParams.get("from") ||
     searchParams.get("to") ||
-    searchParams.get("q");
+    searchParams.get("q") ||
+    searchParams.get("overdue") ||
+    searchParams.get("pending") ||
+    searchParams.get("scheduled");
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
@@ -176,6 +179,9 @@ export function MapFilters({
             params.delete("from");
             params.delete("to");
             params.delete("q");
+            params.delete("overdue");
+            params.delete("pending");
+            params.delete("scheduled");
             router.replace(`${pathname}?${params.toString()}`);
           }}
         >

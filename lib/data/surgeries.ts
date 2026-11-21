@@ -66,6 +66,10 @@ export type SurgeryMapFilters = {
   to?: string;
   /** só cirurgias ativas com data prevista vencida e ainda não confirmadas */
   overdueOnly?: boolean;
+  /** só cirurgias com esse requisito pendente (não satisfeito, não dispensado) */
+  pendingRequirement?: "authorization" | "materials" | "or_reservation" | "preoperative";
+  /** só cirurgias com data confirmada (hoje em diante) */
+  scheduledOnly?: boolean;
 };
 
 export type MapStats = {
@@ -198,6 +202,25 @@ export async function listSurgeriesForMap(
   if (filters.overdueOnly) {
     const today = new Date().toISOString().slice(0, 10);
     query = query.eq("status", "active").lt("expected_date", today).is("confirmed_date", null);
+  }
+  if (filters.scheduledOnly) {
+    const today = new Date().toISOString().slice(0, 10);
+    query = query.not("confirmed_date", "is", null).gte("confirmed_date", today);
+  }
+  if (filters.pendingRequirement) {
+    // Mesma ideia do filtro de procedimento: resolve antes os ids de
+    // cirurgia que têm esse requisito pendente (surgery_requirements é
+    // tabela ligada, não coluna direta de surgeries).
+    const { data: links, error: linksError } = await supabase
+      .from("surgery_requirements")
+      .select("surgery_id")
+      .eq("requirement_key", filters.pendingRequirement)
+      .eq("is_satisfied", false)
+      .eq("waived", false);
+    if (linksError) throw linksError;
+    const ids = (links ?? []).map((l) => l.surgery_id);
+    if (ids.length === 0) return [];
+    query = query.in("id", ids);
   }
 
   const { data, error } = await query;

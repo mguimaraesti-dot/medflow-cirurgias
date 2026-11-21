@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { ListChecks, PackageCheck, PackageX, Clock } from "lucide-react";
+import { ListTodo, ShieldAlert, PackageX, Building2, ClipboardX, Clock } from "lucide-react";
 
 import type { SurgeryListItem } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
@@ -23,18 +23,26 @@ const PRIORITY_CLASS: Record<SurgeryListItem["priority"], string> = {
   urgent: "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900",
 };
 
+// Um ícone + rótulo curto por tipo de requisito — só aparece quando está
+// de fato pendente (não satisfeito e não dispensado), pra manter o card
+// enxuto: nada aqui quando está tudo em dia.
+const REQUIREMENT_BADGE: Record<string, { label: string; icon: typeof ShieldAlert }> = {
+  authorization: { label: "Autorização pendente", icon: ShieldAlert },
+  materials: { label: "Materiais pendentes", icon: PackageX },
+  or_reservation: { label: "Reserva pendente", icon: Building2 },
+  preoperative: { label: "Pré-op pendente", icon: ClipboardX },
+};
+
 function formatDate(value: string | null) {
   if (!value) return null;
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
-function materialsStatus(requirements: SurgeryListItem["requirements"]) {
-  const materials = requirements.find((r) => r.requirement_key === "materials");
-  if (!materials || materials.waived) return null;
-  if (materials.is_satisfied) {
-    return { label: "Materiais OK", icon: PackageCheck, className: "text-emerald-600 dark:text-emerald-400" };
-  }
-  return { label: "Materiais pendentes", icon: PackageX, className: "text-red-600 dark:text-red-400" };
+function pendingRequirements(requirements: SurgeryListItem["requirements"]) {
+  return requirements
+    .filter((r) => !r.is_satisfied && !r.waived)
+    .map((r) => REQUIREMENT_BADGE[r.requirement_key])
+    .filter((badge): badge is { label: string; icon: typeof ShieldAlert } => Boolean(badge));
 }
 
 export function KanbanCard({
@@ -57,7 +65,7 @@ export function KanbanCard({
     ? formatDate(surgery.confirmed_date)
     : formatDate(surgery.expected_date);
 
-  const materials = materialsStatus(surgery.requirements);
+  const pending = pendingRequirements(surgery.requirements);
   const attendanceLabel =
     surgery.attendance_type === "particular" ? "Particular" : surgery.insurance_provider?.name ?? "Convênio";
 
@@ -88,26 +96,34 @@ export function KanbanCard({
       </p>
       <p className="mt-0.5 truncate text-xs text-muted-foreground">{attendanceLabel}</p>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         {date ? (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             {date}
           </span>
         ) : null}
-        {materials ? (
-          <span className={cn("flex items-center gap-1 text-xs", materials.className)}>
-            <materials.icon className="h-3 w-3" />
-            {materials.label}
-          </span>
-        ) : null}
         {openTasksCount > 0 ? (
           <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-            <ListChecks className="h-3 w-3" />
-            {openTasksCount} pendência{openTasksCount === 1 ? "" : "s"}
+            <ListTodo className="h-3 w-3" />
+            {openTasksCount} tarefa{openTasksCount === 1 ? "" : "s"} aberta{openTasksCount === 1 ? "" : "s"}
           </span>
         ) : null}
       </div>
+
+      {pending.length > 0 ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-1.5">
+          {pending.map(({ label, icon: Icon }) => (
+            <span
+              key={label}
+              className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400"
+            >
+              <Icon className="h-3 w-3" />
+              {label}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

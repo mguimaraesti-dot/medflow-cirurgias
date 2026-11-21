@@ -30,6 +30,8 @@ type SearchParams = {
   from?: string;
   to?: string;
   overdue?: string;
+  pending?: string;
+  scheduled?: string;
 };
 
 export default async function KanbanPage({
@@ -50,6 +52,8 @@ export default async function KanbanPage({
     from: params.from,
     to: params.to,
     overdueOnly: params.overdue === "1",
+    pendingRequirement: params.pending as SurgeryMapFilters["pendingRequirement"],
+    scheduledOnly: params.scheduled === "1",
   };
 
   const [stages, surgeries, stats, openTasksBySurgery, hospitals, procedures, insuranceProviders] =
@@ -63,7 +67,10 @@ export default async function KanbanPage({
       listActiveInsuranceProvidersForSelect(supabase),
     ]);
 
-  const isListView = params.view === "lista" || !!params.overdue;
+  // O board só mostra cirurgias ativas (abaixo) — qualquer filtro de
+  // situação diferente de "ativa" (ex: clicar no indicador "Realizadas")
+  // não faria sentido nele, então cai automaticamente pra lista.
+  const isListView = params.view === "lista" || (!!params.status && params.status !== "active");
   const activeSurgeries = surgeries.filter((s) => s.status === "active");
 
   return (
