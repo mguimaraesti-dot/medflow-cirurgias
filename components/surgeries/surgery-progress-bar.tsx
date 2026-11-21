@@ -18,23 +18,16 @@ export type ProgressStep = {
  */
 export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
   return (
-    // O círculo+rótulo de cada etapa tem largura fixa (w-20): num container
-    // flex comum, o texto do rótulo se recusa a encolher abaixo da palavra
-    // mais larga (min-content), o que, com várias etapas espremidas numa
-    // tela de celular, fazia os rótulos vazarem um por cima do outro. Com
-    // largura fixa, sobra garantido pra cada rótulo quebrar em 2-3 linhas.
-    //
-    // Já o traço conector entre as etapas é flex-1 (cresce), não largura
-    // fixa — assim a faixa toda se espalha e ocupa a largura disponível da
-    // tela (em vez de ficar agrupada à esquerda com um vão vazio à
-    // direita, como ficou depois de reduzir o número de etapas). Numa tela
-    // estreita, o conector encolhe até o mínimo (min-w) antes de qualquer
-    // rótulo ser espremido; se ainda assim não couber, a faixa rola de
-    // lado (overflow-x-auto) em vez de sobrepor texto.
-    <div className="-mx-1 flex items-start overflow-x-auto px-1 py-1">
+    // Cada etapa agora é flex-1 (sem largura fixa e sem shrink-0): elas
+    // dividem igualmente a largura disponível do container, então a faixa
+    // sempre preenche exatamente a tela, sem sobrar vão nem precisar de
+    // scroll — só o rótulo quebra em mais linhas se a tela for estreita. O
+    // traço conector, antes flex-1 (era ele quem crescia), agora tem
+    // largura pequena e fixa: são as etapas que crescem/encolhem, não ele.
+    <div className="flex items-start">
       {steps.map((step, index) => (
         <Fragment key={step.label}>
-          <div className="flex w-20 shrink-0 flex-col items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
             <div
               className={cn(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-medium",
@@ -50,7 +43,7 @@ export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
             </div>
             <span
               className={cn(
-                "w-full text-center text-[11px] leading-tight",
+                "w-full text-center text-[11px] leading-tight break-words",
                 step.state === "pending" ? "text-muted-foreground" : "font-medium text-foreground"
               )}
             >
@@ -60,7 +53,7 @@ export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
           {index < steps.length - 1 ? (
             <div
               className={cn(
-                "mx-1 mt-3.5 h-0.5 min-w-4 flex-1 rounded",
+                "mx-0.5 mt-3.5 h-0.5 w-3 shrink-0 rounded sm:w-6",
                 step.state === "done" ? "bg-emerald-500 dark:bg-emerald-400" : "bg-border"
               )}
             />
