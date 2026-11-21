@@ -14,11 +14,6 @@ export const roleSchema = z.object({
   description: optionalText,
 });
 
-export const inviteUserSchema = z.object({
-  email: z.string().trim().email("E-mail inválido."),
-  role_id: z.string().uuid("Selecione uma função."),
-});
-
 export const changeRoleSchema = z.object({
   user_id: z.string().uuid(),
   role_id: z.string().uuid("Selecione uma função."),

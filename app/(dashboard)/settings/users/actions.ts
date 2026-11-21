@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { getCurrentUser, hasPermission } from "@/lib/auth/session";
 import {
@@ -12,7 +13,9 @@ import {
   deleteRole,
   setRolePermissions,
 } from "@/lib/data/access";
-import { inviteUserSchema, changeRoleSchema, roleSchema } from "@/lib/validation/access";
+import { changeRoleSchema, roleSchema } from "@/lib/validation/access";
+
+const emailSchema = z.string().trim().email("E-mail inválido.");
 
 export type UsersActionState = {
   error?: string;
@@ -27,21 +30,49 @@ async function requireUsersEdit() {
   return user;
 }
 
+/**
+ * Convite: a função pode vir pronta (`mode=existing`, seleciona uma role
+ * já cadastrada) ou ser criada na hora (`mode=new`, nome + grid de
+ * permissões marcadas ali mesmo no próprio formulário de convite) — não
+ * precisa passar pela tela de funções antes.
+ */
 export async function inviteUserAction(
   _prevState: UsersActionState,
   formData: FormData
 ): Promise<UsersActionState> {
-  const parsed = inviteUserSchema.safeParse({
-    email: formData.get("email"),
-    role_id: formData.get("role_id"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  const parsedEmail = emailSchema.safeParse(formData.get("email"));
+  if (!parsedEmail.success) {
+    return { error: parsedEmail.error.issues[0]?.message ?? "E-mail inválido." };
   }
+
+  const mode = formData.get("mode");
 
   try {
     const user = await requireUsersEdit();
-    await inviteUser(parsed.data.email, parsed.data.role_id, user.id);
+
+    let roleId: string;
+    if (mode === "new") {
+      const parsedRole = roleSchema.safeParse({
+        name: formData.get("new_role_name"),
+        description: formData.get("new_role_description"),
+      });
+      if (!parsedRole.success) {
+        return { error: parsedRole.error.issues[0]?.message ?? "Dê um nome pra função." };
+      }
+      const permissionIds = formData.getAll("permission_ids").map(String);
+      roleId = await createRole(parsedRole.data.name, parsedRole.data.description ?? null);
+      if (permissionIds.length > 0) {
+        await setRolePermissions(roleId, permissionIds);
+      }
+    } else {
+      const parsedExisting = z.string().uuid().safeParse(formData.get("role_id"));
+      if (!parsedExisting.success) {
+        return { error: "Selecione uma função." };
+      }
+      roleId = parsedExisting.data;
+    }
+
+    await inviteUser(parsedEmail.data, roleId, user.id);
   } catch {
     return genericError;
   }

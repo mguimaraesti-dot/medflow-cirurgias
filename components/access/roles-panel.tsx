@@ -9,6 +9,7 @@ import {
   type UsersActionState,
 } from "@/app/(dashboard)/settings/users/actions";
 import type { Permission, RolePermissionMatrix } from "@/lib/data/access";
+import { MODULE_LABELS, MODULE_ORDER } from "@/lib/access-modules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,24 +24,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-const MODULE_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  kanban: "Mapa Cirúrgico",
-  surgeries: "Cirurgias",
-  patients: "Pacientes",
-  schedule: "Agenda",
-  pending_tasks: "Pendências",
-  procedures: "Procedimentos",
-  materials: "Materiais",
-  suppliers: "Fornecedores",
-  financial: "Financeiro",
-  reports: "Relatórios",
-  settings: "Configurações",
-  users: "Usuários",
-};
-
-const MODULE_ORDER = Object.keys(MODULE_LABELS);
 
 function RolePermissionsCard({
   matrix,

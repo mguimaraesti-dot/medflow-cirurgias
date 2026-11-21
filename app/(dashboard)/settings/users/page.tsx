@@ -32,7 +32,7 @@ export default async function UsersPage() {
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-foreground">Convites pendentes</h2>
-          <InviteUserDialog roles={roles} />
+          <InviteUserDialog roles={roles} permissions={permissions} />
         </div>
         <div className="mt-3">
           <PendingInvitesTable invites={invites} />

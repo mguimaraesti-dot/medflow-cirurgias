@@ -70,10 +70,17 @@ export async function listRolePermissionMatrix(): Promise<RolePermissionMatrix[]
   }));
 }
 
-export async function createRole(name: string, description?: string | null): Promise<void> {
+/** Retorna o id da função criada — usado quando o convite cria a função
+ * na hora, em vez de reaproveitar uma já existente. */
+export async function createRole(name: string, description?: string | null): Promise<string> {
   const admin = createAdminClient();
-  const { error } = await admin.from("roles").insert({ name, description: description ?? null });
+  const { data, error } = await admin
+    .from("roles")
+    .insert({ name, description: description ?? null })
+    .select("id")
+    .single();
   if (error) throw error;
+  return data.id as string;
 }
 
 export async function deleteRole(roleId: string): Promise<void> {
