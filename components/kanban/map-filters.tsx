@@ -116,7 +116,10 @@ function DateRangeFilter() {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    // flex-wrap: com "Personalizado" selecionado, os 2 campos de data +
+    // "até" não cabem numa linha só no mobile (mesmo problema corrigido
+    // em dashboard-period-filter.tsx).
+    <div className="flex flex-wrap items-center gap-1.5">
       <Select value={selected} onValueChange={handlePresetChange}>
         <SelectTrigger className="w-[135px] shrink-0">
           <SelectValue placeholder="Período" />

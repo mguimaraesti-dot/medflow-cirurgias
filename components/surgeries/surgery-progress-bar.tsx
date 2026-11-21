@@ -17,10 +17,17 @@ export type ProgressStep = {
  */
 export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
   return (
-    <div className="flex w-full items-start px-1 py-1">
+    // Cada etapa tem largura fixa (w-20) em vez de flex-1: num container
+    // flex comum, o texto de cada rótulo se recusa a encolher abaixo da
+    // palavra mais larga (min-content), o que, com 8 etapas espremidas
+    // numa tela de celular, fazia os rótulos vazarem um por cima do
+    // outro. Com largura fixa, sobra garantido pra cada rótulo quebrar em
+    // 2-3 linhas; se a soma não couber na tela, a faixa toda rola de lado
+    // (overflow-x-auto) em vez de sobrepor texto.
+    <div className="-mx-1 flex items-start overflow-x-auto px-1 py-1">
       {steps.map((step, index) => (
-        <div key={step.label} className="flex min-w-0 flex-1 items-start">
-          <div className="flex min-w-0 flex-col items-center gap-1.5">
+        <div key={step.label} className="flex shrink-0 items-start">
+          <div className="flex w-20 shrink-0 flex-col items-center gap-1.5">
             <div
               className={cn(
                 "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-medium",
@@ -36,7 +43,7 @@ export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
             </div>
             <span
               className={cn(
-                "w-full max-w-[90px] text-center text-[11px] leading-tight",
+                "w-full text-center text-[11px] leading-tight",
                 step.state === "pending" ? "text-muted-foreground" : "font-medium text-foreground"
               )}
             >
@@ -46,7 +53,7 @@ export function SurgeryProgressBar({ steps }: { steps: ProgressStep[] }) {
           {index < steps.length - 1 ? (
             <div
               className={cn(
-                "mx-1 mt-3.5 h-0.5 flex-1 rounded",
+                "mx-1 mt-3.5 h-0.5 w-6 shrink-0 rounded",
                 step.state === "done" ? "bg-emerald-500 dark:bg-emerald-400" : "bg-border"
               )}
             />

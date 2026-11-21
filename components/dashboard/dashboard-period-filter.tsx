@@ -94,7 +94,11 @@ export function DashboardPeriodFilter() {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    // flex-wrap: com o preset "Personalizado" selecionado, o Select + 2
+    // campos de data + "até" não cabem numa linha só em telas pequenas;
+    // sem quebra, cada item (shrink-0) recusava encolher e empurrava a
+    // página inteira pra rolar de lado horizontalmente.
+    <div className="flex flex-wrap items-center gap-1.5">
       <Select value={selected} onValueChange={handlePresetChange}>
         <SelectTrigger className="w-[150px] shrink-0">
           <SelectValue placeholder="Período" />

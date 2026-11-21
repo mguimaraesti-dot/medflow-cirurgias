@@ -34,7 +34,15 @@ export default async function DashboardLayout({
         <div className="shrink-0 print:hidden">
           <MobileNav userEmail={user.email ?? null} roleName={access.roleName} permissions={permissions} />
         </div>
-        <main className="flex-1 overflow-y-auto">
+        {/*
+          overflow-x-hidden: rede de segurança — se algum componente filho
+          (um filtro, uma faixa de abas etc.) acabar um pouco mais largo
+          que a tela em algum breakpoint, ele é cortado aqui em vez de
+          forçar a página inteira a rolar de lado. Rolagem horizontal
+          interna de algum componente (ex.: abas do Kanban) continua
+          funcionando normalmente, pois é um scroll container próprio.
+        */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {/*
             Sem max-w aqui: telas de lista/kanban/tabela devem aproveitar toda
             a largura disponível. Telas de formulário (ex: nova cirurgia, novo
