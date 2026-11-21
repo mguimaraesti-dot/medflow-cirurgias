@@ -6,6 +6,7 @@ import {
   importProcedureDefaultMaterials,
 } from "@/lib/data/operations";
 import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
+import { todayInSaoPaulo } from "@/lib/utils";
 
 export type WorkflowStage = {
   id: string;
@@ -245,11 +246,11 @@ export async function listSurgeriesForMap(
     query = query.eq("insurance_provider_id", filters.attendance);
   }
   if (filters.overdueOnly) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayInSaoPaulo();
     query = query.eq("status", "active").lt("expected_date", today).is("confirmed_date", null);
   }
   if (filters.scheduledOnly) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayInSaoPaulo();
     query = query.not("confirmed_date", "is", null).gte("confirmed_date", today);
   }
   if (filters.pendingRequirement) {
@@ -387,7 +388,7 @@ export async function listSurgeriesForReport(
  * está filtrado na tela).
  */
 export async function getMapStats(supabase: SupabaseClient): Promise<MapStats> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
 
   const [{ data: activeRows, error: activeError }, { count: completed, error: completedError }] =
     await Promise.all([

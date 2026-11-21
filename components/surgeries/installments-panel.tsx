@@ -10,6 +10,7 @@ import {
 } from "@/app/(dashboard)/surgeries/financial-actions";
 import type { Installment } from "@/lib/data/financial";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
+import { todayInSaoPaulo } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +71,7 @@ function ConfirmSinglePaymentForm({
           id="single_received_at"
           name="received_at"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayInSaoPaulo()}
         />
       </div>
       {state.error ? (
@@ -167,7 +168,7 @@ function InstallmentRow({ surgeryId, installment }: { surgeryId: string; install
               id={`received_at-${installment.id}`}
               name="received_at"
               type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={todayInSaoPaulo()}
               className="h-9"
             />
           </div>

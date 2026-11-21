@@ -10,6 +10,7 @@ import {
   type SurgeryFormState,
 } from "@/app/(dashboard)/surgeries/actions";
 import type { Surgery } from "@/lib/data/surgeries";
+import { todayInSaoPaulo } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -193,7 +194,7 @@ export function SurgeryForm({
             id="indication_date"
             name="indication_date"
             type="date"
-            defaultValue={surgery?.indication_date ?? new Date().toISOString().slice(0, 10)}
+            defaultValue={surgery?.indication_date ?? todayInSaoPaulo()}
           />
         </div>
       </div>

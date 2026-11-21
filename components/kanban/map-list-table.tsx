@@ -6,6 +6,7 @@ import { RequirementBadges } from "@/components/kanban/requirement-badges";
 import { getStageColor } from "@/components/kanban/stage-palette";
 import { SurgeryDetailSheet } from "@/components/kanban/surgery-detail-sheet";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
+import { todayInSaoPaulo } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
   active: "Ativa",
@@ -57,7 +58,7 @@ export function MapListTable({
   openTasksBySurgery: Record<string, number>;
   documentsBySurgery: Record<string, number>;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
   const stageIndexById = new Map(stages.map((stage, index) => [stage.id, index]));
 
   const columns: SortableColumn<SurgeryListItem>[] = [

@@ -11,6 +11,7 @@ import {
 } from "@/app/(dashboard)/surgeries/financial-actions";
 import type { InsuranceBilling, Glosa } from "@/lib/data/financial";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
+import { todayInSaoPaulo } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -162,7 +163,7 @@ function NewGlosaForm({
           id="glosa_date"
           name="glosa_date"
           type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          defaultValue={todayInSaoPaulo()}
         />
       </div>
       <div className="flex min-w-[180px] flex-col gap-1.5">
@@ -233,7 +234,7 @@ function GlosaRow({ surgeryId, glosa }: { surgeryId: string; glosa: Glosa }) {
               id={`appeal_date-${glosa.id}`}
               name="appeal_date"
               type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={todayInSaoPaulo()}
               className="h-9"
             />
           </div>
@@ -284,7 +285,7 @@ function GlosaRow({ surgeryId, glosa }: { surgeryId: string; glosa: Glosa }) {
               id={`recovered_at-${glosa.id}`}
               name="recovered_at"
               type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={todayInSaoPaulo()}
               className="h-9"
             />
           </div>

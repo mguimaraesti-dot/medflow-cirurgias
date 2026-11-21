@@ -1,3 +1,5 @@
+import { todayInSaoPaulo } from "@/lib/utils";
+
 /**
  * Status "de agenda" de uma cirurgia — diferente do `status` bruto do
  * banco (active/rescheduled/completed/cancelled). Unifica os 4
@@ -76,6 +78,6 @@ export function deriveScheduleStatus(surgery: {
   if (surgery.status === "cancelled") return "cancelada";
   if (!surgery.confirmed_date && !surgery.expected_date) return "sem_data";
   if (surgery.confirmed_date) return "confirmada";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInSaoPaulo();
   return surgery.expected_date! < today ? "atrasada" : "prevista";
 }
