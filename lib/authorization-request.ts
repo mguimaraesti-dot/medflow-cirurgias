@@ -79,9 +79,5 @@ Encaminhamos em anexo a documentação médica pertinente para análise da solic
 
 Solicitamos, por gentileza, a análise e retorno quanto à autorização do procedimento e dos materiais/OPME relacionados.
 
-Caso haja necessidade de informações ou documentos complementares, permanecemos à disposição.
-
-Atenciosamente,
-
-Equipe MedFlow – Cirurgias`;
+Caso haja necessidade de informações ou documentos complementares, permanecemos à disposição.`;
 }
