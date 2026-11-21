@@ -12,8 +12,7 @@ import { listHolidays, type Holiday } from "@/lib/data/holidays";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { deriveScheduleStatus, type ScheduleStatus } from "@/lib/schedule-status";
 import { Button } from "@/components/ui/button";
-import { ScheduleHospitalFilter } from "@/components/schedule/schedule-hospital-filter";
-import { ScheduleStatusFilter } from "@/components/schedule/schedule-status-filter";
+import { ScheduleFilters } from "@/components/schedule/schedule-filters";
 import { ScheduleViewToggle } from "@/components/schedule/schedule-view-toggle";
 import { ScheduleIndicatorCards } from "@/components/schedule/schedule-indicator-cards";
 import { ScheduleCalendar, type ScheduleDay } from "@/components/schedule/schedule-calendar";
@@ -184,9 +183,8 @@ export default async function SchedulePage({
             Cirurgias confirmadas (ou previstas, quando ainda sem data confirmada) por mês.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ScheduleStatusFilter />
-          <ScheduleHospitalFilter hospitals={hospitals} />
+        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
+          <ScheduleFilters hospitals={hospitals} />
           <ScheduleViewToggle />
         </div>
       </div>

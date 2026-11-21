@@ -6,6 +6,7 @@ import { useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchInput } from "@/components/shared/search-input";
 import { Button } from "@/components/ui/button";
+import { FilterDisclosure } from "@/components/shared/filter-disclosure";
 
 const CATEGORY_LABEL: Record<string, string> = {
   documentation: "Documentação",
@@ -52,60 +53,58 @@ export function TaskFilters() {
     });
   }
 
-  const hasFilters =
-    searchParams.get("category") ||
-    searchParams.get("priority") ||
-    searchParams.get("status") ||
-    searchParams.get("q");
+  const activeCount = ["category", "priority", "status", "q"].filter((key) => searchParams.get(key)).length;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <SearchInput placeholder="Buscar por título..." />
+    <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
+      <FilterDisclosure activeCount={activeCount}>
+        <SearchInput placeholder="Buscar por título..." className="w-full max-w-none md:w-auto md:max-w-none" />
 
-      <Select value={searchParams.get("category") ?? "all"} onValueChange={(v) => setParam("category", v)}>
-        <SelectTrigger className="w-[190px]">
-          <SelectValue placeholder="Categoria" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as categorias</SelectItem>
-          {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select value={searchParams.get("category") ?? "all"} onValueChange={(v) => setParam("category", v)}>
+          <SelectTrigger className="w-full shrink-0 md:w-[190px]">
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as categorias</SelectItem>
+            {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select value={searchParams.get("priority") ?? "all"} onValueChange={(v) => setParam("priority", v)}>
-        <SelectTrigger className="w-[150px]">
-          <SelectValue placeholder="Prioridade" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Toda prioridade</SelectItem>
-          {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select value={searchParams.get("priority") ?? "all"} onValueChange={(v) => setParam("priority", v)}>
+          <SelectTrigger className="w-full shrink-0 md:w-[150px]">
+            <SelectValue placeholder="Prioridade" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toda prioridade</SelectItem>
+            {Object.entries(PRIORITY_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select value={searchParams.get("status") ?? "all"} onValueChange={(v) => setParam("status", v)}>
-        <SelectTrigger className="w-[170px]">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todo status</SelectItem>
-          {Object.entries(STATUS_LABEL).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select value={searchParams.get("status") ?? "all"} onValueChange={(v) => setParam("status", v)}>
+          <SelectTrigger className="w-full shrink-0 md:w-[170px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo status</SelectItem>
+            {Object.entries(STATUS_LABEL).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FilterDisclosure>
 
-      {hasFilters ? (
-        <Button variant="ghost" size="sm" onClick={() => router.replace(pathname)}>
+      {activeCount > 0 ? (
+        <Button variant="ghost" size="sm" className="shrink-0" onClick={() => router.replace(pathname)}>
           Limpar filtros
         </Button>
       ) : null}

@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { FilterDisclosure } from "@/components/shared/filter-disclosure";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -109,95 +110,101 @@ export function ReportFilters({ hospitals }: { hospitals: { id: string; name: st
   if (type === "cirurgias" && statusParam) exportParams.set("status", statusParam);
   const exportHref = `/api/reports/export?${exportParams.toString()}`;
 
+  const activeCount = [hospitalParam, type === "cirurgias" ? statusParam : null].filter(Boolean).length;
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Select value={type} onValueChange={(v) => setParams({ type: v, status: undefined })}>
-        <SelectTrigger className="w-[200px] shrink-0">
-          <SelectValue placeholder="Relatório" />
-        </SelectTrigger>
-        <SelectContent>
-          {REPORT_TYPES.map((t) => (
-            <SelectItem key={t.value} value={t.value}>
-              {t.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={selectedPreset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-[135px] shrink-0">
-          <SelectValue placeholder="Período" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="month">Este mês</SelectItem>
-          <SelectItem value="last_month">Mês anterior</SelectItem>
-          <SelectItem value="year">Este ano</SelectItem>
-          <SelectItem value="custom">Personalizado</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {selectedPreset === "custom" ? (
-        <>
-          <Input
-            type="date"
-            className="w-[150px] shrink-0"
-            value={from}
-            onChange={(e) => setParams({ from: e.target.value, to })}
-          />
-          <span className="shrink-0 text-xs text-muted-foreground">até</span>
-          <Input
-            type="date"
-            className="w-[150px] shrink-0"
-            value={to}
-            onChange={(e) => setParams({ from, to: e.target.value })}
-          />
-        </>
-      ) : null}
-
-      <Select value={searchParams.get("hospital") ?? "all"} onValueChange={(v) => setParams({ hospital: v })}>
-        <SelectTrigger className="w-[170px] shrink-0">
-          <SelectValue placeholder="Hospital" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os hospitais</SelectItem>
-          {hospitals.map((h) => (
-            <SelectItem key={h.id} value={h.id}>
-              {h.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {type === "cirurgias" ? (
-        <Select value={statusParam ?? "all"} onValueChange={(v) => setParams({ status: v })}>
-          <SelectTrigger className="w-[150px] shrink-0">
-            <SelectValue placeholder="Status" />
+    <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
+      <FilterDisclosure activeCount={activeCount}>
+        <Select value={type} onValueChange={(v) => setParams({ type: v, status: undefined })}>
+          <SelectTrigger className="w-full shrink-0 md:w-[200px]">
+            <SelectValue placeholder="Relatório" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
+            {REPORT_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      ) : null}
 
-      <Button asChild variant="outline" size="sm">
-        <a href={exportHref} download>
-          Exportar CSV
-        </a>
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="print:hidden"
-        onClick={() => window.print()}
-      >
-        Imprimir / PDF
-      </Button>
+        <Select value={selectedPreset} onValueChange={handlePresetChange}>
+          <SelectTrigger className="w-full shrink-0 md:w-[135px]">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="last_month">Mês anterior</SelectItem>
+            <SelectItem value="year">Este ano</SelectItem>
+            <SelectItem value="custom">Personalizado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {selectedPreset === "custom" ? (
+          <>
+            <Input
+              type="date"
+              className="w-[calc(50%-12px)] shrink-0 md:w-[150px]"
+              value={from}
+              onChange={(e) => setParams({ from: e.target.value, to })}
+            />
+            <span className="shrink-0 text-xs text-muted-foreground">até</span>
+            <Input
+              type="date"
+              className="w-[calc(50%-12px)] shrink-0 md:w-[150px]"
+              value={to}
+              onChange={(e) => setParams({ from, to: e.target.value })}
+            />
+          </>
+        ) : null}
+
+        <Select value={searchParams.get("hospital") ?? "all"} onValueChange={(v) => setParams({ hospital: v })}>
+          <SelectTrigger className="w-full shrink-0 md:w-[170px]">
+            <SelectValue placeholder="Hospital" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os hospitais</SelectItem>
+            {hospitals.map((h) => (
+              <SelectItem key={h.id} value={h.id}>
+                {h.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {type === "cirurgias" ? (
+          <Select value={statusParam ?? "all"} onValueChange={(v) => setParams({ status: v })}>
+            <SelectTrigger className="w-full shrink-0 md:w-[150px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </FilterDisclosure>
+
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <Button asChild variant="outline" size="sm">
+          <a href={exportHref} download>
+            Exportar CSV
+          </a>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="print:hidden"
+          onClick={() => window.print()}
+        >
+          Imprimir / PDF
+        </Button>
+      </div>
     </div>
   );
 }
