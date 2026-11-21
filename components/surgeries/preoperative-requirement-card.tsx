@@ -8,6 +8,10 @@ import { PreoperativeCard } from "@/components/surgeries/preoperative-card";
 import { RequirementItem } from "@/components/surgeries/requirement-item";
 import { RequirementCardShell, type RequirementTone } from "@/components/surgeries/requirement-card-shell";
 
+function formatDate(value: string) {
+  return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
+}
+
 export function PreoperativeRequirementCard({
   surgeryId,
   items,
@@ -21,28 +25,43 @@ export function PreoperativeRequirementCard({
   open: boolean;
   onToggle: () => void;
 }) {
-  const total = items.length;
-  const done = items.filter((i) => i.status === "done" || i.status === "waived").length;
+  // No máximo 1 item: a avaliação pré-anestésica (ver preoperative-card.tsx).
+  const item = items[0] ?? null;
   const today = new Date().toISOString().slice(0, 10);
-  const overdue = items.some((i) => i.status === "pending" && i.due_date && i.due_date < today);
+  const overdue = item?.status === "pending" && !!item.due_date && item.due_date < today;
 
   let tone: RequirementTone = "neutral";
-  let statusLabel = "Não iniciada";
+  let statusLabel = "Não avaliado";
+  let summary = "Ainda não foi avaliado se a cirurgia precisa de consulta pré-anestésica.";
+
   if (requirement.waived) {
     tone = "neutral";
     statusLabel = "Dispensado";
-  } else if (total === 0) {
-    tone = "neutral";
-    statusLabel = "Não iniciada";
-  } else if (done === total) {
+    summary = "Requisito dispensado manualmente.";
+  } else if (!item) {
+    // mantém os valores padrão acima
+  } else if (item.status === "waived") {
     tone = "success";
-    statusLabel = "Completo";
+    statusLabel = "Não necessária";
+    summary = "Avaliado: a cirurgia não precisa de consulta pré-anestésica.";
+  } else if (item.status === "done") {
+    tone = "success";
+    statusLabel = "Realizada";
+    summary = item.due_date
+      ? `Consulta pré-anestésica realizada em ${formatDate(item.due_date)}.`
+      : "Consulta pré-anestésica realizada.";
   } else if (overdue) {
     tone = "warning";
-    statusLabel = "Atrasado";
+    statusLabel = "Atrasada";
+    summary = `Consulta pré-anestésica necessária — data prevista (${formatDate(item.due_date as string)}) já passou.`;
+  } else if (item.due_date) {
+    tone = "info";
+    statusLabel = "Agendada";
+    summary = `Consulta pré-anestésica necessária, agendada para ${formatDate(item.due_date)}.`;
   } else {
     tone = "info";
-    statusLabel = "Em andamento";
+    statusLabel = "Pendente";
+    summary = "Consulta pré-anestésica necessária, ainda sem data marcada.";
   }
 
   return (
@@ -51,8 +70,8 @@ export function PreoperativeRequirementCard({
       title="Pré-operatório"
       tone={tone}
       statusLabel={statusLabel}
-      summary={total > 0 ? `${done} de ${total} itens concluídos` : "Nenhum item cadastrado ainda."}
-      actionLabel={total > 0 ? "Visualizar / Editar" : "Registrar dados"}
+      summary={summary}
+      actionLabel={item ? "Visualizar / Editar" : "Registrar dados"}
       open={open}
       onToggle={onToggle}
     >

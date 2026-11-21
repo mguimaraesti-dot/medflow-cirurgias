@@ -246,6 +246,36 @@ export async function removePreoperativeItem(supabase: SupabaseClient, id: strin
   if (error) throw error;
 }
 
+// Pré-operatório simplificado: em vez de um checklist livre, a cirurgia
+// tem um único item fixo representando a avaliação pré-anestésica —
+// "precisa?", e se sim, data da consulta e se já foi realizada.
+export const PREANESTHETIC_EVALUATION_DESCRIPTION = "Avaliação pré-anestésica";
+
+export async function savePreanestheticEvaluation(
+  supabase: SupabaseClient,
+  checklistId: string,
+  existingItemId: string | null,
+  input: { needed: boolean; consultDate: string | null; done: boolean }
+) {
+  const status: PreoperativeItem["status"] = !input.needed ? "waived" : input.done ? "done" : "pending";
+  const payload = {
+    checklist_id: checklistId,
+    description: PREANESTHETIC_EVALUATION_DESCRIPTION,
+    due_date: input.needed ? input.consultDate : null,
+    status,
+    completed_at: status === "done" ? new Date().toISOString() : null,
+  };
+
+  if (existingItemId) {
+    const { error } = await supabase.from("preoperative_items").update(payload).eq("id", existingItemId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase.from("preoperative_items").insert(payload);
+  if (error) throw error;
+}
+
 // ----------------------------------------------------------------------------
 // Materiais da cirurgia
 // ----------------------------------------------------------------------------

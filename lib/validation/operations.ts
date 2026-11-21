@@ -98,6 +98,15 @@ export const preoperativeItemSchema = z.object({
 });
 export type PreoperativeItemInput = z.infer<typeof preoperativeItemSchema>;
 
+// Pré-operatório simplificado: a única pergunta que importa é se a
+// cirurgia precisa de avaliação/consulta pré-anestésica.
+export const preanestheticEvaluationSchema = z.object({
+  needed: z.enum(["yes", "no"]),
+  consult_date: optionalDate,
+  done: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
+});
+export type PreanestheticEvaluationInput = z.infer<typeof preanestheticEvaluationSchema>;
+
 export const surgeryMaterialItemSchema = z.object({
   material_id: z.string().uuid("Selecione um material."),
   supplier_id: z.preprocess(

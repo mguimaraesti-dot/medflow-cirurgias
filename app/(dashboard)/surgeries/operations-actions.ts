@@ -12,6 +12,7 @@ import {
   addPreoperativeItem,
   setPreoperativeItemStatus,
   removePreoperativeItem,
+  savePreanestheticEvaluation,
   addSurgeryMaterialItem,
   setSurgeryMaterialItemStatus,
   removeSurgeryMaterialItem,
@@ -24,6 +25,7 @@ import {
   authorizationSchema,
   orReservationSchema,
   preoperativeItemSchema,
+  preanestheticEvaluationSchema,
   surgeryMaterialItemSchema,
 } from "@/lib/validation/operations";
 
@@ -198,6 +200,36 @@ export async function removePreoperativeItemAction(itemId: string, surgeryId: st
   const supabase = await createClient();
   await removePreoperativeItem(supabase, itemId);
   revalidateSurgery(surgeryId);
+}
+
+export async function savePreanestheticEvaluationAction(
+  surgeryId: string,
+  existingItemId: string | null,
+  _prevState: PreoperativeFormState,
+  formData: FormData
+): Promise<PreoperativeFormState> {
+  const parsed = preanestheticEvaluationSchema.safeParse({
+    needed: formData.get("needed"),
+    consult_date: formData.get("consult_date"),
+    done: formData.get("done"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const supabase = await createClient();
+  try {
+    const checklistId = await getOrCreateChecklist(supabase, surgeryId);
+    await savePreanestheticEvaluation(supabase, checklistId, existingItemId, {
+      needed: parsed.data.needed === "yes",
+      consultDate: parsed.data.consult_date ?? null,
+      done: parsed.data.done,
+    });
+  } catch {
+    return { error: "Não foi possível salvar a avaliação pré-anestésica." };
+  }
+  revalidateSurgery(surgeryId);
+  return {};
 }
 
 // ----------------------------------------------------------------------------

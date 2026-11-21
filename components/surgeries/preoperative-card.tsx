@@ -1,102 +1,28 @@
 "use client";
 
-import { useActionState, useRef, useTransition } from "react";
-import { X } from "lucide-react";
-import { toast } from "sonner";
+import { useActionState, useState } from "react";
 
 import {
-  addPreoperativeItemAction,
-  setPreoperativeItemStatusAction,
-  removePreoperativeItemAction,
+  savePreanestheticEvaluationAction,
   type PreoperativeFormState,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { PreoperativeItem } from "@/lib/data/operations";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-const STATUS_LABEL: Record<PreoperativeItem["status"], string> = {
-  pending: "Pendente",
-  in_progress: "Em andamento",
-  done: "Concluído",
-  waived: "Dispensado",
-};
-
-const STATUS_VARIANT: Record<PreoperativeItem["status"], "outline" | "secondary" | "default"> = {
-  pending: "outline",
-  in_progress: "secondary",
-  done: "default",
-  waived: "secondary",
-};
-
-function ItemRow({ item, surgeryId }: { item: PreoperativeItem; surgeryId: string }) {
-  const [pending, startTransition] = useTransition();
-
-  return (
-    <li className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-foreground">{item.description}</p>
-        {item.due_date ? (
-          <p className="text-xs text-muted-foreground">
-            Prazo: {new Date(item.due_date + "T00:00:00").toLocaleDateString("pt-BR")}
-          </p>
-        ) : null}
-      </div>
-      <Select
-        value={item.status}
-        disabled={pending}
-        onValueChange={(status) =>
-          startTransition(async () => {
-            await setPreoperativeItemStatusAction(
-              item.id,
-              surgeryId,
-              status as PreoperativeItem["status"]
-            );
-            toast.success("Status atualizado.");
-          })
-        }
-      >
-        <SelectTrigger className="h-8 w-[160px] text-xs">
-          <SelectValue>
-            <Badge variant={STATUS_VARIANT[item.status]}>{STATUS_LABEL[item.status]}</Badge>
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {(Object.keys(STATUS_LABEL) as PreoperativeItem["status"][]).map((status) => (
-            <SelectItem key={status} value={status}>
-              {STATUS_LABEL[status]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        variant="ghost"
-        size="icon"
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            await removePreoperativeItemAction(item.id, surgeryId);
-            toast.success("Item removido.");
-          })
-        }
-        aria-label="Remover item"
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </li>
-  );
-}
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const initialState: PreoperativeFormState = {};
 
+/**
+ * Pré-operatório simplificado: a única pergunta é se a cirurgia precisa de
+ * avaliação/consulta pré-anestésica — se sim, quando e se já foi feita.
+ * Por baixo continua guardado como um item de `preoperative_items` (pra
+ * reaproveitar o mesmo gate de liberação automático da migration 0005),
+ * mas sempre no máximo 1 item por cirurgia, em vez de um checklist livre.
+ */
 export function PreoperativeCard({
   surgeryId,
   items,
@@ -104,44 +30,56 @@ export function PreoperativeCard({
   surgeryId: string;
   items: PreoperativeItem[];
 }) {
-  const action = addPreoperativeItemAction.bind(null, surgeryId);
+  const item = items[0] ?? null;
+  const action = savePreanestheticEvaluationAction.bind(null, surgeryId, item?.id ?? null);
   const [state, formAction, pending] = useActionState(action, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
-  useActionToast(state, "Item adicionado.");
+  const [needed, setNeeded] = useState(item ? (item.status === "waived" ? "no" : "yes") : "");
+  useActionToast(state, "Avaliação pré-anestésica salva.");
 
   return (
-    <div className="flex flex-col gap-4">
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum item cadastrado ainda.</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {items.map((item) => (
-            <ItemRow key={item.id} item={item} surgeryId={surgeryId} />
-          ))}
-        </ul>
-      )}
+    <form action={formAction} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="needed">Precisa de consulta pré-anestésica?</Label>
+        <Select name="needed" value={needed} onValueChange={setNeeded}>
+          <SelectTrigger id="needed">
+            <SelectValue placeholder="Selecione" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="yes">Sim</SelectItem>
+            <SelectItem value="no">Não</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <form
-        ref={formRef}
-        action={async (formData) => {
-          await formAction(formData);
-          formRef.current?.reset();
-        }}
-        className="flex items-end gap-2 border-t border-border pt-4"
-      >
-        <div className="flex-1">
-          <Input name="description" placeholder="Novo item do checklist" required />
-        </div>
-        <Input name="due_date" type="date" className="w-40" />
-        <Button type="submit" variant="outline" size="sm" disabled={pending}>
-          {pending ? "Adicionando..." : "Adicionar"}
-        </Button>
-      </form>
+      {needed === "yes" ? (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="consult_date">Data da consulta</Label>
+            <Input
+              id="consult_date"
+              name="consult_date"
+              type="date"
+              defaultValue={item?.due_date ?? ""}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <Checkbox name="done" value="on" defaultChecked={item?.status === "done"} />
+            Consulta já realizada
+          </label>
+        </>
+      ) : null}
+
       {state.error ? (
         <p className="text-sm text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       ) : null}
-    </div>
+
+      <div>
+        <Button type="submit" variant="outline" size="sm" disabled={pending || needed === ""}>
+          {pending ? "Salvando..." : "Salvar"}
+        </Button>
+      </div>
+    </form>
   );
 }
