@@ -278,7 +278,12 @@ const SCHEDULE_COLUMNS = LIST_COLUMNS + ",confirmed_time";
  * confirmed_date quando tem, senão expected_date — então o filtro de
  * período precisa olhar pra esse valor efetivo, não só uma coluna: traz
  * cirurgias com confirmed_date no intervalo OU (sem confirmed_date e)
- * expected_date no intervalo. Cancelada não entra — não ocupa agenda.
+ * expected_date no intervalo.
+ *
+ * Traz também as canceladas (ao contrário da versão anterior) — quem
+ * decide se mostra ou não é o filtro de status na tela, já que o
+ * indicador "Atrasadas" etc precisa contar sobre o conjunto completo do
+ * período, e às vezes faz sentido auditar canceladas no período.
  */
 export async function listSurgeriesForSchedule(
   supabase: SupabaseClient,
@@ -287,11 +292,36 @@ export async function listSurgeriesForSchedule(
   let query = supabase
     .from("surgeries")
     .select(SCHEDULE_COLUMNS)
-    .neq("status", "cancelled")
     .or(
       `and(confirmed_date.gte.${filters.from},confirmed_date.lte.${filters.to}),` +
         `and(confirmed_date.is.null,expected_date.gte.${filters.from},expected_date.lte.${filters.to})`
     );
+
+  if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as unknown as (ScheduleSurgeryItem & { surgery_procedures: SurgeryProcedureLink[] })[]).map(
+    withDerivedProcedures
+  ) as unknown as ScheduleSurgeryItem[];
+}
+
+/**
+ * Cirurgias sem nenhuma data (nem prevista, nem confirmada) — não cabem
+ * no calendário mensal (não têm onde entrar), mas precisam aparecer no
+ * indicador "Aguardando definição" e na visão em lista. Exclui
+ * realizada/cancelada (já têm desfecho, não estão "aguardando" nada).
+ */
+export async function listSurgeriesWithoutDate(
+  supabase: SupabaseClient,
+  filters: { hospitalId?: string } = {}
+): Promise<ScheduleSurgeryItem[]> {
+  let query = supabase
+    .from("surgeries")
+    .select(SCHEDULE_COLUMNS)
+    .is("confirmed_date", null)
+    .is("expected_date", null)
+    .not("status", "in", "(completed,cancelled)");
 
   if (filters.hospitalId) query = query.eq("hospital_id", filters.hospitalId);
 

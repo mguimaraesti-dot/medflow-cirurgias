@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, HeartHandshake, Users } from "lucide-react";
+import { Building2, HeartHandshake, CalendarHeart, Users } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -15,6 +15,12 @@ const SECTIONS = [
     icon: HeartHandshake,
     title: "Operadoras e convênios",
     description: "Operadoras de saúde e regras de autorização/pagamento.",
+  },
+  {
+    href: "/settings/holidays",
+    icon: CalendarHeart,
+    title: "Feriados",
+    description: "Destaque visual na Agenda — nacionais, estaduais e municipais.",
   },
   {
     href: "#",
