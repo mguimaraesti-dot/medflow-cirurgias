@@ -9,7 +9,8 @@ const CLASSIFICATION_BY_PRIORITY: Record<SurgeryAuthorizationRequestData["priori
 
 /** Único médico do sistema — não existe campo de médico solicitante no
  * cadastro da cirurgia, então o nome é fixo aqui. */
-const REQUESTING_DOCTOR = "Dr. Flávio Morita";
+const REQUESTING_DOCTOR = "Dr. Flávio Hiroshi Ananias Morita";
+const REQUESTING_DOCTOR_CRM = "CRM SP: 146.989";
 
 /**
  * Monta o texto pronto pra copiar e enviar à central de autorizações do
@@ -57,6 +58,7 @@ export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestD
 - Carteirinha: ${carteirinhaLine}
 - Hospital previsto: ${data.hospital_name ?? "[Nome do hospital]"}
 - Médico solicitante: ${REQUESTING_DOCTOR}
+- ${REQUESTING_DOCTOR_CRM}
 
 2. PROCEDIMENTO CIRÚRGICO
 
