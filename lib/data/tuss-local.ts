@@ -77,7 +77,8 @@ export async function searchLocalTuss(
     for (const token of tokens) {
       // escapa os curingas do LIKE digitados pelo usuário
       const safe = token.replace(/[\\%_]/g, (c) => `\\${c}`);
-      q = q.like("search_text", `%${safe}%`);
+      // Início de palavra ("clip" acha "clipe" mas não "…triclip…"): resultados bem mais relevantes.
+      q = q.or(`search_text.like."${safe}%",search_text.like."% ${safe}%",search_text.like."%/${safe}%",search_text.like."%-${safe}%"`);
     }
   }
 
