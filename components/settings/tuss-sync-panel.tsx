@@ -51,7 +51,7 @@ function TableCard({ info, canEdit }: { info: TableInfo; canEdit: boolean }) {
         break;
       }
       saved += res.saved ?? 0;
-      page = res.nextPage ?? page + 4;
+      page = res.nextPage ?? page + 1;
       setProgress({ page, saved });
       if (res.done) {
         toast.success(`${info.title}: tabela atualizada.`);

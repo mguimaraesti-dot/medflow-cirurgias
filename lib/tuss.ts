@@ -341,7 +341,7 @@ export type TussSyncRow = {
 export async function fetchTussListPage(table: TussTable, page: number): Promise<TussSyncRow[]> {
   const url = `${TUSS_BASE_URL}/${table}?page=${page}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
   let response: Response;
   try {
     response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });

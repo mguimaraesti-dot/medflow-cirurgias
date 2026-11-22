@@ -6,8 +6,9 @@ import { requireActionPermission } from "@/lib/auth/guard";
 import { createAdminClient } from "@/lib/supabase/server";
 import { describeTussError, fetchTussListPage, type TussSyncRow, type TussTable } from "@/lib/tuss";
 
-const PAGES_PER_BATCH = 4;
-const UPSERT_CHUNK = 500;
+// Tempo máximo de um lote (a página tem maxDuration = 60s; sobra folga pra
+// a última página do lote terminar).
+const BATCH_BUDGET_MS = 15_000;
 
 export type TussSyncResult = {
   ok: boolean;
@@ -41,27 +42,39 @@ export async function syncTussBatchAction(table: string, startPage: number): Pro
   }
 
   try {
-    const pageNumbers = Array.from({ length: PAGES_PER_BATCH }, (_, i) => startPage + i);
-    const pages = await Promise.all(pageNumbers.map((n) => fetchTussListPage(table, n)));
-    const done = pages.some((rows) => rows.length === 0);
-
-    const byCode = new Map<string, TussSyncRow>();
-    for (const rows of pages) for (const row of rows) byCode.set(row.code, row);
-    const all = Array.from(byCode.values());
-
     const admin = createAdminClient();
-    for (let i = 0; i < all.length; i += UPSERT_CHUNK) {
+    const startedAt = Date.now();
+    let page = startPage;
+    let saved = 0;
+    let done = false;
+
+    // Uma página por vez (a ANS não gosta de várias em paralelo), gravando a
+    // cada página — assim o que já chegou nunca se perde, mesmo se a próxima
+    // der erro. Para quando acaba o orçamento de tempo do lote.
+    while (!done && Date.now() - startedAt < BATCH_BUDGET_MS) {
+      let rows: TussSyncRow[];
+      try {
+        rows = await fetchTussListPage(table, page);
+      } catch {
+        rows = await fetchTussListPage(table, page); // 1 nova tentativa
+      }
+      if (rows.length === 0) {
+        done = true;
+        break;
+      }
+      const byCode = new Map(rows.map((r) => [r.code, r]));
       const { error } = await admin
         .from("tuss_terms")
-        .upsert(all.slice(i, i + UPSERT_CHUNK), { onConflict: "table_name,code" });
+        .upsert(Array.from(byCode.values()), { onConflict: "table_name,code" });
       if (error) throw error;
+      saved += byCode.size;
+      page += 1;
     }
 
-    const nextPage = startPage + PAGES_PER_BATCH;
     const { error: stateError } = await admin.from("tuss_sync_state").upsert(
       {
         table_name: table,
-        last_page: done ? 0 : nextPage,
+        last_page: done ? 0 : page,
         status: done ? "done" : "running",
         ...(done ? { last_synced_at: new Date().toISOString() } : {}),
       },
@@ -70,7 +83,7 @@ export async function syncTussBatchAction(table: string, startPage: number): Pro
     if (stateError) throw stateError;
 
     if (done) revalidatePath("/settings/tuss");
-    return { ok: true, nextPage, done, saved: all.length };
+    return { ok: true, nextPage: page, done, saved };
   } catch (e) {
     console.error("[tuss] falha na atualização:", e);
     const message = String((e as { message?: unknown } | null)?.message ?? "");
