@@ -20,6 +20,7 @@ import { HospitalRequestCard } from "@/components/surgeries/hospital-request-car
 type RequirementKey = SurgeryRequirement["requirement_key"] | "hospital_request";
 
 export function SurgeryRequirementsPanel({
+  defaultOpenKey = null,
   surgeryId,
   procedureLabel,
   hospitalId,
@@ -30,6 +31,7 @@ export function SurgeryRequirementsPanel({
   preoperativeItems,
   documents,
 }: {
+  defaultOpenKey?: RequirementKey | null;
   surgeryId: string;
   procedureLabel: string;
   hospitalId: string;
@@ -40,7 +42,7 @@ export function SurgeryRequirementsPanel({
   preoperativeItems: PreoperativeItem[];
   documents: SurgeryDocument[];
 }) {
-  const [openKey, setOpenKey] = useState<RequirementKey | null>(null);
+  const [openKey, setOpenKey] = useState<RequirementKey | null>(defaultOpenKey);
 
   const byKey = (key: SurgeryRequirement["requirement_key"]) =>
     requirements.find((r) => r.requirement_key === key);

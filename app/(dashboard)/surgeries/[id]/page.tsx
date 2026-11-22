@@ -58,11 +58,18 @@ function formatDateTime(value: string) {
 
 export default async function SurgeryDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ open?: string }>;
 }) {
   await requireModuleView("surgeries");
   const { id } = await params;
+  // ?open=authorization | or_reservation: a lista de cirurgias leva direto
+  // pro card de requisito já aberto.
+  const { open: openParam } = await searchParams;
+  const defaultOpenKey =
+    openParam === "authorization" || openParam === "or_reservation" ? openParam : null;
   const supabase = await createClient();
   const [surgery, requirements, stages, history] = await Promise.all([
     getSurgery(supabase, id),
@@ -205,9 +212,10 @@ export default async function SurgeryDetailPage({
       </Card>
 
       {/* Cards de requisitos para liberação — expansíveis, um por vez */}
-      <div className="mt-6">
+      <div id="requisitos" className="mt-6 scroll-mt-4">
         <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
         <SurgeryRequirementsPanel
+          defaultOpenKey={defaultOpenKey}
           surgeryId={surgery.id}
           procedureLabel={surgery.procedures.map((p) => p.name).join(", ")}
           hospitalId={surgery.hospital_id}
