@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useState, type FocusEvent, type KeyboardEvent } from "react";
 
 import { Input } from "@/components/ui/input";
 
@@ -41,23 +41,19 @@ export function CurrencyInput({
   const [display, setDisplay] = useState(
     defaultValue != null ? formatBRL(defaultValue) : ""
   );
-  const hiddenRef = useRef<HTMLInputElement>(null);
 
-  // Mantém o input oculto sempre em dia com o que foi digitado, a cada
-  // tecla — não só no blur/Enter. Assim, se o clique em "Salvar" acontecer
-  // antes do navegador disparar o blur do campo, o valor já está lá mesmo
-  // assim; o blur/Enter só cuida de deixar o texto visível bonito.
-  function syncHidden(raw: string) {
-    const parsed = parseCurrencyInput(raw);
-    if (hiddenRef.current) {
-      hiddenRef.current.value = parsed !== null ? parsed.toFixed(2) : "";
-    }
-  }
+  // O valor enviado no formulário é sempre derivado do texto exibido, a
+  // cada render (input oculto controlado pelo React). Antes o valor era
+  // escrito direto no DOM a cada tecla, o que ficava frágil: o React
+  // podia redefinir o campo oculto (reset do formulário após a action,
+  // re-render) e o formulário seguia com o valor em branco. Derivar do
+  // estado garante que o que aparece na tela é o que vai pro servidor.
+  const parsedDisplay = parseCurrencyInput(display);
+  const hiddenValue = parsedDisplay !== null ? parsedDisplay.toFixed(2) : "";
 
   function commit(raw: string) {
     const parsed = parseCurrencyInput(raw);
     setDisplay(parsed !== null ? formatBRL(parsed) : "");
-    syncHidden(raw);
   }
 
   return (
@@ -66,22 +62,14 @@ export function CurrencyInput({
         id={id}
         inputMode="decimal"
         value={display}
-        onChange={(e) => {
-          setDisplay(e.target.value);
-          syncHidden(e.target.value);
-        }}
+        onChange={(e) => setDisplay(e.target.value)}
         onBlur={(e: FocusEvent<HTMLInputElement>) => commit(e.target.value)}
         onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
           if (e.key === "Enter") commit(e.currentTarget.value);
         }}
         placeholder={placeholder ?? "0,00"}
       />
-      <input
-        ref={hiddenRef}
-        type="hidden"
-        name={name}
-        defaultValue={defaultValue != null ? defaultValue.toFixed(2) : ""}
-      />
+      <input type="hidden" name={name} value={hiddenValue} readOnly />
     </>
   );
 }

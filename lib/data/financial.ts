@@ -47,7 +47,22 @@ export async function getOrCreateFinancialRecord(
     .eq("surgery_id", surgeryId)
     .maybeSingle();
   if (fetchError) throw fetchError;
-  if (existing) return existing as FinancialRecord;
+  if (existing) {
+    // O tipo de atendimento da cirurgia pode ter mudado depois que o
+    // registro foi criado (ex.: convênio -> particular). Sem acompanhar,
+    // o registro ficava preso no tipo antigo e sumia da tela Financeiro.
+    if ((existing as FinancialRecord).attendance_type !== attendanceType) {
+      const { data: synced, error: syncError } = await supabase
+        .from("financial_records")
+        .update({ attendance_type: attendanceType })
+        .eq("id", (existing as FinancialRecord).id)
+        .select(FINANCIAL_RECORD_COLUMNS)
+        .single();
+      if (syncError) throw syncError;
+      return synced as FinancialRecord;
+    }
+    return existing as FinancialRecord;
+  }
 
   const { data: created, error: insertError } = await supabase
     .from("financial_records")
