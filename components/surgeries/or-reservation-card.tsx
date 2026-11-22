@@ -9,6 +9,7 @@ import {
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { OrReservation } from "@/lib/data/operations";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,14 +44,20 @@ export function OrReservationCard({
   useActionToast(state, "Reserva salva.");
 
   const isConfirmed = status === "confirmed";
+  // Só o status importa enquanto nada foi solicitado. Os demais campos
+  // continuam no formulário (apenas com `hidden`), então nada que já foi
+  // salvo se perde ao trocar o status.
+  const started = status !== "not_requested";
+  const showConfirmation = status === "confirmed" || status === "rescheduled";
+  const showReason = status === "rescheduled" || status === "cancelled";
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+        <div className={cn("flex flex-col gap-1.5", !started && "sm:col-span-2")}>
           <Label htmlFor="status">Status</Label>
           <Select name="status" value={status} onValueChange={setStatus}>
-            <SelectTrigger>
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -62,25 +69,32 @@ export function OrReservationCard({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className={cn("flex flex-col gap-1.5", !started && "hidden")}>
           <Label htmlFor="room">
             Sala {isConfirmed ? <span className="text-destructive">*</span> : null}
           </Label>
-          <Input id="room" name="room" required={isConfirmed} defaultValue={reservation?.room ?? ""} />
+          <Input
+            id="room"
+            name="room"
+            className="h-10"
+            required={isConfirmed}
+            defaultValue={reservation?.room ?? ""}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className={cn("grid grid-cols-1 gap-3", showConfirmation ? "sm:grid-cols-3" : "sm:grid-cols-2", !started && "hidden")}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="requested_date">Data solicitada</Label>
           <Input
             id="requested_date"
             name="requested_date"
             type="date"
+            className="h-10"
             defaultValue={reservation?.requested_date ?? ""}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className={cn("flex flex-col gap-1.5", !showConfirmation && "hidden")}>
           <Label htmlFor="confirmed_date">
             Data confirmada {isConfirmed ? <span className="text-destructive">*</span> : null}
           </Label>
@@ -88,11 +102,12 @@ export function OrReservationCard({
             id="confirmed_date"
             name="confirmed_date"
             type="date"
+            className="h-10"
             required={isConfirmed}
             defaultValue={reservation?.confirmed_date ?? ""}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className={cn("flex flex-col gap-1.5", !showConfirmation && "hidden")}>
           <Label htmlFor="confirmed_time">
             Horário {isConfirmed ? <span className="text-destructive">*</span> : null}
           </Label>
@@ -100,14 +115,15 @@ export function OrReservationCard({
             id="confirmed_time"
             name="confirmed_time"
             type="time"
+            className="h-10"
             required={isConfirmed}
             defaultValue={reservation?.confirmed_time ?? ""}
           />
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="change_reason">Motivo de mudança/cancelamento (se houver)</Label>
+      <div className={cn("flex flex-col gap-1.5", !showReason && "hidden")}>
+        <Label htmlFor="change_reason">Motivo da mudança/cancelamento</Label>
         <Textarea
           id="change_reason"
           name="change_reason"
@@ -121,8 +137,8 @@ export function OrReservationCard({
         </p>
       ) : null}
 
-      <div>
-        <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      <div className="flex sm:justify-end">
+        <Button type="submit" disabled={pending} className="h-10 w-full px-6 sm:w-auto">
           {pending ? "Salvando..." : reservation ? "Salvar reserva" : "Registrar solicitação"}
         </Button>
       </div>
