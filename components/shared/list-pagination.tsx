@@ -23,7 +23,6 @@ function pageWindow(current: number, count: number): (number | "gap")[] {
 }
 
 export function ListPagination({
-  hrefFor,
   sizes,
   size,
   page,
@@ -31,8 +30,6 @@ export function ListPagination({
   total,
   shown,
 }: {
-  /** URL da página N, mantendo filtros e ordenação. */
-  hrefFor: (page: number) => string;
   sizes: readonly number[];
   size: number;
   page: number;
@@ -43,7 +40,15 @@ export function ListPagination({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const href = hrefFor;
+  // Monta o link a partir da URL atual (mantém filtros e ordenação). Não recebe função por
+  // props: Server Components não podem passar funções a Client Components.
+  const href = (p: number) => {
+    const next = new URLSearchParams(searchParams.toString());
+    if (p > 1) next.set("page", String(p));
+    else next.delete("page");
+    const qs = next.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
 
   const first = total === 0 ? 0 : (page - 1) * size + 1;
   const last = (page - 1) * size + shown;

@@ -9,7 +9,6 @@ import {
   PROCEDURE_PAGE_SIZES,
   parseProcedureListParams,
   procedureActiveFilterCount,
-  procedureListQuery,
 } from "@/lib/procedure-list-params";
 import { ProcedureFormDialog } from "@/components/procedures/procedure-form-dialog";
 import { ProcedureListStatsCards } from "@/components/procedures/procedure-list-stats";
@@ -81,7 +80,6 @@ export default async function ProceduresCatalogPage({
           }
         />
         <ListPagination
-          hrefFor={(p) => `/catalog/procedures${procedureListQuery(params, { page: p })}`}
           sizes={PROCEDURE_PAGE_SIZES}
           size={params.size}
           page={page}
