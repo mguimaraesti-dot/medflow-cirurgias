@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
+import { getCurrentUser, hasPermission } from "@/lib/auth/session";
 import { listPatients } from "@/lib/data/patients";
 import { countSurgeriesByPatient } from "@/lib/data/surgeries";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
@@ -15,6 +16,8 @@ export default async function PatientsPage({
   await requireModuleView("patients");
   const { q } = await searchParams;
   const supabase = await createClient();
+  const user = await getCurrentUser();
+  const canEdit = user ? await hasPermission(user, "patients", "edit") : false;
   const [patients, insuranceProviders, surgeryCountByPatient] = await Promise.all([
     listPatients(supabase, q),
     listInsuranceProviders(supabase).then((rows) => rows.filter((r) => r.active)),
@@ -30,7 +33,7 @@ export default async function PatientsPage({
             Um paciente pode ter várias cirurgias ao longo do tempo.
           </p>
         </div>
-        <PatientFormDialog insuranceProviders={insuranceProviders} />
+        {canEdit ? <PatientFormDialog insuranceProviders={insuranceProviders} /> : null}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

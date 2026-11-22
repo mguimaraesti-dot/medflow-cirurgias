@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { calculateAge, type Patient } from "@/lib/data/patients";
+import { formatPhone } from "@/lib/br-format";
 import { PatientRowActions } from "@/components/patients/patient-row-actions";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 
@@ -32,7 +33,7 @@ function buildColumns(surgeryCountByPatient: Record<string, number>): SortableCo
       label: "Telefone",
       accessor: (patient) => patient.phone ?? patient.whatsapp,
       cell: (patient) => (
-        <span className="text-muted-foreground">{patient.phone || patient.whatsapp || "—"}</span>
+        <span className="text-muted-foreground">{formatPhone(patient.phone || patient.whatsapp) || "—"}</span>
       ),
     },
     {

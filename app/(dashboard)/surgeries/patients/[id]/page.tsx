@@ -3,11 +3,16 @@ import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
+import { getCurrentUser, hasPermission } from "@/lib/auth/session";
+import { listPatientDocuments, type PatientDocument } from "@/lib/data/patient-documents";
+import { formatAddress } from "@/lib/patient-address";
+import { formatCpf, formatPhone } from "@/lib/br-format";
 import { getPatient, calculateAge } from "@/lib/data/patients";
 import { listSurgeriesByPatient } from "@/lib/data/surgeries";
 import { listInsuranceProviders } from "@/lib/data/insurance-providers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PatientFormDialog } from "@/components/patients/patient-form-dialog";
+import { PatientDocumentList } from "@/components/patients/patient-document-list";
 import { PatientSurgeryHistoryTable } from "@/components/patients/patient-surgery-history-table";
 
 function formatDate(value: string | null) {
@@ -24,11 +29,22 @@ export default async function PatientDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [patient, surgeries, insuranceProviders] = await Promise.all([
+  const user = await getCurrentUser();
+  const [patient, surgeries, insuranceProviders, canEdit, docsResult] = await Promise.all([
     getPatient(supabase, id),
     listSurgeriesByPatient(supabase, id),
     listInsuranceProviders(supabase).then((rows) => rows.filter((r) => r.active)),
+    user ? hasPermission(user, "patients", "edit") : Promise.resolve(false),
+    // Se a migração 0023 ainda não foi aplicada, a ficha continua abrindo.
+    listPatientDocuments(id).then(
+      (documents) => ({ documents, unavailable: null as string | null }),
+      () => ({
+        documents: [] as PatientDocument[],
+        unavailable: "Documentos indisponíveis: a migração 0023 ainda não foi aplicada no banco.",
+      })
+    ),
   ]);
+  const { documents, unavailable } = docsResult;
 
   const age = calculateAge(patient.birth_date);
 
@@ -50,7 +66,14 @@ export default async function PatientDetailPage({
             {patient.insurance_provider?.name ?? "Particular"}
           </p>
         </div>
-        <PatientFormDialog patient={patient} insuranceProviders={insuranceProviders} />
+        {canEdit ? (
+          <PatientFormDialog
+            patient={patient}
+            insuranceProviders={insuranceProviders}
+            documents={documents}
+            documentsUnavailable={unavailable}
+          />
+        ) : null}
       </div>
 
       <Card className="mt-6">
@@ -61,7 +84,7 @@ export default async function PatientDetailPage({
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-xs text-muted-foreground">CPF</dt>
-              <dd className="text-foreground">{patient.cpf || "—"}</dd>
+              <dd className="text-foreground">{patient.cpf ? formatCpf(patient.cpf) : "—"}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">Nascimento</dt>
@@ -69,11 +92,11 @@ export default async function PatientDetailPage({
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">Celular</dt>
-              <dd className="text-foreground">{patient.phone || "—"}</dd>
+              <dd className="text-foreground">{patient.phone ? formatPhone(patient.phone) : "—"}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">Telefone de contato</dt>
-              <dd className="text-foreground">{patient.whatsapp || "—"}</dd>
+              <dd className="text-foreground">{patient.whatsapp ? formatPhone(patient.whatsapp) : "—"}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">E-mail</dt>
@@ -81,7 +104,7 @@ export default async function PatientDetailPage({
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">Endereço</dt>
-              <dd className="text-foreground">{patient.address || "—"}</dd>
+              <dd className="text-foreground">{formatAddress(patient.address) || "—"}</dd>
             </div>
             {patient.insurance_provider ? (
               <>
@@ -102,6 +125,26 @@ export default async function PatientDetailPage({
               <dd className="mt-1 whitespace-pre-wrap text-sm text-foreground">{patient.admin_notes}</dd>
             </div>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Documentos ({documents.length})</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Ficam vinculados ao paciente, independentemente da quantidade de cirurgias.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {unavailable ? (
+            <p className="text-sm text-amber-600 dark:text-amber-400">{unavailable}</p>
+          ) : documents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhum documento anexado.{canEdit ? " Use “Editar” para anexar." : ""}
+            </p>
+          ) : (
+            <PatientDocumentList documents={documents} canEdit={canEdit} />
+          )}
         </CardContent>
       </Card>
 
