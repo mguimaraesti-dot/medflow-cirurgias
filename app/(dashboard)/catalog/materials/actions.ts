@@ -16,6 +16,8 @@ import {
 } from "@/lib/data/materials";
 import { materialSchema, materialSupplierSchema } from "@/lib/validation/materials";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
+import { searchLocalTuss } from "@/lib/data/tuss-local";
+import { todayInSaoPaulo } from "@/lib/utils";
 import { searchTussMaterials, describeTussError, type TussResult } from "@/lib/tuss";
 
 export type MaterialFormState = {
@@ -44,8 +46,12 @@ export async function searchTussMaterialsAction(
 ): Promise<{ results?: TussResult[]; error?: string }> {
   try {
     await requireActionPermission("materials", "view");
-    // Materiais/OPME (TUSS 19) têm mais de 1 milhão de itens: não cabe em
-    // cópia local pela API, então a busca é sempre ao vivo na ANS.
+    // 1º a cópia local (instantânea, funciona com a ANS fora do ar). A cópia
+    // padrão traz só materiais de endoscopia (a TUSS 19 inteira não cabe no
+    // plano gratuito); se não achar nada ali, consulta a ANS ao vivo.
+    const supabase = await createClient();
+    const local = await searchLocalTuss(supabase, "tuss-19", query, todayInSaoPaulo());
+    if (local && local.length > 0) return { results: local };
     const results = await searchTussMaterials(query);
     return { results };
   } catch (e) {

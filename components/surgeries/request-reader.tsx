@@ -119,7 +119,8 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   function openPicker(key: string) {
     const m = analysis?.materials.find((x) => x.key === key);
     if (!m) return;
-    void runPickerSearch(key, [m.read_name, m.details].filter(Boolean).join(" "));
+    // Só o nome: marca/medida escritas ("Microtech 16 mm") restringem demais; o usuário pode refinar.
+    void runPickerSearch(key, m.read_name);
   }
 
   async function createMaterial(key: string, tuss: TussResult | null) {

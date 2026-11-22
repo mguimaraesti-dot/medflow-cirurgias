@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
 import { getCurrentUser, hasPermission } from "@/lib/auth/session";
+import { Card, CardContent } from "@/components/ui/card";
 import { TussSyncPanel } from "@/components/settings/tuss-sync-panel";
 
 // Cada lote de atualização consulta a ANS (lenta, até ~25s por página).
@@ -34,6 +35,12 @@ export default async function TussSettingsPage() {
     })
   );
 
+  const [{ count: t19Count }, { data: t19State }] = await Promise.all([
+    supabase.from("tuss_terms").select("code", { count: "exact", head: true }).eq("table_name", "tuss-19"),
+    supabase.from("tuss_sync_state").select("last_synced_at").eq("table_name", "tuss-19").maybeSingle(),
+  ]);
+  const t19When = (t19State?.last_synced_at as string | null | undefined) ?? null;
+
   return (
     <div>
       <Link
@@ -53,11 +60,39 @@ export default async function TussSettingsPage() {
 
       <div className="mt-6">
         <TussSyncPanel tables={states} canEdit={canEdit} />
-        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
-          Materiais e OPME (TUSS 19) ficam de fora: a ANS lista mais de 1 milhão de itens nessa
-          tabela, grande demais para copiar. A busca de materiais continua consultando a ANS ao
-          vivo.
-        </p>
+        <Card className="mt-4 max-w-2xl">
+          <CardContent className="flex flex-col gap-2 pt-5 text-sm">
+            <p className="font-medium text-foreground">Materiais e OPME (TUSS 19)</p>
+            <p className="text-muted-foreground">
+              Usada no cadastro de materiais. A tabela completa da ANS tem mais de 1,5 milhão de itens e não
+              cabe no plano gratuito do Supabase; por isso a cópia local traz os materiais de endoscopia
+              digestiva (papilótomo, fio guia, alça, balões, próteses, clipes, pinças…). O que não estiver
+              na cópia é buscado ao vivo na ANS.
+            </p>
+            <dl className="grid grid-cols-2 gap-3">
+              <div>
+                <dt className="text-xs text-muted-foreground">Códigos na cópia local</dt>
+                <dd className="text-foreground">{(t19Count ?? 0).toLocaleString("pt-BR")}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Última importação</dt>
+                <dd className="text-foreground">
+                  {t19When
+                    ? new Date(t19When).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })
+                    : "Nunca importada"}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-xs text-muted-foreground">
+              Para atualizar: baixe o ZIP da TUSS 19 no portal da ANS e rode, na pasta do projeto,{" "}
+              <code className="rounded bg-muted px-1 py-0.5">
+                node --env-file=.env.local scripts/import-tuss19.mjs arquivo.zip
+              </code>
+              . É seguro repetir (atualiza por código). Para incluir outras áreas, edite{" "}
+              <code className="rounded bg-muted px-1 py-0.5">scripts/tuss19-filter.mjs</code>.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -34,14 +34,19 @@ function toResult(row: Row, today: string): TussResult {
   };
 }
 
+/** "clipes" → "clip", "próteses" → "protes": acha o termo no singular também. */
+function singular(token: string): string {
+  if (token.length > 5 && token.endsWith("es")) return token.slice(0, -2);
+  if (token.length > 4 && token.endsWith("s")) return token.slice(0, -1);
+  return token;
+}
+
 /** A cópia local já foi carregada pelo menos uma vez? */
 export async function hasLocalTuss(supabase: SupabaseClient, table: TussTable): Promise<boolean> {
-  const { count, error } = await supabase
-    .from("tuss_terms")
-    .select("code", { count: "exact", head: true })
-    .eq("table_name", table);
+  // Só precisa saber se existe ao menos 1 linha (contar tudo seria lento na TUSS 19).
+  const { data, error } = await supabase.from("tuss_terms").select("code").eq("table_name", table).limit(1);
   if (error) return false;
-  return (count ?? 0) > 0;
+  return (data ?? []).length > 0;
 }
 
 /**
@@ -67,7 +72,8 @@ export async function searchLocalTuss(
   } else {
     const tokens = normalizeTussText(trimmed)
       .split(/\s+/)
-      .filter((t) => t.length >= 2);
+      .filter((t) => t.length >= 2)
+      .map(singular);
     for (const token of tokens) {
       // escapa os curingas do LIKE digitados pelo usuário
       const safe = token.replace(/[\\%_]/g, (c) => `\\${c}`);
