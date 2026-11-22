@@ -64,8 +64,12 @@ export function ReportFilters({ hospitals }: { hospitals: { id: string; name: st
   const [, startTransition] = useTransition();
 
   const type = searchParams.get("type") ?? "cirurgias";
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
+  // Sem período na URL (primeira visita), a página já mostra o mês atual
+  // (ver reports/page.tsx) — aqui usa o mesmo padrão, senão os links de
+  // CSV/PDF saíam com from/to vazios e davam "Período é obrigatório".
+  const defaultRange = presetRange("month")!;
+  const from = searchParams.get("from") || defaultRange.from;
+  const to = searchParams.get("to") || defaultRange.to;
 
   function matchedPreset(): string {
     const match = PRESETS.find((p) => {
