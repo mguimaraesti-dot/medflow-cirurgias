@@ -10,6 +10,7 @@ import {
   createProcedureFromRequestAction,
   matchSurgeryRequestAction,
   readSurgeryRequestPhotoAction,
+  searchCatalogMaterialsAction,
 } from "@/app/(dashboard)/surgeries/request-reader-actions";
 import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
 import type { TussResult } from "@/lib/tuss";
@@ -122,6 +123,13 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [creating, setCreating] = useState<string | null>(null);
   const [createdProcedures, setCreatedProcedures] = useState<ReaderApplyResult["createdProcedures"]>([]);
   const [createdPatient, setCreatedPatient] = useState<ReaderApplyResult["createdPatient"]>(null);
+  // Busca livre no catálogo de materiais (quando a sugestão não é o material certo).
+  const [catalog, setCatalog] = useState<{
+    key: string;
+    query: string;
+    loading: boolean;
+    results: { id: string; name: string }[] | null;
+  } | null>(null);
   // Busca do código TUSS 19 (materiais) para o item que o usuário vai cadastrar.
   const [picker, setPicker] = useState<{
     key: string;
@@ -239,6 +247,30 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     toast.success(`Procedimento cadastrado: ${item.name}`);
   }
 
+  async function runCatalogSearch(key: string, query: string) {
+    setCatalog({ key, query, loading: true, results: null });
+    const res = await searchCatalogMaterialsAction(query);
+    setCatalog((cur) => (cur && cur.key === key ? { ...cur, loading: false, results: res.results } : cur));
+  }
+
+  function chooseCatalogMaterial(key: string, item: { id: string; name: string }) {
+    setAnalysis((a) =>
+      a
+        ? {
+            ...a,
+            materials: a.materials.map((x) =>
+              x.key === key && x.material?.id !== item.id && !x.alternatives.some((alt) => alt.id === item.id)
+                ? { ...x, alternatives: [item, ...x.alternatives] }
+                : x
+            ),
+          }
+        : a
+    );
+    setMatChoice((s) => ({ ...s, [key]: item.id }));
+    setMatChecked((s) => ({ ...s, [key]: true }));
+    setCatalog(null);
+  }
+
   async function runPickerSearch(key: string, query: string) {
     setPicker({ key, query, loading: true, results: null, error: null });
     const res = await searchTussMaterialsAction(query);
@@ -253,6 +285,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     const m = analysis?.materials.find((x) => x.key === key);
     if (!m) return;
     // Só o nome: marca/medida escritas ("Microtech 16 mm") restringem demais; o usuário pode refinar.
+    setCatalog(null);
     void runPickerSearch(key, m.read_name);
   }
 
@@ -279,6 +312,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     }
     const item = res.item;
     setPicker(null);
+    setCatalog(null);
     setAnalysis((a) =>
       a ? { ...a, materials: a.materials.map((x) => (x.key === key ? { ...x, material: { id: item.id, name: item.name } } : x)) } : a
     );
@@ -725,7 +759,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                             ) : null}
                           </span>
                         </label>
-                        {m.source === "guide" && !m.material ? (
+                        {m.source === "guide" && (!m.material || picker?.key === m.key) ? (
                           picker?.key === m.key ? (
                             <div className="ml-6 mt-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
                               <p className="text-xs font-medium text-foreground">Escolha o código TUSS 19 do material</p>
@@ -816,6 +850,86 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                 </option>
                               ))}
                           </select>
+                        ) : null}
+                        {m.source === "guide" && picker?.key !== m.key ? (
+                          <div className="ml-6 mt-1.5 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs"
+                              disabled={creating !== null}
+                              onClick={() => {
+                                setPicker(null);
+                                void runCatalogSearch(m.key, m.read_name);
+                              }}
+                            >
+                              Não é este? Buscar outro no catálogo
+                            </Button>
+                            {m.material ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-xs"
+                                disabled={creating !== null}
+                                onClick={() => openPicker(m.key)}
+                              >
+                                Cadastrar como novo (buscar código TUSS)
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {catalog?.key === m.key ? (
+                          <div className="ml-6 mt-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
+                            <div className="flex gap-2">
+                              <input
+                                className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                                value={catalog.query}
+                                placeholder="Nome, código interno ou TUSS"
+                                aria-label="Buscar no catálogo de materiais"
+                                onChange={(e) => setCatalog((c) => (c ? { ...c, query: e.target.value } : c))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    void runCatalogSearch(m.key, catalog.query);
+                                  }
+                                }}
+                              />
+                              <Button type="button" variant="outline" size="sm" className="h-9" disabled={catalog.loading} onClick={() => runCatalogSearch(m.key, catalog.query)}>
+                                Buscar
+                              </Button>
+                            </div>
+                            {catalog.loading ? (
+                              <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando…
+                              </p>
+                            ) : null}
+                            {catalog.results && catalog.results.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Nada encontrado no catálogo com esse termo.</p>
+                            ) : null}
+                            <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+                              {(catalog.results ?? []).map((r) => (
+                                <li key={r.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => chooseCatalogMaterial(m.key, r)}
+                                    className="w-full rounded-md border border-border p-2 text-left text-xs text-foreground hover:bg-muted"
+                                  >
+                                    {r.name}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="flex gap-2">
+                              <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => openPicker(m.key)}>
+                                Não está no catálogo: cadastrar (buscar código TUSS)
+                              </Button>
+                              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setCatalog(null)}>
+                                Fechar
+                              </Button>
+                            </div>
+                          </div>
                         ) : null}
                       </li>
                     ))}

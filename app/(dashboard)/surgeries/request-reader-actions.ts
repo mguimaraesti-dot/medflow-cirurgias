@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai/surgery-request-reader";
 import { createProcedure } from "@/lib/data/procedures";
 import { createMaterial } from "@/lib/data/materials";
+import { fetchAll, normalizeText } from "@/lib/data/fetch-all";
 import { procedureSchema } from "@/lib/validation/procedures";
 import { materialSchema } from "@/lib/validation/materials";
 import { createPatient } from "@/lib/data/patients";
@@ -232,5 +233,30 @@ export async function createMaterialFromRequestAction(input: {
   } catch (e) {
     console.error("[reader] cadastro de material:", e);
     return { error: "Não foi possível cadastrar o material." };
+  }
+}
+
+/** Busca livre no catálogo de materiais (nome, código interno ou TUSS) para trocar a sugestão. */
+export async function searchCatalogMaterialsAction(
+  term: string
+): Promise<{ results: { id: string; name: string }[] }> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+    const supabase = await createClient();
+    // Catálogo pequeno: filtra em memória ignorando acento e caixa (o ilike do banco não ignora acento).
+    const words = normalizeText(term).split(/\s+/).filter(Boolean);
+    const rows = await fetchAll<{ id: string; name: string; internal_code: string | null; tuss_code: string | null }>(
+      (from, to) =>
+        supabase.from("materials_catalog").select("id,name,internal_code,tuss_code").eq("active", true).order("name").range(from, to)
+    );
+    const found = rows
+      .filter((r) => {
+        const hay = normalizeText(`${r.name} ${r.internal_code ?? ""} ${r.tuss_code ?? ""}`);
+        return words.every((w) => hay.includes(w));
+      })
+      .slice(0, 20);
+    return { results: found.map((r) => ({ id: r.id, name: r.name })) };
+  } catch {
+    return { results: [] };
   }
 }
