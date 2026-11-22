@@ -26,11 +26,11 @@ export default async function DashboardLayout({
   const permissions = Array.from(access.permissions);
 
   return (
-    <div className="flex min-h-screen bg-muted md:flex-row">
+    <div className="flex min-h-screen bg-muted md:h-screen md:flex-row md:overflow-hidden print:h-auto print:overflow-visible">
       <div className="shrink-0 print:hidden">
         <Sidebar userEmail={user.email ?? null} roleName={access.roleName} permissions={permissions} />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="shrink-0 print:hidden">
           <MobileNav userEmail={user.email ?? null} roleName={access.roleName} permissions={permissions} />
         </div>
@@ -42,7 +42,7 @@ export default async function DashboardLayout({
           interna de algum componente (ex.: abas do Kanban) continua
           funcionando normalmente, pois é um scroll container próprio.
         */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {/*
             Sem max-w aqui: telas de lista/kanban/tabela devem aproveitar toda
             a largura disponível. Telas de formulário (ex: nova cirurgia, novo
