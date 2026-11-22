@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, HeartHandshake, CalendarHeart, Users } from "lucide-react";
+import { Building2, HeartHandshake, CalendarHeart, Users, DatabaseZap } from "lucide-react";
 
 import { requireModuleView } from "@/lib/auth/guard";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,12 @@ const SECTIONS = [
     icon: CalendarHeart,
     title: "Feriados",
     description: "Destaque visual na Agenda — nacionais, estaduais e municipais.",
+  },
+  {
+    href: "/settings/tuss",
+    icon: DatabaseZap,
+    title: "Tabela TUSS",
+    description: "Cópia local da tabela da ANS para busca rápida de códigos. Atualização manual.",
   },
   {
     href: "/settings/users",

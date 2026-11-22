@@ -19,6 +19,8 @@ import {
   type ProcedureDefaultMaterial,
 } from "@/lib/data/procedure-materials";
 import { procedureDefaultMaterialSchema } from "@/lib/validation/procedure-materials";
+import { searchLocalTuss } from "@/lib/data/tuss-local";
+import { todayInSaoPaulo } from "@/lib/utils";
 import { searchTussProcedures, describeTussError, type TussResult } from "@/lib/tuss";
 
 export type ProcedureFormState = {
@@ -188,6 +190,10 @@ export async function searchTussCodesAction(
 ): Promise<{ results?: TussResult[]; error?: string }> {
   try {
     await requireActionPermission("procedures", "view");
+    const supabase = await createClient();
+    const local = await searchLocalTuss(supabase, "tuss-22", query, todayInSaoPaulo());
+    if (local) return { results: local };
+    // Cópia local ainda não carregada: consulta a ANS ao vivo (mais lenta).
     const results = await searchTussProcedures(query);
     return { results };
   } catch (e) {

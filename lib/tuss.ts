@@ -18,6 +18,8 @@
  * outro valor indica que foi descontinuado/substituído.
  */
 
+import { todayInSaoPaulo } from "@/lib/utils";
+
 const TUSS_BASE_URL = "https://consulta-ocl.apps.sa-1a.mendixcloud.com/rest/oclservice/ANS/concepts";
 
 export type TussTable = "tuss-22" | "tuss-19";
@@ -38,12 +40,28 @@ type TussApiItem = {
   display_name: string;
   extras?: {
     fim_vigencia?: string;
+    inicio_vigencia?: string;
     fabricante?: string;
     modelo?: string;
     registro_anvisa?: string;
     classe_risco?: string;
   };
 };
+
+/** "-" ou vazio = sem data. Datas vêm como YYYY-MM-DD. */
+function parseDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const v = value.trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+}
+
+/** Vigente hoje? "fim_vigencia" com data futura (ex: 2026-12-31) ainda é
+ * vigente — só deixa de valer depois da data. */
+export function isTussActive(start: string | null, end: string | null, today: string): boolean {
+  if (start && start > today) return false;
+  if (end && end < today) return false;
+  return true;
+}
 
 const NOT_APPLICABLE = "NÃO SE APLICA";
 
@@ -108,7 +126,11 @@ async function fetchTussPage(table: TussTable, term: string): Promise<TussResult
     .map((item) => ({
       code: item.id,
       name: item.display_name.trim(),
-      active: !item.extras?.fim_vigencia || item.extras.fim_vigencia === "-",
+      active: isTussActive(
+        parseDate(item.extras?.inicio_vigencia),
+        parseDate(item.extras?.fim_vigencia),
+        todayInSaoPaulo()
+      ),
       manufacturer: cleanExtra(item.extras?.fabricante),
       model: cleanExtra(item.extras?.modelo),
       anvisaRegistration: cleanExtra(item.extras?.registro_anvisa),
@@ -125,6 +147,10 @@ const STOPWORDS = new Set([
 ]);
 
 /** Remove acentos e normaliza caixa, pra comparar "próteses" com "proteses". */
+export function normalizeTussText(value: string): string {
+  return normalize(value);
+}
+
 function normalize(value: string): string {
   return value
     .normalize("NFD")
@@ -284,6 +310,9 @@ export function searchTussMaterials(query: string): Promise<TussResult[]> {
 /** Motivo curto e legível de uma falha na consulta, pra aparecer na tela
  * (e nos logs da Vercel) em vez de um erro genérico que esconde a causa. */
 export function describeTussError(e: unknown): string {
+  if (e && typeof e === "object" && !(e instanceof Error) && "message" in e) {
+    return String((e as { message: unknown }).message);
+  }
   if (e instanceof Error) {
     if (e.name === "AbortError") return "a base da ANS não respondeu a tempo";
     if (e.message === "forbidden") return "sem permissão";
@@ -291,4 +320,52 @@ export function describeTussError(e: unknown): string {
     return e.message || "erro desconhecido";
   }
   return "erro desconhecido";
+}
+
+export type TussSyncRow = {
+  table_name: TussTable;
+  code: string;
+  name: string;
+  search_text: string;
+  start_date: string | null;
+  end_date: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  anvisa_registration: string | null;
+  risk_class: string | null;
+  synced_at: string;
+};
+
+/** Uma página da listagem completa da tabela (sem termo de busca), já no
+ * formato da tabela local `tuss_terms`. Página vazia = acabou. */
+export async function fetchTussListPage(table: TussTable, page: number): Promise<TussSyncRow[]> {
+  const url = `${TUSS_BASE_URL}/${table}?page=${page}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  if (!response.ok) throw new Error(`Tabela TUSS (ANS) respondeu ${response.status}`);
+  const data = (await response.json()) as TussApiItem[];
+  if (!Array.isArray(data)) return [];
+
+  const now = new Date().toISOString();
+  return data
+    .filter((item) => item.id && item.display_name)
+    .map((item) => ({
+      table_name: table,
+      code: item.id,
+      name: item.display_name.trim(),
+      search_text: normalize(item.display_name.trim()),
+      start_date: parseDate(item.extras?.inicio_vigencia),
+      end_date: parseDate(item.extras?.fim_vigencia),
+      manufacturer: cleanExtra(item.extras?.fabricante) ?? null,
+      model: cleanExtra(item.extras?.modelo) ?? null,
+      anvisa_registration: cleanExtra(item.extras?.registro_anvisa) ?? null,
+      risk_class: cleanExtra(item.extras?.classe_risco) ?? null,
+      synced_at: now,
+    }));
 }
