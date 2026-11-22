@@ -1,17 +1,19 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { AlertTriangle, Camera, CheckCircle2, Loader2, ScanLine } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, Loader2, Plus, ScanLine, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import {
-  analyzeSurgeryRequestAction,
   createMaterialFromRequestAction,
+  createPatientFromRequestAction,
   createProcedureFromRequestAction,
+  matchSurgeryRequestAction,
+  readSurgeryRequestPhotoAction,
 } from "@/app/(dashboard)/surgeries/request-reader-actions";
 import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
 import type { TussResult } from "@/lib/tuss";
-import type { RequestAnalysis } from "@/lib/surgery-request-types";
+import type { RequestAnalysis, RequestExtraction } from "@/lib/surgery-request-types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +31,8 @@ export type ReaderApplyResult = {
   materials: { id: string; name: string; quantity: number }[];
   /** Procedimentos cadastrados agora, a partir da guia (precisam entrar nas opções do formulário). */
   createdProcedures: { id: string; name: string; tuss_code: string | null }[];
+  /** Paciente cadastrado agora (cadastro inicial) — precisa entrar nas opções do formulário. */
+  createdPatient: { id: string; full_name: string } | null;
 };
 
 const MAX_SIDE = 1800;
@@ -47,21 +51,77 @@ async function shrinkImage(file: File): Promise<File> {
   return new File([blob], "pedido.jpg", { type: "image/jpeg" });
 }
 
+// Rascunho editável da FASE 1 (validação do que a IA leu)
+type Draft = {
+  patientName: string;
+  indication: string;
+  procedures: { id: string; code: string; description: string }[];
+  materials: { id: string; name: string; quantity: string; details: string }[];
+  notes: string[];
+};
+
+let uid = 0;
+const nextId = () => `r${++uid}`;
+
+function toDraft(e: RequestExtraction): Draft {
+  return {
+    patientName: e.patient_name ?? "",
+    indication: e.clinical_indication ?? "",
+    procedures: e.procedures.map((p) => ({ id: nextId(), code: p.tuss_code ?? "", description: p.description })),
+    materials: e.materials.map((m) => ({
+      id: nextId(),
+      name: m.name,
+      quantity: m.quantity ? String(m.quantity) : "1",
+      details: m.details ?? "",
+    })),
+    notes: e.legibility_notes,
+  };
+}
+
+function fromDraft(d: Draft, guideType: RequestExtraction["guide_type"]): RequestExtraction {
+  return {
+    guide_type: guideType,
+    patient_name: d.patientName.trim() || null,
+    clinical_indication: d.indication.trim() || null,
+    procedures: d.procedures
+      .map((p) => ({ tuss_code: p.code.replace(/\D/g, "") || null, description: p.description.trim() }))
+      .filter((p) => p.tuss_code || p.description),
+    materials: d.materials
+      .map((m) => ({
+        name: m.name.trim(),
+        quantity: Number(m.quantity.replace(",", ".")) > 0 ? Number(m.quantity.replace(",", ".")) : null,
+        details: m.details.trim() || null,
+      }))
+      .filter((m) => m.name),
+    legibility_notes: [],
+  };
+}
+
+const inputCls = "h-9 min-w-0 rounded-md border border-input bg-background px-2 text-sm";
+
+type Step = "upload" | "validate" | "match";
+
 export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult) => void }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [step, setStep] = useState<Step>("upload");
   const [preview, setPreview] = useState<string | null>(null);
+  const [guideType, setGuideType] = useState<RequestExtraction["guide_type"]>("outro");
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [analysis, setAnalysis] = useState<RequestAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Escolhas do usuário na revisão
+  // Escolhas do usuário na FASE 2
   const [patientId, setPatientId] = useState("");
   const [procChecked, setProcChecked] = useState<Record<string, boolean>>({});
   const [matChecked, setMatChecked] = useState<Record<string, boolean>>({});
   const [matChoice, setMatChoice] = useState<Record<string, string>>({});
   const [useIndication, setUseIndication] = useState(true);
   const [creating, setCreating] = useState<string | null>(null);
+  const [createdProcedures, setCreatedProcedures] = useState<ReaderApplyResult["createdProcedures"]>([]);
+  const [createdPatient, setCreatedPatient] = useState<ReaderApplyResult["createdPatient"]>(null);
   // Busca do código TUSS 19 (materiais) para o item que o usuário vai cadastrar.
   const [picker, setPicker] = useState<{
     key: string;
@@ -70,14 +130,87 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     results: TussResult[] | null;
     error: string | null;
   } | null>(null);
-  const [createdProcedures, setCreatedProcedures] = useState<ReaderApplyResult["createdProcedures"]>([]);
 
   function reset() {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
+    setStep("upload");
+    setDraft(null);
+    setConfirmed(false);
     setAnalysis(null);
     setError(null);
+    setPicker(null);
     setCreatedProcedures([]);
+    setCreatedPatient(null);
+  }
+
+  // FASE 1: a IA lê a foto; o usuário valida/corrige
+  function handleFile(file: File | undefined) {
+    if (!file) return;
+    reset();
+    startTransition(async () => {
+      try {
+        const small = await shrinkImage(file);
+        setPreview(URL.createObjectURL(small));
+        const fd = new FormData();
+        fd.set("image", small);
+        const res = await readSurgeryRequestPhotoAction(fd);
+        if (res.error || !res.extraction) {
+          setError(res.error ?? "Não foi possível ler a imagem.");
+          return;
+        }
+        setGuideType(res.extraction.guide_type);
+        setDraft(toDraft(res.extraction));
+        setStep("validate");
+      } catch {
+        setError("Não foi possível processar a imagem. Tente outra foto.");
+      }
+    });
+  }
+
+  // FASE 2: com os dados validados, busca/cadastra no sistema
+  function advance() {
+    if (!draft) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await matchSurgeryRequestAction(fromDraft(draft, guideType));
+      if (res.error || !res.analysis) {
+        setError(res.error ?? "Não foi possível buscar no cadastro.");
+        return;
+      }
+      const a = res.analysis;
+      setAnalysis(a);
+      setPatientId(a.patient.patient?.id ?? "");
+      setProcChecked(Object.fromEntries(a.procedures.map((p) => [p.key, p.match !== "none"])));
+      setMatChecked(Object.fromEntries(a.materials.map((m) => [m.key, m.source === "guide" && !!m.material])));
+      setMatChoice(Object.fromEntries(a.materials.map((m) => [m.key, m.material?.id ?? ""])));
+      setUseIndication(Boolean(a.clinical_indication));
+      setPicker(null);
+      setStep("match");
+    });
+  }
+
+  async function createPatient() {
+    const name = analysis?.patient.read_name;
+    if (!name || creating) return;
+    setCreating("patient");
+    const res = await createPatientFromRequestAction({ full_name: name });
+    setCreating(null);
+    if (res.error || !res.patient) {
+      toast.error(res.error ?? "Não foi possível cadastrar o paciente.");
+      return;
+    }
+    const patient = res.patient;
+    setCreatedPatient({ id: patient.id, full_name: patient.full_name });
+    setAnalysis((a) =>
+      a ? { ...a, patient: { ...a.patient, match: "exact", patient: { id: patient.id, full_name: patient.full_name }, alternatives: [] } } : a
+    );
+    setPatientId(patient.id);
+    toast.success(
+      patient.existing
+        ? `Já existia um paciente com esse nome: ${patient.full_name}.`
+        : `Paciente cadastrado: ${patient.full_name}. Complete os dados depois na ficha.`
+    );
   }
 
   async function createProcedure(key: string) {
@@ -159,34 +292,6 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     for (const p of analysis.procedures.filter((x) => !x.procedure)) await createProcedure(p.key);
   }
 
-  function handleFile(file: File | undefined) {
-    if (!file) return;
-    reset();
-    setError(null);
-    startTransition(async () => {
-      try {
-        const small = await shrinkImage(file);
-        setPreview(URL.createObjectURL(small));
-        const fd = new FormData();
-        fd.set("image", small);
-        const res = await analyzeSurgeryRequestAction(fd);
-        if (res.error || !res.analysis) {
-          setError(res.error ?? "Não foi possível ler a imagem.");
-          return;
-        }
-        const a = res.analysis;
-        setAnalysis(a);
-        setPatientId(a.patient.patient?.id ?? "");
-        setProcChecked(Object.fromEntries(a.procedures.map((p) => [p.key, p.match !== "none"])));
-        setMatChecked(Object.fromEntries(a.materials.map((m) => [m.key, m.source === "guide" && !!m.material])));
-        setMatChoice(Object.fromEntries(a.materials.map((m) => [m.key, m.material?.id ?? ""])));
-        setUseIndication(Boolean(a.clinical_indication));
-      } catch {
-        setError("Não foi possível processar a imagem. Tente outra foto.");
-      }
-    });
-  }
-
   function apply() {
     if (!analysis) return;
     const materials = analysis.materials
@@ -204,6 +309,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       clinicalIndication: useIndication ? analysis.clinical_indication : null,
       materials,
       createdProcedures,
+      createdPatient,
     });
     toast.success("Dados do pedido aplicados. Revise o formulário antes de salvar.");
     setOpen(false);
@@ -258,7 +364,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
             }}
           />
 
-          {!analysis ? (
+          {step === "upload" ? (
             <div className="flex flex-col items-center gap-3 py-6">
               {pending ? (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
@@ -276,7 +382,181 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                 </p>
               ) : null}
             </div>
-          ) : (
+          ) : null}
+
+          {step === "validate" && draft ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={preview} alt="Foto do pedido" className="max-h-72 w-full rounded-lg border border-border object-contain md:sticky md:top-0 md:max-h-[34rem]" />
+              ) : null}
+
+              <div className="flex min-w-0 flex-col gap-5 text-sm">
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-foreground">
+                  <p className="font-semibold">Etapa 1 de 2 — Confira o que a IA leu</p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    Compare com a foto e corrija o que estiver errado. Só depois de confirmar, o sistema busca e cadastra
+                    paciente, procedimentos e materiais.
+                  </p>
+                </div>
+
+                {draft.notes.length > 0 ? (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+                    <p className="mb-1 flex items-center gap-1.5 font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5" /> A IA ficou em dúvida nestes pontos — confira na foto:
+                    </p>
+                    <ul className="list-inside list-disc">
+                      {draft.notes.map((n) => (
+                        <li key={n}>{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <section className="flex flex-col gap-1.5">
+                  <label htmlFor="rd-patient" className="font-semibold text-foreground">Nome do paciente</label>
+                  <input
+                    id="rd-patient"
+                    className={inputCls + " h-10"}
+                    value={draft.patientName}
+                    onChange={(e) => setDraft((d) => (d ? { ...d, patientName: e.target.value } : d))}
+                    placeholder="Nome completo, como está na guia"
+                  />
+                </section>
+
+                <section className="flex flex-col gap-1.5">
+                  <label htmlFor="rd-indication" className="font-semibold text-foreground">Indicação clínica</label>
+                  <textarea
+                    id="rd-indication"
+                    className="min-h-16 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                    value={draft.indication}
+                    onChange={(e) => setDraft((d) => (d ? { ...d, indication: e.target.value } : d))}
+                  />
+                </section>
+
+                <section className="flex flex-col gap-2">
+                  <h3 className="font-semibold text-foreground">Procedimentos (código TUSS + descrição)</h3>
+                  {draft.procedures.map((p) => {
+                    const digits = p.code.replace(/\D/g, "");
+                    return (
+                      <div key={p.id} className="flex flex-col gap-1">
+                        <div className="flex gap-2">
+                          <input
+                            className={inputCls + " w-28 shrink-0 font-mono"}
+                            inputMode="numeric"
+                            value={p.code}
+                            maxLength={10}
+                            placeholder="código"
+                            aria-label="Código TUSS"
+                            onChange={(e) =>
+                              setDraft((d) => (d ? { ...d, procedures: d.procedures.map((x) => (x.id === p.id ? { ...x, code: e.target.value } : x)) } : d))
+                            }
+                          />
+                          <input
+                            className={inputCls + " flex-1"}
+                            value={p.description}
+                            placeholder="descrição"
+                            aria-label="Descrição do procedimento"
+                            onChange={(e) =>
+                              setDraft((d) => (d ? { ...d, procedures: d.procedures.map((x) => (x.id === p.id ? { ...x, description: e.target.value } : x)) } : d))
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            aria-label="Remover procedimento"
+                            onClick={() => setDraft((d) => (d ? { ...d, procedures: d.procedures.filter((x) => x.id !== p.id) } : d))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {digits && digits.length !== 8 ? (
+                          <span className="text-xs text-amber-700 dark:text-amber-400">O código TUSS de procedimento tem 8 dígitos — confira.</span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-fit"
+                    onClick={() => setDraft((d) => (d ? { ...d, procedures: [...d.procedures, { id: nextId(), code: "", description: "" }] } : d))}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar procedimento
+                  </Button>
+                </section>
+
+                <section className="flex flex-col gap-2">
+                  <h3 className="font-semibold text-foreground">Materiais citados</h3>
+                  {draft.materials.map((m) => (
+                    <div key={m.id} className="flex flex-wrap gap-2">
+                      <input
+                        className={inputCls + " min-w-40 flex-1"}
+                        value={m.name}
+                        placeholder="material"
+                        aria-label="Nome do material"
+                        onChange={(e) =>
+                          setDraft((d) => (d ? { ...d, materials: d.materials.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)) } : d))
+                        }
+                      />
+                      <input
+                        className={inputCls + " w-16 shrink-0"}
+                        inputMode="decimal"
+                        value={m.quantity}
+                        aria-label="Quantidade"
+                        onChange={(e) =>
+                          setDraft((d) => (d ? { ...d, materials: d.materials.map((x) => (x.id === m.id ? { ...x, quantity: e.target.value } : x)) } : d))
+                        }
+                      />
+                      <input
+                        className={inputCls + " min-w-32 flex-1"}
+                        value={m.details}
+                        placeholder="marca / medida"
+                        aria-label="Marca ou medida"
+                        onChange={(e) =>
+                          setDraft((d) => (d ? { ...d, materials: d.materials.map((x) => (x.id === m.id ? { ...x, details: e.target.value } : x)) } : d))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        aria-label="Remover material"
+                        onClick={() => setDraft((d) => (d ? { ...d, materials: d.materials.filter((x) => x.id !== m.id) } : d))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-fit"
+                    onClick={() => setDraft((d) => (d ? { ...d, materials: [...d.materials, { id: nextId(), name: "", quantity: "1", details: "" }] } : d))}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar material
+                  </Button>
+                </section>
+
+                <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
+                  <input type="checkbox" className="mt-1" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+                  <span>Conferi os dados com a foto e estão corretos.</span>
+                </label>
+                {error ? (
+                  <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {step === "match" && analysis ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
               {preview ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -322,9 +602,28 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                     </select>
                   ) : (
                     <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
-                      Paciente não encontrado no cadastro. Use o botão “+” ao lado do campo Paciente para cadastrar.
+                      Paciente não encontrado no cadastro.
                     </p>
                   )}
+                  {!analysis.patient.patient && analysis.patient.read_name ? (
+                    <div className="mt-2 rounded-lg border border-border bg-muted/30 p-2.5">
+                      <p className="text-xs text-muted-foreground">
+                        Cadastro inicial: grava só o nome <span className="font-medium text-foreground">{analysis.patient.read_name}</span>.
+                        Depois você completa CPF, nascimento, contato e convênio na ficha do paciente.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 h-8"
+                        disabled={creating !== null}
+                        onClick={createPatient}
+                      >
+                        {creating === "patient" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <UserPlus className="mr-1.5 h-3.5 w-3.5" />}
+                        Cadastrar paciente (cadastro inicial)
+                      </Button>
+                    </div>
+                  ) : null}
                 </section>
 
                 {/* Indicação */}
@@ -525,19 +824,31 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                 </section>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {analysis ? (
+          {step === "validate" ? (
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button type="button" variant="outline" className="h-10" onClick={() => { reset(); inputRef.current?.click(); }}>
+              <Button type="button" variant="outline" className="h-10" disabled={pending} onClick={() => { reset(); inputRef.current?.click(); }}>
                 Usar outra foto
+              </Button>
+              <Button type="button" className="h-10" disabled={pending || !confirmed} onClick={advance}>
+                {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Confirmar e avançar
+              </Button>
+            </DialogFooter>
+          ) : null}
+
+          {step === "match" && analysis ? (
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={() => setStep("validate")}>
+                Voltar e corrigir
               </Button>
               {analysis.procedures.some((p) => !p.procedure) ? (
                 <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={createAllMissing}>
                   Cadastrar procedimentos que faltam
                 </Button>
               ) : null}
-              <Button type="button" className="h-10" onClick={apply}>
+              <Button type="button" className="h-10" disabled={creating !== null} onClick={apply}>
                 Aplicar ao formulário
               </Button>
             </DialogFooter>

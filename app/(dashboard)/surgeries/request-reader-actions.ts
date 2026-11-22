@@ -5,12 +5,18 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireActionPermission } from "@/lib/auth/guard";
 import { analyzeExtraction } from "@/lib/data/surgery-request-match";
-import { isAllowedMedia, isReaderConfigured, readSurgeryRequest } from "@/lib/ai/surgery-request-reader";
+import {
+  isAllowedMedia,
+  isReaderConfigured,
+  readSurgeryRequest,
+  sanitizeExtraction,
+} from "@/lib/ai/surgery-request-reader";
 import { createProcedure } from "@/lib/data/procedures";
 import { createMaterial } from "@/lib/data/materials";
 import { procedureSchema } from "@/lib/validation/procedures";
 import { materialSchema } from "@/lib/validation/materials";
-import type { RequestAnalysis } from "@/lib/surgery-request-types";
+import { createPatient } from "@/lib/data/patients";
+import type { RequestAnalysis, RequestExtraction } from "@/lib/surgery-request-types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -20,12 +26,12 @@ export async function isRequestReaderAvailableAction(): Promise<boolean> {
 }
 
 /**
- * Lê a foto de um pedido/guia e devolve SUGESTÕES (nada é gravado aqui).
- * Quem confirma e salva é o usuário, na tela de revisão.
+ * FASE 1 — lê a foto do pedido e devolve o que a IA transcreveu, para o usuário
+ * validar/corrigir. Nada é gravado e nada é buscado no catálogo ainda.
  */
-export async function analyzeSurgeryRequestAction(
+export async function readSurgeryRequestPhotoAction(
   formData: FormData
-): Promise<{ analysis?: RequestAnalysis; error?: string }> {
+): Promise<{ extraction?: RequestExtraction; error?: string }> {
   try {
     await requireActionPermission("surgeries", "edit");
   } catch {
@@ -46,9 +52,7 @@ export async function analyzeSurgeryRequestAction(
     if (extraction.procedures.length === 0 && !extraction.patient_name && extraction.materials.length === 0) {
       return { error: "Não consegui ler dados nessa imagem. Tente uma foto mais nítida, de frente e bem iluminada." };
     }
-    const supabase = await createClient();
-    const analysis = await analyzeExtraction(supabase, extraction);
-    return { analysis };
+    return { extraction };
   } catch (e) {
     console.error("[reader] falha:", e);
     const msg = e instanceof Error ? e.message : "";
@@ -67,6 +71,67 @@ export async function analyzeSurgeryRequestAction(
       return { error: "A leitura demorou demais. Tente novamente com uma foto menor." };
     }
     return { error: "Não foi possível ler a imagem agora. Tente novamente." };
+  }
+}
+
+/**
+ * FASE 2 — com os dados JÁ VALIDADOS pelo usuário, procura o paciente, os
+ * procedimentos (conferindo o código na TUSS) e os materiais no cadastro.
+ * Não usa IA e não grava nada.
+ */
+export async function matchSurgeryRequestAction(
+  input: RequestExtraction
+): Promise<{ analysis?: RequestAnalysis; error?: string }> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
+  try {
+    // Os dados vêm do navegador: valida e limita tudo de novo.
+    const extraction = sanitizeExtraction(input);
+    const supabase = await createClient();
+    return { analysis: await analyzeExtraction(supabase, extraction) };
+  } catch (e) {
+    console.error("[reader] correspondência:", e);
+    return { error: "Não foi possível buscar no cadastro agora. Tente novamente." };
+  }
+}
+
+/**
+ * Cadastro INICIAL do paciente (só o nome); o restante é completado depois na
+ * ficha. Se já houver paciente com o mesmo nome, devolve o existente.
+ */
+export async function createPatientFromRequestAction(input: {
+  full_name: string;
+}): Promise<{ patient?: { id: string; full_name: string; existing: boolean }; error?: string }> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+    await requireActionPermission("patients", "edit");
+  } catch {
+    return { error: "Você não tem permissão para cadastrar pacientes." };
+  }
+  const name = input.full_name.replace(/\s+/g, " ").trim().slice(0, 200);
+  if (name.length < 3) return { error: "Informe o nome completo do paciente." };
+  const supabase = await createClient();
+  try {
+    const { data: same } = await supabase
+      .from("patients")
+      .select("id,full_name")
+      .ilike("full_name", name.replace(/[%_\\]/g, (c) => `\\${c}`))
+      .limit(1)
+      .maybeSingle();
+    if (same) return { patient: { ...(same as { id: string; full_name: string }), existing: true } };
+
+    const created = await createPatient(supabase, {
+      full_name: name,
+      admin_notes: "Cadastro inicial criado pela leitura de pedido por foto. Completar os dados (CPF, nascimento, contato, convênio).",
+    });
+    revalidatePath("/surgeries/patients");
+    return { patient: { id: created.id, full_name: created.full_name, existing: false } };
+  } catch (e) {
+    console.error("[reader] cadastro de paciente:", e);
+    return { error: "Não foi possível cadastrar o paciente." };
   }
 }
 

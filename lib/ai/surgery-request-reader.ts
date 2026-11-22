@@ -132,7 +132,7 @@ export async function readSurgeryRequest(
   const json = (await res.json()) as { content?: { type: string; input?: unknown }[] };
   const block = json.content?.find((c) => c.type === "tool_use");
   if (!block?.input) throw new Error("reader_empty");
-  return sanitize(block.input);
+  return sanitizeExtraction(block.input);
 }
 
 function str(v: unknown, max = 500): string | null {
@@ -140,7 +140,7 @@ function str(v: unknown, max = 500): string | null {
 }
 
 /** A saída do modelo é tratada como dado não confiável: valida e limita tudo. */
-function sanitize(raw: unknown): RequestExtraction {
+export function sanitizeExtraction(raw: unknown): RequestExtraction {
   const r = (raw ?? {}) as Record<string, unknown>;
   const list = (v: unknown) => (Array.isArray(v) ? v : []);
   const guide = r.guide_type === "sp_sadt" || r.guide_type === "internacao" ? r.guide_type : "outro";

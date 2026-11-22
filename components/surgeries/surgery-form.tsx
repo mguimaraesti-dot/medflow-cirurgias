@@ -235,13 +235,21 @@ export function SurgeryForm({
       const notes = line && !prev.notes.includes(line) ? [prev.notes.trim(), line].filter(Boolean).join("\n") : prev.notes;
       return {
         ...prev,
-        patientId: result.patientId && patientOptions.some((p) => p.id === result.patientId) ? result.patientId : prev.patientId,
+        patientId:
+          result.patientId &&
+          (result.createdPatient?.id === result.patientId || patientOptions.some((p) => p.id === result.patientId))
+            ? result.patientId
+            : prev.patientId,
         procedures: merged,
         notes,
       };
     });
     setErrors({});
     setExtraProcedures((prev) => [...prev, ...result.createdProcedures]);
+    const created = result.createdPatient;
+    if (created) {
+      setPatientOptions((prev) => (prev.some((p) => p.id === created.id) ? prev : [...prev, { ...created, cpf: null }]));
+    }
     setSuggestedMaterials(result.materials);
   }
 
