@@ -34,11 +34,11 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Agenda", href: "/schedule", icon: CalendarDays, module: "schedule" },
   { label: "Cirurgias", href: "/surgeries", icon: Stethoscope, module: "surgeries" },
   { label: "Pacientes", href: "/surgeries/patients", icon: Users, module: "patients" },
-  { label: "Tarefas", href: "/pending-tasks", icon: ListChecks, module: "pending_tasks" },
   { label: "Procedimentos", href: "/catalog/procedures", icon: BookMarked, module: "procedures" },
   { label: "Materiais", href: "/catalog/materials", icon: Boxes, module: "materials" },
   { label: "Fornecedores", href: "/suppliers", icon: Truck, module: "suppliers" },
   { label: "Financeiro", href: "/financial", icon: Wallet, module: "financial" },
   { label: "Relatórios", href: "/reports", icon: BarChart3, module: "reports" },
+  { label: "Tarefas", href: "/pending-tasks", icon: ListChecks, module: "pending_tasks" },
   { label: "Configurações", href: "/settings", icon: Settings, module: "settings" },
 ];
