@@ -41,14 +41,26 @@ export async function listProcedures(supabase: SupabaseClient, search?: string) 
   return data as Procedure[];
 }
 
+/** Procedimentos ativos para seleção em cirurgias (com especialidade e nº de materiais do kit padrão). */
 export async function listActiveProceduresForSelect(supabase: SupabaseClient) {
-  const { data, error } = await supabase
-    .from("procedures")
-    .select("id,name,tuss_code")
-    .eq("active", true)
-    .order("name", { ascending: true });
+  const [{ data, error }, { data: kit, error: kitError }] = await Promise.all([
+    supabase
+      .from("procedures")
+      .select("id,name,tuss_code,specialty")
+      .eq("active", true)
+      .order("name", { ascending: true }),
+    supabase.from("procedure_default_materials").select("procedure_id"),
+  ]);
   if (error) throw error;
-  return data as Pick<Procedure, "id" | "name" | "tuss_code">[];
+  if (kitError) throw kitError;
+  const counts = new Map<string, number>();
+  for (const k of (kit ?? []) as { procedure_id: string }[]) {
+    counts.set(k.procedure_id, (counts.get(k.procedure_id) ?? 0) + 1);
+  }
+  return (data as Pick<Procedure, "id" | "name" | "tuss_code" | "specialty">[]).map((p) => ({
+    ...p,
+    materials_count: counts.get(p.id) ?? 0,
+  }));
 }
 
 export async function getProcedure(supabase: SupabaseClient, id: string) {
@@ -62,8 +74,19 @@ export async function getProcedure(supabase: SupabaseClient, id: string) {
 }
 
 export async function createProcedure(supabase: SupabaseClient, input: ProcedureInput) {
-  const { error } = await supabase.from("procedures").insert(input);
+  const { data, error } = await supabase.from("procedures").insert(input).select("id,internal_code").single();
   if (error) throw error;
+  return data as { id: string; internal_code: string | null };
+}
+
+/** Quantas cirurgias usam o procedimento (vínculo principal ou adicional). */
+export async function countProcedureSurgeries(supabase: SupabaseClient, id: string) {
+  const { count, error } = await supabase
+    .from("surgery_procedures")
+    .select("surgery_id", { count: "exact", head: true })
+    .eq("procedure_id", id);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function updateProcedure(

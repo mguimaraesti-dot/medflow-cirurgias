@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { deriveSituation, SITUATIONS, type SurgerySituation } from "@/lib/surgery-situation";
 import type { SurgeryListParams } from "@/lib/surgery-list-params";
+import { fetchAll, normalizeText as norm } from "@/lib/data/fetch-all";
 
 export type SurgeryListRow = {
   id: string;
@@ -46,28 +47,6 @@ const COLUMNS =
   "patient:patients(full_name),hospital:hospitals(name),insurance_provider:insurance_providers(name)," +
   "stage:workflow_stages(name)," +
   "surgery_procedures(is_primary,procedure:procedures(name,tuss_code))";
-
-const PAGE = 1000; // limite padrão de linhas por consulta do PostgREST
-
-/** Normaliza pra busca/ordenação: sem acento, minúsculo. */
-function norm(value: string | null | undefined) {
-  return (value ?? "")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
-
-async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>) {
-  const out: T[] = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await build(from, from + PAGE - 1);
-    if (error) throw error;
-    const rows = (data ?? []) as T[];
-    out.push(...rows);
-    if (rows.length < PAGE) break;
-  }
-  return out;
-}
 
 /**
  * Listagem de cirurgias (/surgeries): indicadores + página de resultados.

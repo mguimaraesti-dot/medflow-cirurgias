@@ -5,7 +5,14 @@ import { Star, X, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type ProcedureOption = { id: string; name: string; tuss_code?: string | null };
+export type ProcedureOption = {
+  id: string;
+  name: string;
+  tuss_code?: string | null;
+  specialty?: string | null;
+  /** Materiais no kit padrão (sugeridos ao criar a cirurgia). */
+  materials_count?: number;
+};
 export type SelectedProcedure = { id: string; is_primary: boolean };
 
 function normalize(value: string) {
@@ -52,7 +59,7 @@ export function ProceduresMultiSelect({
     const q = normalize(query.trim());
     return procedures
       .filter((p) => !selectedIds.has(p.id))
-      .filter((p) => !q || normalize(`${p.name} ${p.tuss_code ?? ""}`).includes(q))
+      .filter((p) => !q || normalize(`${p.name} ${p.tuss_code ?? ""} ${p.specialty ?? ""}`).includes(q))
       .slice(0, 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [procedures, query, selected]);
@@ -101,7 +108,7 @@ export function ProceduresMultiSelect({
           }}
           placeholder={
             selected.length === 0
-              ? "Buscar procedimento por nome ou código TUSS..."
+              ? "Buscar procedimento por nome, código TUSS ou especialidade..."
               : "Adicionar outro procedimento..."
           }
           autoComplete="off"
@@ -127,7 +134,12 @@ export function ProceduresMultiSelect({
                       onClick={() => addProcedure(p)}
                       className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
                     >
-                      <span className="min-w-0 flex-1">{p.name}</span>
+                      <span className="min-w-0 flex-1">
+                        {p.name}
+                        {p.specialty ? (
+                          <span className="block text-xs text-muted-foreground">{p.specialty}</span>
+                        ) : null}
+                      </span>
                       {p.tuss_code ? (
                         <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                           TUSS {p.tuss_code}
@@ -167,8 +179,14 @@ export function ProceduresMultiSelect({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-foreground">{label}</span>
                     <span className="block text-xs text-muted-foreground">
-                      {p?.tuss_code ? `TUSS ${p.tuss_code}` : "Sem código TUSS"}
-                      {s.is_primary ? " · principal" : ""}
+                      {[
+                        p?.tuss_code ? `TUSS ${p.tuss_code}` : "Sem código TUSS",
+                        p?.specialty,
+                        p?.materials_count ? `Kit padrão: ${p.materials_count} ${p.materials_count === 1 ? "material" : "materiais"}` : null,
+                        s.is_primary ? "principal" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </span>
                 </button>

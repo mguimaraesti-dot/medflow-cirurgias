@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import { searchTussCodesAction } from "@/app/(dashboard)/catalog/procedures/actions";
@@ -8,17 +8,18 @@ import type { TussResult } from "@/lib/tuss";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Código TUSS + busca na tabela da ANS. O nome interno do procedimento e a
+ * descrição oficial da TUSS são mantidos separados: escolher um resultado
+ * só preenche o CÓDIGO; a descrição oficial aparece como confirmação, sem
+ * mexer no campo Nome.
+ */
 export function TussCodeField({
   defaultCode,
   defaultQuery,
-  nameInputRef,
 }: {
   defaultCode?: string | null;
   defaultQuery?: string;
-  /** Ref do campo Nome do formulário — usado só para preencher o nome
-   * automaticamente quando ele ainda estiver vazio e o usuário escolher
-   * um resultado da busca. Nunca sobrescreve um nome já digitado. */
-  nameInputRef?: RefObject<HTMLInputElement | null>;
 }) {
   // Campo 1: código TUSS, sempre editável diretamente (quem já sabe o
   // código não precisa passar pela busca por nome).
@@ -37,13 +38,6 @@ export function TussCodeField({
   const [slow, setSlow] = useState(false);
   const requestIdRef = useRef(0);
 
-  // Só sobrescreve o campo Nome depois que o usuário efetivamente mexeu
-  // nesses campos (digitou um código novo ou buscou/escolheu outro item).
-  // Na primeira renderização de um registro já existente, a confirmação
-  // automática do código salvo não deve apagar um nome que o usuário já
-  // personalizou.
-  const userInteractedRef = useRef(false);
-
   // O dropdown de resultados agora flutua por cima do resto do formulário
   // (como o de procedimentos na tela de cirurgia), em vez de empurrar os
   // campos abaixo pra dentro de uma caixinha de 160px — por isso precisa
@@ -60,10 +54,6 @@ export function TussCodeField({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  function applyName(name: string) {
-    if (nameInputRef?.current) nameInputRef.current.value = name;
-  }
 
   // Busca automática pelo código digitado direto no campo 1.
   useEffect(() => {
@@ -85,11 +75,9 @@ export function TussCodeField({
         const match = res.results?.find((r) => r.code === trimmed) ?? null;
         setCodeMatch(match);
         setCodeNotFound(!match && !res.error);
-        if (match && userInteractedRef.current) applyName(match.name);
       });
     }, 500);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyName só lê a ref, é estável entre renders
   }, [code]);
 
   // Busca automática pelo nome digitado no campo 2, com debounce.
@@ -133,13 +121,11 @@ export function TussCodeField({
   }, [query]);
 
   function handlePick(result: TussResult) {
-    userInteractedRef.current = true;
     setCode(result.code);
     setCodeMatch(result);
     setCodeNotFound(false);
     setResults(null);
     setQuery("");
-    applyName(result.name);
   }
 
   return (
@@ -151,8 +137,7 @@ export function TussCodeField({
           name="tuss_code"
           value={code}
           onChange={(e) => {
-            userInteractedRef.current = true;
-            setCode(e.target.value);
+                    setCode(e.target.value);
           }}
           placeholder="Ex: 40201082"
         />
@@ -165,7 +150,7 @@ export function TussCodeField({
                 : "text-xs text-amber-600 dark:text-amber-400"
             }
           >
-            ✓ {codeMatch.name}
+            ✓ Descrição oficial TUSS: {codeMatch.name}
             {!codeMatch.active ? " (código descontinuado na TUSS)" : ""}
           </p>
         ) : null}

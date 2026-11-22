@@ -109,3 +109,62 @@ export async function replaceDefaultMaterials(
   const { error: insertError } = await supabase.from("procedure_default_materials").insert(rows);
   if (insertError) throw insertError;
 }
+
+export type KitItemInput = {
+  material_id: string;
+  quantity: number;
+  unit: string | null;
+  preferred_supplier_id: string | null;
+};
+
+/**
+ * Grava o kit padrão a partir da lista editada na tela, sem janela em que o
+ * kit fica vazio: primeiro insere/atualiza os itens da lista (upsert) e só
+ * depois remove os que saíram. Se algo falhar no meio, o kit fica com itens
+ * a mais — nunca a menos.
+ */
+export async function saveDefaultMaterials(supabase: SupabaseClient, procedureId: string, items: KitItemInput[]) {
+  if (items.length > 0) {
+    const { error } = await supabase
+      .from("procedure_default_materials")
+      .upsert(
+        items.map((i) => ({ procedure_id: procedureId, ...i })),
+        { onConflict: "procedure_id,material_id" }
+      );
+    if (error) throw error;
+  }
+
+  let remove = supabase.from("procedure_default_materials").delete().eq("procedure_id", procedureId);
+  if (items.length > 0) {
+    remove = remove.not("material_id", "in", `(${items.map((i) => i.material_id).join(",")})`);
+  }
+  const { error: removeError } = await remove;
+  if (removeError) throw removeError;
+}
+
+export type MaterialSearchResult = {
+  id: string;
+  name: string;
+  internal_code: string | null;
+  tuss_code: string | null;
+  unit: string | null;
+};
+
+/** Busca materiais ativos por nome, código interno ou TUSS (máx. 20). */
+export async function searchActiveMaterials(supabase: SupabaseClient, term: string) {
+  const safe = term.trim().replace(/(["\\])/g, "\\$1");
+  let query = supabase
+    .from("materials_catalog")
+    .select("id,name,internal_code,tuss_code,unit")
+    .eq("active", true)
+    .order("name", { ascending: true })
+    .limit(20);
+  if (safe) {
+    query = query.or(
+      [`name.ilike."%${safe}%"`, `internal_code.ilike."%${safe}%"`, `tuss_code.ilike."%${safe}%"`].join(",")
+    );
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as MaterialSearchResult[];
+}

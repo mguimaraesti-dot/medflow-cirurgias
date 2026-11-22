@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-// Especialidade, região, classificação, tipo e os "requisitos" do procedimento
-// saíram do cadastro; as colunas continuam no banco e não são mais alteradas
-// por este formulário (editar um procedimento não apaga o que já estava salvo).
+// Região anatômica, classificação, tipo e os "requisitos" do procedimento
+// saíram do cadastro; as colunas continuam no banco e não são alteradas por
+// este formulário (editar um procedimento não apaga o que já estava salvo).
+// A especialidade voltou como campo de classificação.
 const optionalText = z.preprocess(
   (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
   z.string().optional()
@@ -16,6 +17,7 @@ export const procedureSchema = z.object({
   internal_code: optionalText,
   name: z.string().trim().min(1, "Informe o nome do procedimento."),
   tuss_code: optionalText,
+  specialty: optionalText,
   location: optionalText,
   description: optionalText,
   admin_notes: optionalText,

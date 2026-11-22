@@ -1,69 +1,86 @@
 "use client";
 
-import { useState } from "react";
-import { Package } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 
-import { getDefaultMaterialsAction } from "@/app/(dashboard)/catalog/procedures/actions";
+import { getKitEditorDataAction } from "@/app/(dashboard)/catalog/procedures/actions";
 import type { ProcedureDefaultMaterial } from "@/lib/data/procedure-materials";
-import { ProcedureDefaultMaterialsCard } from "@/components/procedures/procedure-default-materials-card";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
+import { ProcedureKitEditor } from "@/components/procedures/procedure-kit-editor";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+type Loaded = { items: ProcedureDefaultMaterial[]; suppliers: { id: string; company_name: string }[] };
+
+/** Painel lateral "Materiais padrão". Carrega o kit só ao abrir (a listagem leva apenas a contagem). */
 export function ProcedureMaterialsSheet({
   procedure,
-  materials,
-  suppliers,
+  canEdit,
+  open,
+  onOpenChange,
 }: {
   procedure: { id: string; name: string };
-  materials: { id: string; name: string }[];
-  suppliers: { id: string; company_name: string }[];
+  canEdit: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<ProcedureDefaultMaterial[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Loaded | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
+  const dirty = useRef(false);
 
-  async function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (nextOpen) {
-      setLoading(true);
-      try {
-        const data = await getDefaultMaterialsAction(procedure.id);
-        setItems(data);
-      } finally {
-        setLoading(false);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setData(null);
+    setError(null);
+    getKitEditorDataAction(procedure.id).then((res) => {
+      if (cancelled) return;
+      if ("error" in res) setError(res.error);
+      else {
+        setData(res);
+        setVersion((v) => v + 1);
       }
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, procedure.id]);
+
+  function handleOpenChange(next: boolean) {
+    if (!next && dirty.current && !window.confirm("Há alterações não salvas nos materiais padrão. Descartar?")) return;
+    if (!next) dirty.current = false;
+    onOpenChange(next);
   }
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-        >
-          <Package className="h-3.5 w-3.5" />
-          Materiais padrão
-        </button>
-      </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Materiais padrão — {procedure.name}</SheetTitle>
           <SheetDescription>
-            Lista de materiais que o médico costuma usar neste procedimento. Ao criar uma cirurgia,
-            essa lista é sugerida automaticamente — e pode ser atualizada depois de cada cirurgia,
-            se o que for usado for diferente.
+            Kit de materiais e OPME que o médico costuma usar neste procedimento. Ao criar uma cirurgia, a lista é
+            sugerida e pode ser ajustada para aquela cirurgia.
           </SheetDescription>
         </SheetHeader>
 
-        {loading || items === null ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : data === null ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
+          </p>
         ) : (
-          <ProcedureDefaultMaterialsCard
+          <ProcedureKitEditor
+            key={version}
             procedureId={procedure.id}
-            items={items}
-            materials={materials}
-            suppliers={suppliers}
-            onItemsChange={setItems}
+            initialItems={data.items}
+            suppliers={data.suppliers}
+            canEdit={canEdit}
+            onDirtyChange={(d) => {
+              dirty.current = d;
+            }}
           />
         )}
       </SheetContent>
