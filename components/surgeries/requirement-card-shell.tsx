@@ -65,8 +65,6 @@ export function RequirementCardShell({
     <div
       className={cn(
         "flex h-full flex-col rounded-xl border bg-card shadow-sm transition-colors",
-        // Aberto: ocupa a linha inteira (os vizinhos não esticam).
-        open && "lg:col-span-2",
         TONE_BORDER[tone]
       )}
     >

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { cn } from "@/lib/utils";
+
 import type { AuthorizationRequest, OrReservation, PreoperativeItem } from "@/lib/data/operations";
 import type { SurgeryRequirement } from "@/lib/data/surgeries";
 import type { SurgeryDocument } from "@/lib/data/surgery-documents";
@@ -49,7 +51,9 @@ export function SurgeryRequirementsPanel({
   const preoperativeReq = byKey("preoperative");
 
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+    {/* Fechados: cards da mesma altura. Com um aberto, cada um volta à altura
+        natural para o vizinho não esticar junto com o formulário. */}
+    <div className={cn("grid grid-cols-1 gap-3 lg:grid-cols-2", openKey !== null && "items-start")}>
       <HospitalRequestCard
         surgeryId={surgeryId}
         documents={documents}
