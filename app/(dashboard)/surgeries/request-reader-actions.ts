@@ -140,7 +140,7 @@ export async function createPatientFromRequestAction(input: {
 // Cadastro rápido, a partir da tela de revisão, do que ainda não está no catálogo
 // ----------------------------------------------------------------------------
 
-export type QuickCreateResult = { item?: { id: string; name: string; tuss_code: string | null }; error?: string };
+export type QuickCreateResult = { existing?: boolean; item?: { id: string; name: string; tuss_code: string | null }; error?: string };
 
 /**
  * Cadastra no catálogo um procedimento lido da guia. O nome vem da TUSS 22
@@ -150,6 +150,9 @@ export type QuickCreateResult = { item?: { id: string; name: string; tuss_code: 
 export async function createProcedureFromRequestAction(input: {
   code: string | null;
   description: string;
+  /** Nome revisado pelo usuário (tem prioridade sobre o nome oficial da TUSS). */
+  name?: string;
+  specialty?: string;
 }): Promise<QuickCreateResult> {
   try {
     await requireActionPermission("surgeries", "edit");
@@ -167,10 +170,12 @@ export async function createProcedureFromRequestAction(input: {
         .eq("tuss_code", code)
         .limit(1)
         .maybeSingle();
-      if (existing) return { item: existing as { id: string; name: string; tuss_code: string | null } };
+      if (existing) {
+        return { existing: true, item: existing as { id: string; name: string; tuss_code: string | null } };
+      }
     }
-    let name = input.description.trim();
-    if (code) {
+    let name = (input.name ?? "").trim() || input.description.trim();
+    if (code && !input.name?.trim()) {
       const { data: official } = await supabase
         .from("tuss_terms")
         .select("name")
@@ -181,7 +186,12 @@ export async function createProcedureFromRequestAction(input: {
     }
     if (!name) return { error: "Sem nome para cadastrar este procedimento." };
 
-    const parsed = procedureSchema.safeParse({ name, tuss_code: code ?? "", active: "on" });
+    const parsed = procedureSchema.safeParse({
+      name,
+      tuss_code: code ?? "",
+      specialty: (input.specialty ?? "").trim().slice(0, 100),
+      active: "on",
+    });
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
     const created = await createProcedure(supabase, parsed.data);
     revalidatePath("/catalog/procedures");

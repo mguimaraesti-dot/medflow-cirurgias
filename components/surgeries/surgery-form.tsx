@@ -231,8 +231,11 @@ export function SurgeryForm({
       const added = result.procedureIds.filter((id) => !known.has(id));
       const merged = [...prev.procedures, ...added.map((id) => ({ id, is_primary: false }))];
       if (merged.length > 0 && !merged.some((p) => p.is_primary)) merged[0] = { ...merged[0], is_primary: true };
-      const line = result.clinicalIndication ? `Indicação clínica: ${result.clinicalIndication}` : "";
-      const notes = line && !prev.notes.includes(line) ? [prev.notes.trim(), line].filter(Boolean).join("\n") : prev.notes;
+      const lines = [
+        result.clinicalIndication ? `Indicação clínica: ${result.clinicalIndication}` : "",
+        result.observations ? `Observações da guia: ${result.observations}` : "",
+      ].filter((l) => l && !prev.notes.includes(l));
+      const notes = lines.length ? [prev.notes.trim(), ...lines].filter(Boolean).join("\n") : prev.notes;
       return {
         ...prev,
         patientId:

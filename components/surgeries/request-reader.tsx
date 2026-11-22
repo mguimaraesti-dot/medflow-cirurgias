@@ -1,7 +1,26 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { AlertTriangle, Camera, CheckCircle2, Loader2, Plus, ScanLine, Trash2, UserPlus } from "lucide-react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  AlertTriangle,
+  BookOpen,
+  Camera,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  Loader2,
+  Package,
+  PencilLine,
+  Plus,
+  PlusCircle,
+  ScanLine,
+  Sparkles,
+  Stethoscope,
+  Trash2,
+  User,
+  UserPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -14,27 +33,33 @@ import {
 } from "@/app/(dashboard)/surgeries/request-reader-actions";
 import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
 import type { TussResult } from "@/lib/tuss";
-import type { RequestAnalysis, RequestExtraction } from "@/lib/surgery-request-types";
+import type {
+  Confidence,
+  ProcedureSuggestion,
+  RequestAnalysis,
+  RequestExtraction,
+} from "@/lib/surgery-request-types";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { GuideImageViewer } from "@/components/surgeries/guide-image-viewer";
 
 export type ReaderApplyResult = {
   patientId: string | null;
   procedureIds: string[];
   clinicalIndication: string | null;
+  /** Texto do campo Observação/Justificativa da guia (opcional) */
+  observations: string | null;
   materials: { id: string; name: string; quantity: number }[];
   /** Procedimentos cadastrados agora, a partir da guia (precisam entrar nas opções do formulário). */
   createdProcedures: { id: string; name: string; tuss_code: string | null }[];
   /** Paciente cadastrado agora (cadastro inicial) — precisa entrar nas opções do formulário. */
   createdPatient: { id: string; full_name: string } | null;
 };
+
+// ----------------------------------------------------------------------------
+// Imagem
+// ----------------------------------------------------------------------------
 
 const MAX_SIDE = 1800;
 
@@ -52,12 +77,21 @@ async function shrinkImage(file: File): Promise<File> {
   return new File([blob], "pedido.jpg", { type: "image/jpeg" });
 }
 
-// Rascunho editável da FASE 1 (validação do que a IA leu)
+// ----------------------------------------------------------------------------
+// Rascunho editável (etapa 2) — guarda o valor original da IA para saber o que foi corrigido
+// ----------------------------------------------------------------------------
+
+type DraftProcedure = { id: string; code: string; description: string; conf: Confidence; origCode: string; origDesc: string };
+type DraftMaterial = { id: string; name: string; quantity: string; details: string; conf: Confidence; origName: string; origDetails: string };
 type Draft = {
   patientName: string;
+  origPatientName: string;
+  patientConf: Confidence;
   indication: string;
-  procedures: { id: string; code: string; description: string }[];
-  materials: { id: string; name: string; quantity: string; details: string }[];
+  indicationConf: Confidence;
+  observations: string;
+  procedures: DraftProcedure[];
+  materials: DraftMaterial[];
   notes: string[];
 };
 
@@ -67,40 +101,158 @@ const nextId = () => `r${++uid}`;
 function toDraft(e: RequestExtraction): Draft {
   return {
     patientName: e.patient_name ?? "",
+    origPatientName: e.patient_name ?? "",
+    patientConf: e.patient_confidence,
     indication: e.clinical_indication ?? "",
-    procedures: e.procedures.map((p) => ({ id: nextId(), code: p.tuss_code ?? "", description: p.description })),
+    indicationConf: e.indication_confidence,
+    observations: e.observations ?? "",
+    procedures: e.procedures.map((p) => ({
+      id: nextId(),
+      code: p.tuss_code ?? "",
+      description: p.description,
+      conf: p.confidence,
+      origCode: p.tuss_code ?? "",
+      origDesc: p.description,
+    })),
     materials: e.materials.map((m) => ({
       id: nextId(),
       name: m.name,
       quantity: m.quantity ? String(m.quantity) : "1",
       details: m.details ?? "",
+      conf: m.confidence,
+      origName: m.name,
+      origDetails: m.details ?? "",
     })),
     notes: e.legibility_notes,
   };
 }
 
+const digitsOf = (v: string) => v.replace(/\D/g, "");
+const keptProcedures = (d: Draft) => d.procedures.filter((p) => digitsOf(p.code) || p.description.trim());
+const keptMaterials = (d: Draft) => d.materials.filter((m) => m.name.trim());
+
 function fromDraft(d: Draft, guideType: RequestExtraction["guide_type"]): RequestExtraction {
   return {
     guide_type: guideType,
     patient_name: d.patientName.trim() || null,
+    patient_confidence: d.patientConf,
     clinical_indication: d.indication.trim() || null,
-    procedures: d.procedures
-      .map((p) => ({ tuss_code: p.code.replace(/\D/g, "") || null, description: p.description.trim() }))
-      .filter((p) => p.tuss_code || p.description),
-    materials: d.materials
-      .map((m) => ({
-        name: m.name.trim(),
-        quantity: Number(m.quantity.replace(",", ".")) > 0 ? Number(m.quantity.replace(",", ".")) : null,
-        details: m.details.trim() || null,
-      }))
-      .filter((m) => m.name),
+    indication_confidence: d.indicationConf,
+    observations: d.observations.trim() || null,
+    procedures: keptProcedures(d).map((p) => ({
+      tuss_code: digitsOf(p.code) || null,
+      description: p.description.trim(),
+      confidence: p.conf,
+    })),
+    materials: keptMaterials(d).map((m) => {
+      const q = Number(m.quantity.replace(",", "."));
+      return { name: m.name.trim(), quantity: q > 0 ? q : null, details: m.details.trim() || null, confidence: m.conf };
+    }),
     legibility_notes: [],
   };
 }
 
-const inputCls = "h-9 min-w-0 rounded-md border border-input bg-background px-2 text-sm";
+// ----------------------------------------------------------------------------
+// Peças visuais
+// ----------------------------------------------------------------------------
 
-type Step = "upload" | "validate" | "match";
+type Tone = "ok" | "warn" | "info" | "muted";
+const TONE: Record<Tone, string> = {
+  ok: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  warn: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  info: "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  muted: "border-border bg-muted/50 text-muted-foreground",
+};
+
+function Chip({ tone, icon, children }: { tone: Tone; icon?: ReactNode; children: ReactNode }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-4 [&_svg]:h-3 [&_svg]:w-3", TONE[tone])}>
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+const CONF_LABEL: Record<Confidence, string> = { high: "Confiança alta", medium: "Confiança média", low: "Confiança baixa" };
+function ConfChip({ c }: { c: Confidence }) {
+  return (
+    <Chip tone={c === "high" ? "ok" : c === "medium" ? "warn" : "warn"} icon={<Sparkles />}>
+      {CONF_LABEL[c]}
+      {c !== "high" ? " · revisar" : ""}
+    </Chip>
+  );
+}
+
+function Section({ icon, title, right, children }: { icon: ReactNode; title: string; right?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-border bg-card p-3 sm:p-4">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <span className="text-primary [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+          {title}
+        </h3>
+        {right}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Line({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+      <span className="mt-0.5 shrink-0 [&_svg]:h-3 [&_svg]:w-3">{icon}</span>
+      <span className="min-w-0">
+        <span className="font-medium">{label}:</span> <span className="text-foreground/90">{children}</span>
+      </span>
+    </p>
+  );
+}
+
+const inputCls = "h-9 min-w-0 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+
+const STEPS = [
+  { id: "upload", label: "Documento" },
+  { id: "validate", label: "Conferir leitura" },
+  { id: "match", label: "Confirmação" },
+] as const;
+type Step = (typeof STEPS)[number]["id"];
+
+function Stepper({ step }: { step: Step }) {
+  const idx = STEPS.findIndex((s) => s.id === step);
+  return (
+    <ol className="flex items-center gap-2 sm:gap-3" aria-label="Etapas">
+      {STEPS.map((s, i) => {
+        const done = i < idx;
+        const current = i === idx;
+        return (
+          <li key={s.id} className="flex items-center gap-2 sm:gap-3" aria-current={current ? "step" : undefined}>
+            <span
+              className={cn(
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                current && "border-primary bg-primary text-primary-foreground",
+                done && "border-primary/60 bg-primary/15 text-primary",
+                !current && !done && "border-border text-muted-foreground"
+              )}
+            >
+              {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+            </span>
+            <span className={cn("text-xs sm:text-sm", current ? "font-semibold text-foreground" : "text-muted-foreground", !current && "hidden sm:inline")}>
+              {s.label}
+            </span>
+            {i < STEPS.length - 1 ? <span className="hidden h-px w-6 bg-border sm:block lg:w-12" aria-hidden /> : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Componente principal
+// ----------------------------------------------------------------------------
+
+type CreatedProcedure = ReaderApplyResult["createdProcedures"][number];
 
 export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult) => void }) {
   const [open, setOpen] = useState(false);
@@ -114,30 +266,24 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Escolhas do usuário na FASE 2
+  // Etapa 3: escolhas e metadados
+  const [procEdited, setProcEdited] = useState<Record<string, boolean>>({});
+  const [matEdited, setMatEdited] = useState<Record<string, boolean>>({});
+  const [patientEdited, setPatientEdited] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [procChecked, setProcChecked] = useState<Record<string, boolean>>({});
+  const [procSource, setProcSource] = useState<Record<string, "chosen" | "created">>({});
   const [matChecked, setMatChecked] = useState<Record<string, boolean>>({});
   const [matChoice, setMatChoice] = useState<Record<string, string>>({});
   const [useIndication, setUseIndication] = useState(true);
+  const [useObservations, setUseObservations] = useState(true);
   const [creating, setCreating] = useState<string | null>(null);
-  const [createdProcedures, setCreatedProcedures] = useState<ReaderApplyResult["createdProcedures"]>([]);
+  const [createdProcedures, setCreatedProcedures] = useState<CreatedProcedure[]>([]);
   const [createdPatient, setCreatedPatient] = useState<ReaderApplyResult["createdPatient"]>(null);
-  // Busca livre no catálogo de materiais (quando a sugestão não é o material certo).
-  const [catalog, setCatalog] = useState<{
-    key: string;
-    query: string;
-    loading: boolean;
-    results: { id: string; name: string }[] | null;
-  } | null>(null);
-  // Busca do código TUSS 19 (materiais) para o item que o usuário vai cadastrar.
-  const [picker, setPicker] = useState<{
-    key: string;
-    query: string;
-    loading: boolean;
-    results: TussResult[] | null;
-    error: string | null;
-  } | null>(null);
+  const [patientForm, setPatientForm] = useState<{ name: string } | null>(null);
+  const [procForm, setProcForm] = useState<{ key: string; name: string; code: string; specialty: string } | null>(null);
+  const [catalog, setCatalog] = useState<{ key: string; query: string; loading: boolean; results: { id: string; name: string }[] | null } | null>(null);
+  const [picker, setPicker] = useState<{ key: string; query: string; loading: boolean; results: TussResult[] | null; error: string | null } | null>(null);
 
   function reset() {
     if (preview) URL.revokeObjectURL(preview);
@@ -148,11 +294,15 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     setAnalysis(null);
     setError(null);
     setPicker(null);
+    setCatalog(null);
+    setProcForm(null);
+    setPatientForm(null);
     setCreatedProcedures([]);
     setCreatedPatient(null);
+    setProcSource({});
   }
 
-  // FASE 1: a IA lê a foto; o usuário valida/corrige
+  // ETAPA 1 → 2: a IA lê a foto
   function handleFile(file: File | undefined) {
     if (!file) return;
     reset();
@@ -176,7 +326,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     });
   }
 
-  // FASE 2: com os dados validados, busca/cadastra no sistema
+  // ETAPA 2 → 3: com os dados validados, busca no sistema
   function advance() {
     if (!draft) return;
     setError(null);
@@ -187,22 +337,32 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
         return;
       }
       const a = res.analysis;
+      const keptP = keptProcedures(draft);
+      const keptM = keptMaterials(draft);
       setAnalysis(a);
+      setPatientEdited(draft.patientName.trim() !== draft.origPatientName.trim());
+      setProcEdited(Object.fromEntries(a.procedures.map((p, i) => [p.key, keptP[i] ? keptP[i].code !== keptP[i].origCode || keptP[i].description !== keptP[i].origDesc : false])));
+      setMatEdited(Object.fromEntries(a.materials.map((m, i) => [m.key, m.source === "guide" && keptM[i] ? keptM[i].name !== keptM[i].origName || keptM[i].details !== keptM[i].origDetails : false])));
       setPatientId(a.patient.patient?.id ?? "");
-      setProcChecked(Object.fromEntries(a.procedures.map((p) => [p.key, p.match !== "none"])));
+      setProcChecked(Object.fromEntries(a.procedures.map((p) => [p.key, Boolean(p.procedure)])));
+      setProcSource({});
       setMatChecked(Object.fromEntries(a.materials.map((m) => [m.key, m.source === "guide" && !!m.material])));
       setMatChoice(Object.fromEntries(a.materials.map((m) => [m.key, m.material?.id ?? ""])));
       setUseIndication(Boolean(a.clinical_indication));
+      setUseObservations(Boolean(a.observations));
       setPicker(null);
+      setCatalog(null);
+      setProcForm(null);
+      setPatientForm(null);
       setStep("match");
     });
   }
 
-  async function createPatient() {
-    const name = analysis?.patient.read_name;
-    if (!name || creating) return;
+  // --- Paciente ---------------------------------------------------------------
+  async function savePatient() {
+    if (!patientForm || creating) return;
     setCreating("patient");
-    const res = await createPatientFromRequestAction({ full_name: name });
+    const res = await createPatientFromRequestAction({ full_name: patientForm.name });
     setCreating(null);
     if (res.error || !res.patient) {
       toast.error(res.error ?? "Não foi possível cadastrar o paciente.");
@@ -214,6 +374,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       a ? { ...a, patient: { ...a.patient, match: "exact", patient: { id: patient.id, full_name: patient.full_name }, alternatives: [] } } : a
     );
     setPatientId(patient.id);
+    setPatientForm(null);
     toast.success(
       patient.existing
         ? `Já existia um paciente com esse nome: ${patient.full_name}.`
@@ -221,11 +382,33 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     );
   }
 
-  async function createProcedure(key: string) {
-    const p = analysis?.procedures.find((x) => x.key === key);
-    if (!p || creating) return;
-    setCreating(key);
-    const res = await createProcedureFromRequestAction({ code: p.read_code, description: p.read_description });
+  // --- Procedimentos ----------------------------------------------------------
+  function linkProcedure(key: string, item: { id: string; name: string; tuss_code: string | null }, source: "chosen" | "created") {
+    setAnalysis((a) =>
+      a ? { ...a, procedures: a.procedures.map((x) => (x.key === key ? { ...x, procedure: item, match: "exact" as const } : x)) } : a
+    );
+    setProcSource((s) => ({ ...s, [key]: source }));
+    setProcChecked((s) => ({ ...s, [key]: true }));
+  }
+
+  function openProcForm(p: ProcedureSuggestion) {
+    setProcForm({
+      key: p.key,
+      name: p.tuss_official_name ?? p.read_description,
+      code: p.read_code ?? "",
+      specialty: "",
+    });
+  }
+
+  async function saveProcedure() {
+    if (!procForm || creating) return;
+    setCreating(procForm.key);
+    const res = await createProcedureFromRequestAction({
+      code: digitsOf(procForm.code) || null,
+      description: procForm.name,
+      name: procForm.name,
+      specialty: procForm.specialty,
+    });
     setCreating(null);
     if (res.error || !res.item) {
       toast.error(res.error ?? "Não foi possível cadastrar.");
@@ -233,20 +416,12 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     }
     const item = res.item;
     setCreatedProcedures((prev) => (prev.some((x) => x.id === item.id) ? prev : [...prev, item]));
-    setAnalysis((a) =>
-      a
-        ? {
-            ...a,
-            procedures: a.procedures.map((x) =>
-              x.key === key ? { ...x, match: "exact", procedure: { id: item.id, name: item.name, tuss_code: item.tuss_code } } : x
-            ),
-          }
-        : a
-    );
-    setProcChecked((s) => ({ ...s, [key]: true }));
-    toast.success(`Procedimento cadastrado: ${item.name}`);
+    linkProcedure(procForm.key, item, "created");
+    setProcForm(null);
+    toast.success(res.existing ? `Já existia um procedimento com esse código TUSS: ${item.name}.` : `Procedimento cadastrado: ${item.name}`);
   }
 
+  // --- Materiais --------------------------------------------------------------
   async function runCatalogSearch(key: string, query: string) {
     setCatalog({ key, query, loading: true, results: null });
     const res = await searchCatalogMaterialsAction(query);
@@ -274,18 +449,14 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   async function runPickerSearch(key: string, query: string) {
     setPicker({ key, query, loading: true, results: null, error: null });
     const res = await searchTussMaterialsAction(query);
-    setPicker((cur) =>
-      cur && cur.key === key
-        ? { ...cur, loading: false, results: res.results ?? [], error: res.error ?? null }
-        : cur
-    );
+    setPicker((cur) => (cur && cur.key === key ? { ...cur, loading: false, results: res.results ?? [], error: res.error ?? null } : cur));
   }
 
   function openPicker(key: string) {
     const m = analysis?.materials.find((x) => x.key === key);
     if (!m) return;
-    // Só o nome: marca/medida escritas ("Microtech 16 mm") restringem demais; o usuário pode refinar.
     setCatalog(null);
+    // Só o nome: marca/medida escritas ("Microtech 16 mm") restringem demais; o usuário pode refinar.
     void runPickerSearch(key, m.read_name);
   }
 
@@ -296,14 +467,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     const res = await createMaterialFromRequestAction({
       name: m.read_name,
       details: m.details,
-      tuss: tuss
-        ? {
-            code: tuss.code,
-            manufacturer: tuss.manufacturer,
-            model: tuss.model,
-            anvisaRegistration: tuss.anvisaRegistration,
-          }
-        : null,
+      tuss: tuss ? { code: tuss.code, manufacturer: tuss.manufacturer, model: tuss.model, anvisaRegistration: tuss.anvisaRegistration } : null,
     });
     setCreating(null);
     if (res.error || !res.item) {
@@ -313,34 +477,31 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     const item = res.item;
     setPicker(null);
     setCatalog(null);
-    setAnalysis((a) =>
-      a ? { ...a, materials: a.materials.map((x) => (x.key === key ? { ...x, material: { id: item.id, name: item.name } } : x)) } : a
-    );
+    setAnalysis((a) => (a ? { ...a, materials: a.materials.map((x) => (x.key === key ? { ...x, material: { id: item.id, name: item.name } } : x)) } : a));
     setMatChoice((s) => ({ ...s, [key]: item.id }));
     setMatChecked((s) => ({ ...s, [key]: true }));
     toast.success(`Material cadastrado: ${item.name}${item.tuss_code ? ` (TUSS ${item.tuss_code})` : " (sem código TUSS)"}`);
   }
 
-  async function createAllMissing() {
-    if (!analysis) return;
-    for (const p of analysis.procedures.filter((x) => !x.procedure)) await createProcedure(p.key);
-  }
+  // --- Resumo e aplicação -----------------------------------------------------
+  const selectedProcedures = analysis ? analysis.procedures.filter((p) => procChecked[p.key] && p.procedure) : [];
+  const selectedMaterials = analysis ? analysis.materials.filter((m) => matChecked[m.key] && matChoice[m.key]) : [];
+  const patientName = analysis
+    ? ([analysis.patient.patient, ...analysis.patient.alternatives].find((p) => p?.id === patientId)?.full_name ?? createdPatient?.full_name ?? null)
+    : null;
 
   function apply() {
     if (!analysis) return;
-    const materials = analysis.materials
-      .filter((m) => matChecked[m.key] && matChoice[m.key])
-      .map((m) => {
-        const id = matChoice[m.key];
-        const name = m.material?.id === id ? m.material.name : (m.alternatives.find((a) => a.id === id)?.name ?? m.read_name);
-        return { id, name, quantity: m.quantity };
-      });
+    const materials = selectedMaterials.map((m) => {
+      const id = matChoice[m.key];
+      const name = m.material?.id === id ? m.material.name : (m.alternatives.find((a) => a.id === id)?.name ?? m.read_name);
+      return { id, name, quantity: m.quantity };
+    });
     onApply({
       patientId: patientId || null,
-      procedureIds: analysis.procedures
-        .filter((p) => procChecked[p.key] && p.procedure)
-        .map((p) => p.procedure!.id),
+      procedureIds: selectedProcedures.map((p) => p.procedure!.id),
       clinicalIndication: useIndication ? analysis.clinical_indication : null,
+      observations: useObservations ? analysis.observations : null,
       materials,
       createdProcedures,
       createdPatient,
@@ -350,6 +511,18 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     reset();
   }
 
+  function patch<K extends keyof Draft>(key: K, value: Draft[K]) {
+    setDraft((d) => (d ? { ...d, [key]: value } : d));
+    setConfirmed(false);
+  }
+  const patchProc = (id: string, f: Partial<DraftProcedure>) =>
+    patch("procedures", (draft?.procedures ?? []).map((x) => (x.id === id ? { ...x, ...f } : x)));
+  const patchMat = (id: string, f: Partial<DraftMaterial>) =>
+    patch("materials", (draft?.materials ?? []).map((x) => (x.id === id ? { ...x, ...f } : x)));
+
+  // ----------------------------------------------------------------------------
+  // Render
+  // ----------------------------------------------------------------------------
   return (
     <>
       <div className="flex flex-col gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -360,7 +533,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
           <div>
             <p className="text-sm font-semibold text-foreground">Preencher a partir da foto do pedido</p>
             <p className="text-xs text-muted-foreground">
-              A IA lê a guia e sugere paciente, procedimentos e materiais. Você revisa antes de salvar.
+              A IA lê a guia e sugere paciente, procedimentos e materiais. Você confere cada etapa antes de salvar.
             </p>
           </div>
         </div>
@@ -373,19 +546,25 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       <Dialog
         open={open}
         onOpenChange={(o) => {
-          if (pending) return;
+          if (pending || creating) return;
           setOpen(o);
           if (!o) reset();
         }}
       >
-        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Ler pedido por foto</DialogTitle>
-            <DialogDescription>
-              Envie uma foto nítida da guia (de frente, bem iluminada). A foto é enviada ao serviço de IA só para a
-              leitura e não é guardada.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="flex h-[94vh] max-h-[94vh] w-[calc(100%-1rem)] max-w-6xl flex-col gap-0 overflow-hidden p-0">
+          {/* Cabeçalho */}
+          <div className="flex flex-col gap-3 border-b border-border px-4 pb-3 pt-4 sm:px-6">
+            <div className="flex items-start gap-3 pr-10">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <DialogTitle>Leitura de guia por IA</DialogTitle>
+                <DialogDescription>Foto enviada ao serviço de IA só para a leitura; não é guardada.</DialogDescription>
+              </div>
+            </div>
+            <Stepper step={step} />
+          </div>
 
           <input
             ref={inputRef}
@@ -398,574 +577,550 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
             }}
           />
 
-          {step === "upload" ? (
-            <div className="flex flex-col items-center gap-3 py-6">
-              {pending ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Lendo o pedido… pode levar até 30 segundos.
-                </p>
-              ) : (
-                <Button type="button" className="h-11" onClick={() => inputRef.current?.click()}>
-                  <Camera className="mr-2 h-4 w-4" />
-                  Escolher foto ou tirar agora
-                </Button>
-              )}
-              {error ? (
-                <p className="max-w-md text-center text-sm text-red-600 dark:text-red-400" role="alert">
-                  {error}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {step === "validate" && draft ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
-              {preview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={preview} alt="Foto do pedido" className="max-h-72 w-full rounded-lg border border-border object-contain md:sticky md:top-0 md:max-h-[34rem]" />
-              ) : null}
-
-              <div className="flex min-w-0 flex-col gap-5 text-sm">
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-foreground">
-                  <p className="font-semibold">Etapa 1 de 2 — Confira o que a IA leu</p>
-                  <p className="mt-0.5 text-muted-foreground">
-                    Compare com a foto e corrija o que estiver errado. Só depois de confirmar, o sistema busca e cadastra
-                    paciente, procedimentos e materiais.
+          {/* Corpo rolável */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {step === "upload" ? (
+              <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-14 text-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <FileText className="h-7 w-7" />
+                </span>
+                {pending ? (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Lendo o pedido… pode levar até 30 segundos.
                   </p>
-                </div>
-
-                {draft.notes.length > 0 ? (
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-                    <p className="mb-1 flex items-center gap-1.5 font-medium">
-                      <AlertTriangle className="h-3.5 w-3.5" /> A IA ficou em dúvida nestes pontos — confira na foto:
-                    </p>
-                    <ul className="list-inside list-disc">
-                      {draft.notes.map((n) => (
-                        <li key={n}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                <section className="flex flex-col gap-1.5">
-                  <label htmlFor="rd-patient" className="font-semibold text-foreground">Nome do paciente</label>
-                  <input
-                    id="rd-patient"
-                    className={inputCls + " h-10"}
-                    value={draft.patientName}
-                    onChange={(e) => setDraft((d) => (d ? { ...d, patientName: e.target.value } : d))}
-                    placeholder="Nome completo, como está na guia"
-                  />
-                </section>
-
-                <section className="flex flex-col gap-1.5">
-                  <label htmlFor="rd-indication" className="font-semibold text-foreground">Indicação clínica</label>
-                  <textarea
-                    id="rd-indication"
-                    className="min-h-16 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                    value={draft.indication}
-                    onChange={(e) => setDraft((d) => (d ? { ...d, indication: e.target.value } : d))}
-                  />
-                </section>
-
-                <section className="flex flex-col gap-2">
-                  <h3 className="font-semibold text-foreground">Procedimentos (código TUSS + descrição)</h3>
-                  {draft.procedures.map((p) => {
-                    const digits = p.code.replace(/\D/g, "");
-                    return (
-                      <div key={p.id} className="flex flex-col gap-1">
-                        <div className="flex gap-2">
-                          <input
-                            className={inputCls + " w-28 shrink-0 font-mono"}
-                            inputMode="numeric"
-                            value={p.code}
-                            maxLength={10}
-                            placeholder="código"
-                            aria-label="Código TUSS"
-                            onChange={(e) =>
-                              setDraft((d) => (d ? { ...d, procedures: d.procedures.map((x) => (x.id === p.id ? { ...x, code: e.target.value } : x)) } : d))
-                            }
-                          />
-                          <input
-                            className={inputCls + " flex-1"}
-                            value={p.description}
-                            placeholder="descrição"
-                            aria-label="Descrição do procedimento"
-                            onChange={(e) =>
-                              setDraft((d) => (d ? { ...d, procedures: d.procedures.map((x) => (x.id === p.id ? { ...x, description: e.target.value } : x)) } : d))
-                            }
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 shrink-0"
-                            aria-label="Remover procedimento"
-                            onClick={() => setDraft((d) => (d ? { ...d, procedures: d.procedures.filter((x) => x.id !== p.id) } : d))}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        {digits && digits.length !== 8 ? (
-                          <span className="text-xs text-amber-700 dark:text-amber-400">O código TUSS de procedimento tem 8 dígitos — confira.</span>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-fit"
-                    onClick={() => setDraft((d) => (d ? { ...d, procedures: [...d.procedures, { id: nextId(), code: "", description: "" }] } : d))}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar procedimento
-                  </Button>
-                </section>
-
-                <section className="flex flex-col gap-2">
-                  <h3 className="font-semibold text-foreground">Materiais citados</h3>
-                  {draft.materials.map((m) => (
-                    <div key={m.id} className="flex flex-wrap gap-2">
-                      <input
-                        className={inputCls + " min-w-40 flex-1"}
-                        value={m.name}
-                        placeholder="material"
-                        aria-label="Nome do material"
-                        onChange={(e) =>
-                          setDraft((d) => (d ? { ...d, materials: d.materials.map((x) => (x.id === m.id ? { ...x, name: e.target.value } : x)) } : d))
-                        }
-                      />
-                      <input
-                        className={inputCls + " w-16 shrink-0"}
-                        inputMode="decimal"
-                        value={m.quantity}
-                        aria-label="Quantidade"
-                        onChange={(e) =>
-                          setDraft((d) => (d ? { ...d, materials: d.materials.map((x) => (x.id === m.id ? { ...x, quantity: e.target.value } : x)) } : d))
-                        }
-                      />
-                      <input
-                        className={inputCls + " min-w-32 flex-1"}
-                        value={m.details}
-                        placeholder="marca / medida"
-                        aria-label="Marca ou medida"
-                        onChange={(e) =>
-                          setDraft((d) => (d ? { ...d, materials: d.materials.map((x) => (x.id === m.id ? { ...x, details: e.target.value } : x)) } : d))
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0"
-                        aria-label="Remover material"
-                        onClick={() => setDraft((d) => (d ? { ...d, materials: d.materials.filter((x) => x.id !== m.id) } : d))}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-base font-semibold text-foreground">Envie a foto da guia</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        De frente, bem iluminada e com a guia inteira na imagem. Aceita JPG, PNG ou WebP.
+                      </p>
                     </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-fit"
-                    onClick={() => setDraft((d) => (d ? { ...d, materials: [...d.materials, { id: nextId(), name: "", quantity: "1", details: "" }] } : d))}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar material
-                  </Button>
-                </section>
-
-                <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
-                  <input type="checkbox" className="mt-1" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
-                  <span>Conferi os dados com a foto e estão corretos.</span>
-                </label>
+                    <Button type="button" className="h-11" onClick={() => inputRef.current?.click()}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      Escolher foto ou tirar agora
+                    </Button>
+                  </>
+                )}
                 {error ? (
                   <p className="text-sm text-red-600 dark:text-red-400" role="alert">
                     {error}
                   </p>
                 ) : null}
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {step === "match" && analysis ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-              {preview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={preview} alt="Foto do pedido" className="max-h-72 w-full rounded-lg border border-border object-contain md:max-h-[28rem]" />
-              ) : null}
+            {step !== "upload" && draft ? (
+              <div className="grid grid-cols-1 gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)]">
+                {preview ? <GuideImageViewer src={preview} className="lg:sticky lg:top-0 lg:self-start" /> : null}
 
-              <div className="flex min-w-0 flex-col gap-5 text-sm">
-                {analysis.legibility_notes.length > 0 ? (
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-                    <p className="mb-1 flex items-center gap-1.5 font-medium">
-                      <AlertTriangle className="h-3.5 w-3.5" /> Trechos incertos na leitura — confira:
-                    </p>
-                    <ul className="list-inside list-disc">
-                      {analysis.legibility_notes.map((n) => (
-                        <li key={n}>{n}</li>
-                      ))}
-                    </ul>
+                {/* ============ ETAPA 2: conferir a leitura ============ */}
+                {step === "validate" ? (
+                  <div className="flex min-w-0 flex-col gap-3">
+                    <div className="flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+                      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="font-semibold text-foreground">Dados extraídos da foto</p>
+                        <p className="text-xs text-muted-foreground">
+                          Compare com a guia ao lado e corrija o que estiver errado. Só depois de confirmar o sistema
+                          busca e cadastra paciente, procedimentos e materiais.
+                        </p>
+                      </div>
+                    </div>
+
+                    {draft.notes.length > 0 ? (
+                      <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+                        <p className="mb-1 flex items-center gap-1.5 font-medium">
+                          <AlertTriangle className="h-3.5 w-3.5" /> A IA ficou em dúvida nestes pontos:
+                        </p>
+                        <ul className="list-inside list-disc">
+                          {draft.notes.map((n) => (
+                            <li key={n}>{n}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    <Section icon={<User />} title="Paciente" right={<ConfChip c={draft.patientConf} />}>
+                      <input
+                        className={cn(inputCls, "h-10 w-full")}
+                        value={draft.patientName}
+                        onChange={(e) => patch("patientName", e.target.value)}
+                        placeholder="Nome completo, como está na guia"
+                        aria-label="Nome do paciente"
+                      />
+                    </Section>
+
+                    <Section icon={<Stethoscope />} title="Indicação clínica" right={<ConfChip c={draft.indicationConf} />}>
+                      <textarea
+                        className="min-h-16 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={draft.indication}
+                        onChange={(e) => patch("indication", e.target.value)}
+                        aria-label="Indicação clínica"
+                      />
+                    </Section>
+
+                    <Section icon={<ClipboardList />} title="Procedimentos identificados" right={<span className="text-xs text-muted-foreground">código TUSS + descrição</span>}>
+                      <div className="flex flex-col gap-2">
+                        {draft.procedures.map((p) => {
+                          const digits = digitsOf(p.code);
+                          const doubt = p.conf !== "high" || (digits.length > 0 && digits.length !== 8);
+                          return (
+                            <div key={p.id} className={cn("rounded-lg border p-2", doubt ? "border-amber-500/40 bg-amber-500/5" : "border-border")}>
+                              <div className="flex gap-2">
+                                <input
+                                  className={cn(inputCls, "w-28 shrink-0 font-mono")}
+                                  inputMode="numeric"
+                                  value={p.code}
+                                  maxLength={10}
+                                  placeholder="código"
+                                  aria-label="Código TUSS"
+                                  onChange={(e) => patchProc(p.id, { code: e.target.value })}
+                                />
+                                <input
+                                  className={cn(inputCls, "flex-1")}
+                                  value={p.description}
+                                  placeholder="descrição"
+                                  aria-label="Descrição do procedimento"
+                                  onChange={(e) => patchProc(p.id, { description: e.target.value })}
+                                />
+                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Remover procedimento" onClick={() => patch("procedures", draft.procedures.filter((x) => x.id !== p.id))}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                <ConfChip c={p.conf} />
+                                {digits && digits.length !== 8 ? <Chip tone="warn" icon={<AlertTriangle />}>Código TUSS tem 8 dígitos</Chip> : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <Button type="button" variant="outline" size="sm" className="h-8 w-fit" onClick={() => patch("procedures", [...draft.procedures, { id: nextId(), code: "", description: "", conf: "high", origCode: "", origDesc: "" }])}>
+                          <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar procedimento
+                        </Button>
+                      </div>
+                    </Section>
+
+                    <Section icon={<Package />} title="Materiais / OPME citados">
+                      <div className="flex flex-col gap-2">
+                        {draft.materials.map((m) => (
+                          <div key={m.id} className={cn("rounded-lg border p-2", m.conf !== "high" ? "border-amber-500/40 bg-amber-500/5" : "border-border")}>
+                            <div className="flex flex-wrap gap-2">
+                              <input className={cn(inputCls, "min-w-40 flex-1")} value={m.name} placeholder="material" aria-label="Nome do material" onChange={(e) => patchMat(m.id, { name: e.target.value })} />
+                              <input className={cn(inputCls, "w-16 shrink-0")} inputMode="decimal" value={m.quantity} aria-label="Quantidade" onChange={(e) => patchMat(m.id, { quantity: e.target.value })} />
+                              <input className={cn(inputCls, "min-w-32 flex-1")} value={m.details} placeholder="marca / medida" aria-label="Marca ou medida" onChange={(e) => patchMat(m.id, { details: e.target.value })} />
+                              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Remover material" onClick={() => patch("materials", draft.materials.filter((x) => x.id !== m.id))}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="mt-1.5">
+                              <ConfChip c={m.conf} />
+                            </div>
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" className="h-8 w-fit" onClick={() => patch("materials", [...draft.materials, { id: nextId(), name: "", quantity: "1", details: "", conf: "high", origName: "", origDetails: "" }])}>
+                          <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar material
+                        </Button>
+                      </div>
+                    </Section>
+
+                    <Section icon={<FileText />} title="Observações da guia">
+                      <textarea
+                        className="min-h-16 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={draft.observations}
+                        onChange={(e) => patch("observations", e.target.value)}
+                        placeholder="Campo Observação / Justificativa, como escrito"
+                        aria-label="Observações da guia"
+                      />
+                    </Section>
+
+                    {error ? (
+                      <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                        {error}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
 
-                {/* Paciente */}
-                <section>
-                  <h3 className="mb-1.5 font-semibold text-foreground">Paciente</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Lido na guia: <span className="text-foreground">{analysis.patient.read_name ?? "não identificado"}</span>
-                  </p>
-                  {analysis.patient.patient || analysis.patient.alternatives.length > 0 ? (
-                    <select
-                      className="mt-1.5 h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
-                      value={patientId}
-                      onChange={(e) => setPatientId(e.target.value)}
-                      aria-label="Paciente cadastrado correspondente"
-                    >
-                      <option value="">Não usar / escolher depois</option>
-                      {[analysis.patient.patient, ...analysis.patient.alternatives]
-                        .filter((p): p is { id: string; full_name: string } => Boolean(p))
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.full_name}
-                            {analysis.patient.match === "exact" && p.id === analysis.patient.patient?.id ? " ✓" : ""}
-                          </option>
-                        ))}
-                    </select>
-                  ) : (
-                    <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400">
-                      Paciente não encontrado no cadastro.
-                    </p>
-                  )}
-                  {!analysis.patient.patient && analysis.patient.read_name ? (
-                    <div className="mt-2 rounded-lg border border-border bg-muted/30 p-2.5">
-                      <p className="text-xs text-muted-foreground">
-                        Cadastro inicial: grava só o nome <span className="font-medium text-foreground">{analysis.patient.read_name}</span>.
-                        Depois você completa CPF, nascimento, contato e convênio na ficha do paciente.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 h-8"
-                        disabled={creating !== null}
-                        onClick={createPatient}
-                      >
-                        {creating === "patient" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <UserPlus className="mr-1.5 h-3.5 w-3.5" />}
-                        Cadastrar paciente (cadastro inicial)
-                      </Button>
+                {/* ============ ETAPA 3: confirmação ============ */}
+                {step === "match" && analysis ? (
+                  <div className="flex min-w-0 flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Lido da foto</span>
+                      <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> Catálogo / TUSS</span>
+                      <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Você conferiu os dados na etapa anterior</span>
                     </div>
-                  ) : null}
-                </section>
 
-                {/* Indicação */}
-                {analysis.clinical_indication ? (
-                  <section>
-                    <h3 className="mb-1.5 font-semibold text-foreground">Indicação clínica</h3>
-                    <label className="flex items-start gap-2 text-sm">
-                      <input type="checkbox" className="mt-1" checked={useIndication} onChange={(e) => setUseIndication(e.target.checked)} />
-                      <span>{analysis.clinical_indication} <span className="text-xs text-muted-foreground">(vai para as observações)</span></span>
-                    </label>
-                  </section>
-                ) : null}
-
-                {/* Procedimentos */}
-                <section>
-                  <h3 className="mb-1.5 font-semibold text-foreground">Procedimentos</h3>
-                  <ul className="flex flex-col gap-2">
-                    {analysis.procedures.map((p) => (
-                      <li key={p.key} className="rounded-lg border border-border p-2.5">
-                        <label className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
-                            className="mt-1"
-                            disabled={!p.procedure}
-                            checked={Boolean(procChecked[p.key])}
-                            onChange={(e) => setProcChecked((s) => ({ ...s, [p.key]: e.target.checked }))}
-                          />
-                          <span className="min-w-0">
-                            <span className="block text-foreground">
-                              {p.procedure ? p.procedure.name : "Sem correspondência no seu cadastro"}
-                              {p.match === "exact" ? <CheckCircle2 className="ml-1.5 inline h-3.5 w-3.5 text-emerald-500" /> : null}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                              Lido: {p.read_code ?? "sem código"} · {p.read_description || "—"}
-                              {p.match === "similar" ? " · correspondência pelo nome, confira" : ""}
-                            </span>
-                            {p.tuss_official_name ? (
-                              <span className="block text-xs text-muted-foreground">TUSS {p.read_code}: {p.tuss_official_name}</span>
-                            ) : null}
-                            {p.tuss_code_unknown ? (
-                              <span className="block text-xs text-amber-700 dark:text-amber-400">
-                                Código lido não existe na TUSS — possível erro de leitura.
-                              </span>
-                            ) : null}
-                            {!p.procedure ? (
-                              <span className="block text-xs text-amber-700 dark:text-amber-400">
-                                Ainda não está no seu catálogo de procedimentos.
-                              </span>
-                            ) : null}
-                          </span>
-                        </label>
-                        {!p.procedure ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="ml-6 mt-2 h-8"
-                            disabled={creating !== null}
-                            onClick={() => createProcedure(p.key)}
-                          >
-                            {creating === p.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-                            Cadastrar no catálogo{p.tuss_official_name ? " (nome oficial TUSS)" : ""}
-                          </Button>
-                        ) : null}
-                      </li>
-                    ))}
-                    {analysis.procedures.length === 0 ? <li className="text-xs text-muted-foreground">Nenhum procedimento lido.</li> : null}
-                  </ul>
-                </section>
-
-                {/* Materiais */}
-                <section>
-                  <h3 className="mb-1.5 font-semibold text-foreground">Materiais sugeridos</h3>
-                  <ul className="flex flex-col gap-2">
-                    {analysis.materials.map((m) => (
-                      <li key={m.key} className="rounded-lg border border-border p-2.5">
-                        <label className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
-                            className="mt-1"
-                            disabled={!matChoice[m.key]}
-                            checked={Boolean(matChecked[m.key])}
-                            onChange={(e) => setMatChecked((s) => ({ ...s, [m.key]: e.target.checked }))}
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-foreground">
-                              {m.source === "guide" ? m.read_name : m.material?.name} × {m.quantity}
-                              {m.details ? <span className="text-muted-foreground"> · {m.details}</span> : null}
-                            </span>
-                            <span className="block text-xs text-muted-foreground">
-                              {m.source === "kit" ? "Do kit padrão dos procedimentos" : "Citado na guia"}
-                            </span>
-                            {m.source === "guide" && !m.material ? (
-                              <span className="block text-xs text-amber-700 dark:text-amber-400">
-                                {m.alternatives.length > 0
-                                  ? "Sem correspondência exata — escolha um parecido ou deixe de fora:"
-                                  : "Ainda não está no seu catálogo de materiais."}
-                              </span>
-                            ) : null}
-                          </span>
-                        </label>
-                        {m.source === "guide" && (!m.material || picker?.key === m.key) ? (
-                          picker?.key === m.key ? (
-                            <div className="ml-6 mt-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
-                              <p className="text-xs font-medium text-foreground">Escolha o código TUSS 19 do material</p>
-                              <div className="flex gap-2">
-                                <input
-                                  className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"
-                                  value={picker.query}
-                                  onChange={(e) => setPicker((c) => (c ? { ...c, query: e.target.value } : c))}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      void runPickerSearch(m.key, picker.query);
-                                    }
-                                  }}
-                                  aria-label="Buscar na TUSS 19"
-                                />
-                                <Button type="button" variant="outline" size="sm" className="h-9" disabled={picker.loading} onClick={() => runPickerSearch(m.key, picker.query)}>
-                                  Buscar
-                                </Button>
-                              </div>
-                              {picker.loading ? (
-                                <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando a tabela TUSS na ANS (pode levar alguns segundos)…
-                                </p>
-                              ) : null}
-                              {picker.error ? <p className="text-xs text-red-600 dark:text-red-400">{picker.error}</p> : null}
-                              {picker.results && picker.results.length === 0 && !picker.error ? (
-                                <p className="text-xs text-muted-foreground">Nada encontrado. Tente menos palavras (ex.: só “papilótomo”).</p>
-                              ) : null}
-                              <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
-                                {(picker.results ?? []).map((r) => (
-                                  <li key={r.code}>
-                                    <button
-                                      type="button"
-                                      disabled={creating !== null}
-                                      onClick={() => createMaterial(m.key, r)}
-                                      className="w-full rounded-md border border-border p-2 text-left text-xs hover:bg-muted disabled:opacity-60"
-                                    >
-                                      <span className="block font-medium text-foreground">{r.code} · {r.name}</span>
-                                      <span className="block text-muted-foreground">
-                                        {[r.manufacturer, r.model ? `Modelo ${r.model}` : null, r.anvisaRegistration ? `ANVISA ${r.anvisaRegistration}` : null, r.active ? null : "não vigente"]
-                                          .filter(Boolean)
-                                          .join(" · ")}
-                                      </span>
-                                    </button>
-                                  </li>
-                                ))}
-                              </ul>
-                              <div className="flex gap-2">
-                                <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => createMaterial(m.key, null)}>
-                                  {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-                                  Cadastrar sem código TUSS
-                                </Button>
-                                <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setPicker(null)}>
-                                  Cancelar
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="ml-6 mt-2 h-8"
-                              disabled={creating !== null}
-                              onClick={() => openPicker(m.key)}
-                            >
-                              Cadastrar no catálogo (buscar código TUSS)
-                            </Button>
-                          )
-                        ) : null}
-                        {m.source === "guide" && (m.alternatives.length > 0 || m.material) ? (
+                    {/* Paciente */}
+                    <Section
+                      icon={<User />}
+                      title="Paciente"
+                      right={
+                        patientId ? (
+                          <Chip tone="ok" icon={<CheckCircle2 />}>{analysis.patient.match === "exact" && !createdPatient ? "Encontrado no cadastro" : "Selecionado"}</Chip>
+                        ) : analysis.patient.alternatives.length > 0 ? (
+                          <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip>
+                        ) : (
+                          <Chip tone="info" icon={<PlusCircle />}>Paciente não encontrado</Chip>
+                        )
+                      }
+                    >
+                      <div className="flex flex-col gap-2">
+                        <Line icon={<Sparkles />} label="Lido na foto">
+                          {analysis.patient.read_name ?? "não identificado"} {patientEdited ? <Chip tone="muted" icon={<PencilLine />}>Corrigido</Chip> : null}{" "}
+                          {!patientEdited ? <ConfChip c={analysis.patient.confidence} /> : null}
+                        </Line>
+                        {analysis.patient.patient || analysis.patient.alternatives.length > 0 ? (
                           <select
-                            className="ml-6 mt-1.5 h-9 w-[calc(100%-1.5rem)] rounded-md border border-input bg-background px-2 text-xs"
-                            value={matChoice[m.key] ?? ""}
-                            onChange={(e) => {
-                              setMatChoice((s) => ({ ...s, [m.key]: e.target.value }));
-                              setMatChecked((s) => ({ ...s, [m.key]: Boolean(e.target.value) }));
-                            }}
-                            aria-label={`Material do catálogo para ${m.read_name}`}
+                            className={cn(inputCls, "h-10 w-full")}
+                            value={patientId}
+                            onChange={(e) => setPatientId(e.target.value)}
+                            aria-label="Paciente cadastrado correspondente"
                           >
-                            <option value="">Nenhum</option>
-                            {[m.material, ...m.alternatives]
-                              .filter((x): x is { id: string; name: string } => Boolean(x))
-                              .map((x) => (
-                                <option key={x.id} value={x.id}>
-                                  {x.name}
-                                </option>
+                            <option value="">Não vincular / escolher depois</option>
+                            {[analysis.patient.patient, ...analysis.patient.alternatives]
+                              .filter((p): p is { id: string; full_name: string } => Boolean(p))
+                              .map((p) => (
+                                <option key={p.id} value={p.id}>{p.full_name}</option>
                               ))}
                           </select>
                         ) : null}
-                        {m.source === "guide" && picker?.key !== m.key ? (
-                          <div className="ml-6 mt-1.5 flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 px-2 text-xs"
-                              disabled={creating !== null}
-                              onClick={() => {
-                                setPicker(null);
-                                void runCatalogSearch(m.key, m.read_name);
-                              }}
-                            >
-                              Não é este? Buscar outro no catálogo
-                            </Button>
-                            {m.material ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                disabled={creating !== null}
-                                onClick={() => openPicker(m.key)}
-                              >
-                                Cadastrar como novo (buscar código TUSS)
-                              </Button>
-                            ) : null}
-                          </div>
+                        {analysis.patient.match === "similar" && !patientId ? (
+                          <p className="text-xs text-amber-700 dark:text-amber-400">Há pacientes com nome parecido. Escolha o correto ou cadastre um novo.</p>
                         ) : null}
-                        {catalog?.key === m.key ? (
-                          <div className="ml-6 mt-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
-                            <div className="flex gap-2">
-                              <input
-                                className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"
-                                value={catalog.query}
-                                placeholder="Nome, código interno ou TUSS"
-                                aria-label="Buscar no catálogo de materiais"
-                                onChange={(e) => setCatalog((c) => (c ? { ...c, query: e.target.value } : c))}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    void runCatalogSearch(m.key, catalog.query);
-                                  }
-                                }}
-                              />
-                              <Button type="button" variant="outline" size="sm" className="h-9" disabled={catalog.loading} onClick={() => runCatalogSearch(m.key, catalog.query)}>
-                                Buscar
-                              </Button>
-                            </div>
-                            {catalog.loading ? (
-                              <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando…
+                        {!analysis.patient.patient && analysis.patient.read_name ? (
+                          patientForm ? (
+                            <div className="rounded-lg border border-border bg-muted/30 p-2.5">
+                              <p className="mb-1.5 text-xs text-muted-foreground">
+                                Cadastro inicial: grava só o nome. CPF, nascimento, contato e convênio você completa depois na ficha do paciente.
                               </p>
-                            ) : null}
-                            {catalog.results && catalog.results.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">Nada encontrado no catálogo com esse termo.</p>
-                            ) : null}
-                            <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
-                              {(catalog.results ?? []).map((r) => (
-                                <li key={r.id}>
-                                  <button
-                                    type="button"
-                                    onClick={() => chooseCatalogMaterial(m.key, r)}
-                                    className="w-full rounded-md border border-border p-2 text-left text-xs text-foreground hover:bg-muted"
-                                  >
-                                    {r.name}
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                            <div className="flex gap-2">
-                              <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => openPicker(m.key)}>
-                                Não está no catálogo: cadastrar (buscar código TUSS)
-                              </Button>
-                              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setCatalog(null)}>
-                                Fechar
-                              </Button>
+                              <input
+                                className={cn(inputCls, "h-10 w-full")}
+                                value={patientForm.name}
+                                onChange={(e) => setPatientForm({ name: e.target.value })}
+                                aria-label="Nome do paciente a cadastrar"
+                              />
+                              <div className="mt-2 flex gap-2">
+                                <Button type="button" size="sm" className="h-8" disabled={creating !== null} onClick={savePatient}>
+                                  {creating === "patient" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <UserPlus className="mr-1.5 h-3.5 w-3.5" />}
+                                  Salvar paciente
+                                </Button>
+                                <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setPatientForm(null)}>Cancelar</Button>
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <Button type="button" variant="outline" size="sm" className="h-8 w-fit" onClick={() => setPatientForm({ name: analysis.patient.read_name ?? "" })}>
+                              <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Cadastrar paciente (cadastro inicial)
+                            </Button>
+                          )
                         ) : null}
-                      </li>
-                    ))}
-                    {analysis.materials.length === 0 ? <li className="text-xs text-muted-foreground">Nenhum material sugerido.</li> : null}
-                  </ul>
-                </section>
+                      </div>
+                    </Section>
+
+                    {/* Indicação e observações */}
+                    {analysis.clinical_indication || analysis.observations ? (
+                      <Section icon={<Stethoscope />} title="Indicação clínica e observações">
+                        <div className="flex flex-col gap-2 text-sm">
+                          {analysis.clinical_indication ? (
+                            <label className="flex items-start gap-2">
+                              <input type="checkbox" className="mt-1" checked={useIndication} onChange={(e) => setUseIndication(e.target.checked)} />
+                              <span><span className="font-medium">Indicação:</span> {analysis.clinical_indication}</span>
+                            </label>
+                          ) : null}
+                          {analysis.observations ? (
+                            <label className="flex items-start gap-2">
+                              <input type="checkbox" className="mt-1" checked={useObservations} onChange={(e) => setUseObservations(e.target.checked)} />
+                              <span><span className="font-medium">Observações da guia:</span> {analysis.observations}</span>
+                            </label>
+                          ) : null}
+                          <p className="text-xs text-muted-foreground">Os itens marcados vão para as observações da cirurgia.</p>
+                        </div>
+                      </Section>
+                    ) : null}
+
+                    {/* Procedimentos */}
+                    <Section
+                      icon={<ClipboardList />}
+                      title="Procedimentos"
+                      right={<span className="text-xs text-muted-foreground">{selectedProcedures.length} de {analysis.procedures.length} selecionado(s)</span>}
+                    >
+                      <ul className="flex flex-col gap-2">
+                        {analysis.procedures.map((p) => {
+                          const checked = Boolean(procChecked[p.key]);
+                          const digits = digitsOf(p.read_code ?? "");
+                          const userLinked = procSource[p.key];
+                          const lowConf = p.confidence === "low" && !userLinked && !procEdited[p.key];
+                          const review = !p.procedure && (Boolean(p.suggestion) || p.tuss_code_unknown || p.confidence !== "high" || (digits.length > 0 && digits.length !== 8));
+                          let status: ReactNode;
+                          if (p.procedure && !lowConf) {
+                            status = <Chip tone="ok" icon={<CheckCircle2 />}>{userLinked === "created" ? "Cadastrado agora" : userLinked === "chosen" ? "Vinculado por você" : "Encontrado no catálogo"}</Chip>;
+                          } else if (p.procedure || review) {
+                            status = <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip>;
+                          } else {
+                            status = <Chip tone="info" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>;
+                          }
+                          return (
+                            <li key={p.key} className={cn("rounded-xl border p-3", checked ? "border-primary/50 bg-primary/5" : "border-border")}>
+                              <div className="flex items-start gap-3">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1 h-4 w-4"
+                                  disabled={!p.procedure}
+                                  checked={checked}
+                                  onChange={(e) => setProcChecked((s) => ({ ...s, [p.key]: e.target.checked }))}
+                                  aria-label={`Incluir ${p.procedure?.name ?? p.read_description ?? "procedimento"}`}
+                                />
+                                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-medium text-foreground">{p.procedure?.name ?? p.tuss_official_name ?? (p.read_description || "Procedimento sem descrição")}</p>
+                                    {status}
+                                  </div>
+                                  <Line icon={<Sparkles />} label="Lido na foto">
+                                    {p.read_code ? <span className="font-mono">{p.read_code}</span> : "sem código"} · {p.read_description || "—"}{" "}
+                                    {procEdited[p.key] ? <Chip tone="muted" icon={<PencilLine />}>Corrigido</Chip> : <ConfChip c={p.confidence} />}
+                                  </Line>
+                                  {p.tuss_official_name ? <Line icon={<BookOpen />} label="TUSS oficial">{p.tuss_official_name}</Line> : null}
+                                  {p.tuss_code_unknown ? (
+                                    <p className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="h-3 w-3" /> Código não existe na TUSS — possível erro de leitura. Volte e corrija.</p>
+                                  ) : null}
+                                  {p.suggestion && !p.procedure ? (
+                                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs">
+                                      <span className="min-w-0 flex-1">Possível correspondência (só pelo nome): <span className="font-medium text-foreground">{p.suggestion.name}</span>{p.suggestion.tuss_code ? ` · TUSS ${p.suggestion.tuss_code}` : " · sem código TUSS"}</span>
+                                      <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => linkProcedure(p.key, p.suggestion!, "chosen")}>Usar este</Button>
+                                    </div>
+                                  ) : null}
+                                  {!p.procedure && procForm?.key !== p.key ? (
+                                    <Button type="button" variant="outline" size="sm" className="mt-1 h-8 w-fit" disabled={creating !== null} onClick={() => openProcForm(p)}>
+                                      <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Cadastrar no catálogo
+                                    </Button>
+                                  ) : null}
+                                  {procForm?.key === p.key ? (
+                                    <div className="mt-1 rounded-lg border border-border bg-muted/30 p-2.5">
+                                      <p className="mb-2 text-xs font-medium text-foreground">Revise antes de cadastrar</p>
+                                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_8rem]">
+                                        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                          Nome do procedimento
+                                          <input className={cn(inputCls, "h-10 text-foreground")} value={procForm.name} onChange={(e) => setProcForm({ ...procForm, name: e.target.value })} />
+                                        </label>
+                                        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                          Código TUSS
+                                          <input className={cn(inputCls, "h-10 font-mono text-foreground")} inputMode="numeric" maxLength={8} value={procForm.code} onChange={(e) => setProcForm({ ...procForm, code: e.target.value })} />
+                                        </label>
+                                      </div>
+                                      <label className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
+                                        Especialidade (opcional)
+                                        <input className={cn(inputCls, "h-10 text-foreground")} value={procForm.specialty} onChange={(e) => setProcForm({ ...procForm, specialty: e.target.value })} />
+                                      </label>
+                                      <p className="mt-1.5 text-xs text-muted-foreground">Se já existir procedimento com este código TUSS, ele será reaproveitado (sem duplicar).</p>
+                                      <div className="mt-2 flex gap-2">
+                                        <Button type="button" size="sm" className="h-8" disabled={creating !== null || !procForm.name.trim()} onClick={saveProcedure}>
+                                          {creating === p.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                                          Salvar no catálogo
+                                        </Button>
+                                        <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setProcForm(null)}>Cancelar</Button>
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                        {analysis.procedures.length === 0 ? <li className="text-xs text-muted-foreground">Nenhum procedimento lido.</li> : null}
+                      </ul>
+                    </Section>
+
+                    {/* Materiais */}
+                    <Section
+                      icon={<Package />}
+                      title="Materiais / OPME"
+                      right={<span className="text-xs text-muted-foreground">{selectedMaterials.length} de {analysis.materials.length} selecionado(s)</span>}
+                    >
+                      <ul className="flex flex-col gap-2">
+                        {analysis.materials.map((m) => {
+                          const chosen = matChoice[m.key];
+                          const checked = Boolean(matChecked[m.key]);
+                          const isGuide = m.source === "guide";
+                          let status: ReactNode;
+                          if (chosen) status = <Chip tone="ok" icon={<CheckCircle2 />}>{isGuide ? "No catálogo" : "Kit padrão"}</Chip>;
+                          else if (m.alternatives.length > 0) status = <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip>;
+                          else status = <Chip tone="info" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>;
+                          return (
+                            <li key={m.key} className={cn("rounded-xl border p-3", checked ? "border-primary/50 bg-primary/5" : "border-border")}>
+                              <div className="flex items-start gap-3">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1 h-4 w-4"
+                                  disabled={!chosen}
+                                  checked={checked}
+                                  onChange={(e) => setMatChecked((s) => ({ ...s, [m.key]: e.target.checked }))}
+                                  aria-label={`Incluir ${m.read_name}`}
+                                />
+                                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-medium text-foreground">{isGuide ? m.read_name : m.material?.name} × {m.quantity}</p>
+                                    {status}
+                                  </div>
+                                  {isGuide ? (
+                                    <Line icon={<Sparkles />} label="Lido na foto">
+                                      {m.read_name}{m.details ? ` · ${m.details}` : ""}{" "}
+                                      {matEdited[m.key] ? <Chip tone="muted" icon={<PencilLine />}>Corrigido</Chip> : <ConfChip c={m.confidence} />}
+                                    </Line>
+                                  ) : (
+                                    <Line icon={<BookOpen />} label="Origem">kit padrão dos procedimentos (sugestão extra)</Line>
+                                  )}
+                                  {isGuide && (m.material || m.alternatives.length > 0) ? (
+                                    <select
+                                      className={cn(inputCls, "w-full text-xs")}
+                                      value={chosen ?? ""}
+                                      onChange={(e) => {
+                                        setMatChoice((s) => ({ ...s, [m.key]: e.target.value }));
+                                        setMatChecked((s) => ({ ...s, [m.key]: Boolean(e.target.value) }));
+                                      }}
+                                      aria-label={`Material do catálogo para ${m.read_name}`}
+                                    >
+                                      <option value="">{m.material ? "Nenhum" : "Escolha um material do catálogo…"}</option>
+                                      {[m.material, ...m.alternatives]
+                                        .filter((x): x is { id: string; name: string } => Boolean(x))
+                                        .map((x) => (
+                                          <option key={x.id} value={x.id}>{x.name}</option>
+                                        ))}
+                                    </select>
+                                  ) : null}
+                                  {isGuide && !m.material && m.alternatives.length > 0 && !chosen ? (
+                                    <p className="text-xs text-amber-700 dark:text-amber-400">Só há materiais parecidos: nada é vinculado sem você escolher.</p>
+                                  ) : null}
+
+                                  {isGuide && picker?.key !== m.key ? (
+                                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" disabled={creating !== null} onClick={() => { setPicker(null); void runCatalogSearch(m.key, m.read_name); }}>
+                                        Buscar no catálogo
+                                      </Button>
+                                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" disabled={creating !== null} onClick={() => openPicker(m.key)}>
+                                        {m.material ? "Cadastrar como novo (buscar código TUSS)" : "Cadastrar no catálogo (buscar código TUSS)"}
+                                      </Button>
+                                    </div>
+                                  ) : null}
+
+                                  {catalog?.key === m.key ? (
+                                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
+                                      <div className="flex gap-2">
+                                        <input
+                                          className={cn(inputCls, "flex-1")}
+                                          value={catalog.query}
+                                          placeholder="Nome, código interno ou TUSS"
+                                          aria-label="Buscar no catálogo de materiais"
+                                          onChange={(e) => setCatalog((c) => (c ? { ...c, query: e.target.value } : c))}
+                                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void runCatalogSearch(m.key, catalog.query); } }}
+                                        />
+                                        <Button type="button" variant="outline" size="sm" className="h-9" disabled={catalog.loading} onClick={() => runCatalogSearch(m.key, catalog.query)}>Buscar</Button>
+                                      </div>
+                                      {catalog.loading ? <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando…</p> : null}
+                                      {catalog.results && catalog.results.length === 0 ? <p className="text-xs text-muted-foreground">Nada encontrado no catálogo com esse termo.</p> : null}
+                                      <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+                                        {(catalog.results ?? []).map((r) => (
+                                          <li key={r.id}>
+                                            <button type="button" onClick={() => chooseCatalogMaterial(m.key, r)} className="w-full rounded-md border border-border p-2 text-left text-xs text-foreground hover:bg-muted">{r.name}</button>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      <div className="flex gap-2">
+                                        <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => openPicker(m.key)}>Não está no catálogo: cadastrar</Button>
+                                        <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setCatalog(null)}>Fechar</Button>
+                                      </div>
+                                    </div>
+                                  ) : null}
+
+                                  {picker?.key === m.key ? (
+                                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
+                                      <p className="text-xs font-medium text-foreground">Escolha o código TUSS 19 do material</p>
+                                      <div className="flex gap-2">
+                                        <input
+                                          className={cn(inputCls, "flex-1")}
+                                          value={picker.query}
+                                          aria-label="Buscar na TUSS 19"
+                                          onChange={(e) => setPicker((c) => (c ? { ...c, query: e.target.value } : c))}
+                                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void runPickerSearch(m.key, picker.query); } }}
+                                        />
+                                        <Button type="button" variant="outline" size="sm" className="h-9" disabled={picker.loading} onClick={() => runPickerSearch(m.key, picker.query)}>Buscar</Button>
+                                      </div>
+                                      {picker.loading ? <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando a tabela TUSS…</p> : null}
+                                      {picker.error ? <p className="text-xs text-red-600 dark:text-red-400">{picker.error}</p> : null}
+                                      {picker.results && picker.results.length === 0 && !picker.error ? <p className="text-xs text-muted-foreground">Nada encontrado. Tente menos palavras (ex.: só “papilótomo”).</p> : null}
+                                      <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+                                        {(picker.results ?? []).map((r) => (
+                                          <li key={r.code}>
+                                            <button type="button" disabled={creating !== null} onClick={() => createMaterial(m.key, r)} className="w-full rounded-md border border-border p-2 text-left text-xs hover:bg-muted disabled:opacity-60">
+                                              <span className="block font-medium text-foreground">{r.code} · {r.name}</span>
+                                              <span className="block text-muted-foreground">
+                                                {[r.manufacturer, r.model ? `Modelo ${r.model}` : null, r.anvisaRegistration ? `ANVISA ${r.anvisaRegistration}` : null, r.active ? null : "não vigente"].filter(Boolean).join(" · ")}
+                                              </span>
+                                            </button>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      <div className="flex gap-2">
+                                        <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => createMaterial(m.key, null)}>
+                                          {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                                          Cadastrar sem código TUSS
+                                        </Button>
+                                        <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setPicker(null)}>Cancelar</Button>
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                        {analysis.materials.length === 0 ? <li className="text-xs text-muted-foreground">Nenhum material sugerido.</li> : null}
+                      </ul>
+                    </Section>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Rodapé fixo */}
+          {step === "validate" ? (
+            <div className="flex flex-col gap-2 border-t border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-1" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+                <span>Conferi os dados com a foto e estão corretos.</span>
+              </label>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button type="button" variant="outline" className="h-10" disabled={pending} onClick={() => { reset(); inputRef.current?.click(); }}>
+                  Usar outra foto
+                </Button>
+                <Button type="button" className="h-10" disabled={pending || !confirmed} onClick={advance}>
+                  {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Confirmar e avançar
+                </Button>
               </div>
             </div>
           ) : null}
 
-          {step === "validate" ? (
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button type="button" variant="outline" className="h-10" disabled={pending} onClick={() => { reset(); inputRef.current?.click(); }}>
-                Usar outra foto
-              </Button>
-              <Button type="button" className="h-10" disabled={pending || !confirmed} onClick={advance}>
-                {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Confirmar e avançar
-              </Button>
-            </DialogFooter>
-          ) : null}
-
           {step === "match" && analysis ? (
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={() => setStep("validate")}>
-                Voltar e corrigir
-              </Button>
-              {analysis.procedures.some((p) => !p.procedure) ? (
-                <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={createAllMissing}>
-                  Cadastrar procedimentos que faltam
+            <div className="flex flex-col gap-2 border-t border-border bg-card px-4 py-3 sm:px-6">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" aria-live="polite">
+                <span className="font-semibold text-foreground">Resumo da seleção:</span>
+                <Chip tone={patientName ? "ok" : "warn"} icon={patientName ? <CheckCircle2 /> : <AlertTriangle />}>
+                  {patientName ? `Paciente: ${patientName}` : "Sem paciente vinculado"}
+                </Chip>
+                <Chip tone={selectedProcedures.length ? "ok" : "warn"}>{selectedProcedures.length} procedimento(s)</Chip>
+                <Chip tone="muted">{selectedMaterials.length} material(is)</Chip>
+                {(useIndication && analysis.clinical_indication) || (useObservations && analysis.observations) ? <Chip tone="muted">Indicação/observações incluídas</Chip> : null}
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={() => setStep("validate")}>
+                  Voltar e corrigir
                 </Button>
-              ) : null}
-              <Button type="button" className="h-10" disabled={creating !== null} onClick={apply}>
-                Aplicar ao formulário
-              </Button>
-            </DialogFooter>
+                <Button type="button" className="h-10" disabled={creating !== null} onClick={apply}>
+                  Aplicar ao formulário
+                </Button>
+              </div>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

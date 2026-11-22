@@ -78,10 +78,10 @@ export async function analyzeExtraction(
 
   const procSuggestions: ProcedureSuggestion[] = extraction.procedures.map((p, i) => {
     const code = p.tuss_code;
+    // Só o código TUSS vincula automaticamente. Nome parecido vira apenas sugestão.
     const byCode = code ? catalog.find((c) => c.tuss_code === code) : undefined;
-    let found = byCode ?? null;
-    let match: ProcedureSuggestion["match"] = byCode ? "exact" : "none";
-    if (!found) {
+    let suggestion: ProcedureSuggestion["suggestion"] = null;
+    if (!byCode) {
       const t = tokens(p.description);
       const t2 = tokens(official.get(code ?? "") ?? "");
       const best = catalog
@@ -90,17 +90,16 @@ export async function analyzeExtraction(
           return { c, score: Math.max(t.length ? overlap(t, ct) : 0, t2.length ? overlap(t2, ct) : 0) };
         })
         .sort((a, b) => b.score - a.score)[0];
-      if (best && best.score >= 0.6) {
-        found = best.c;
-        match = "similar";
-      }
+      if (best && best.score >= 0.6) suggestion = best.c;
     }
     return {
       key: `p${i}`,
       read_code: code,
       read_description: p.description,
-      match,
-      procedure: found,
+      confidence: p.confidence,
+      match: byCode ? "exact" : suggestion ? "suggested" : "none",
+      procedure: byCode ?? null,
+      suggestion,
       tuss_official_name: code ? (official.get(code) ?? null) : null,
       tuss_code_unknown: Boolean(code) && haveLocalTuss && !official.has(code as string),
     };
@@ -128,14 +127,21 @@ export async function analyzeExtraction(
         .slice(0, 8)
         .map((x) => x.c);
     }
-    const top = candidates[0];
-    const strong =
-      top && words.length > 0 && overlap(words, tokens(top.name)) >= 1 && !usedIds.has(top.id) ? top : null;
+    // Vínculo automático só com nome IGUAL ao do catálogo; o resto é sugestão.
+    const readNorm = normalizeText(m.name).trim();
+    const readFull = normalizeText([m.name, m.details].filter(Boolean).join(" ")).trim();
+    const exact =
+      materialCatalog.find((c) => {
+        const n = normalizeText(c.name).trim();
+        return (n === readNorm || n === readFull) && !usedIds.has(c.id);
+      }) ?? null;
+    const strong = exact;
     if (strong) usedIds.add(strong.id);
     materialSuggestions.push({
       key: `m${i}`,
       source: "guide",
       read_name: m.name,
+      confidence: m.confidence,
       quantity: m.quantity ?? 1,
       details: m.details,
       material: strong ? { id: strong.id, name: strong.name } : null,
@@ -153,6 +159,7 @@ export async function analyzeExtraction(
       key: `k${k.id}`,
       source: "kit",
       read_name: k.material.name,
+      confidence: "high",
       quantity: k.quantity,
       details: null,
       material: { id: k.material.id, name: k.material.name },
@@ -163,7 +170,9 @@ export async function analyzeExtraction(
   return {
     guide_type: extraction.guide_type,
     clinical_indication: extraction.clinical_indication,
-    patient: matchPatient(extraction.patient_name, patients),
+    indication_confidence: extraction.indication_confidence,
+    observations: extraction.observations,
+    patient: { ...matchPatient(extraction.patient_name, patients), confidence: extraction.patient_confidence },
     procedures: procSuggestions,
     materials: materialSuggestions,
     legibility_notes: extraction.legibility_notes,

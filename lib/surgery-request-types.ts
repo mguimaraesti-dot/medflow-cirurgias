@@ -1,11 +1,18 @@
 /** Tipos compartilhados (servidor e cliente) da leitura de pedido cirúrgico por foto. */
 
+/** Quão legível/seguro foi o trecho lido pela IA. */
+export type Confidence = "high" | "medium" | "low";
+
 export type RequestExtraction = {
   guide_type: "sp_sadt" | "internacao" | "outro";
   patient_name: string | null;
+  patient_confidence: Confidence;
   clinical_indication: string | null;
-  procedures: { tuss_code: string | null; description: string }[];
-  materials: { name: string; quantity: number | null; details: string | null }[];
+  indication_confidence: Confidence;
+  /** Texto do campo Observação/Justificativa da guia */
+  observations: string | null;
+  procedures: { tuss_code: string | null; description: string; confidence: Confidence }[];
+  materials: { name: string; quantity: number | null; details: string | null; confidence: Confidence }[];
   legibility_notes: string[];
 };
 
@@ -13,9 +20,16 @@ export type ProcedureSuggestion = {
   key: string;
   read_code: string | null;
   read_description: string;
-  /** exact = código TUSS bate com o cadastro; similar = só o nome parece; none = não achou */
-  match: "exact" | "similar" | "none";
+  confidence: Confidence;
+  /**
+   * exact = o código TUSS lido bate com um procedimento do catálogo (única forma de vincular sozinho);
+   * suggested = só o nome parece: precisa de confirmação do usuário;
+   * none = não há correspondência.
+   */
+  match: "exact" | "suggested" | "none";
   procedure: { id: string; name: string; tuss_code: string | null } | null;
+  /** Possível correspondência por semelhança de nome (nunca aplicada sozinha). */
+  suggestion: { id: string; name: string; tuss_code: string | null } | null;
   /** Nome oficial do código lido na TUSS 22 (para conferir a leitura) */
   tuss_official_name: string | null;
   /** O código lido não existe na TUSS 22 local (possível erro de leitura) */
@@ -26,10 +40,12 @@ export type MaterialSuggestion = {
   key: string;
   source: "guide" | "kit";
   read_name: string;
+  confidence: Confidence;
   quantity: number;
   details: string | null;
+  /** Só preenchido quando o nome é igual ao do catálogo (ou vem do kit padrão). */
   material: { id: string; name: string } | null;
-  /** Outros materiais do catálogo parecidos (quando não há correspondência certa) */
+  /** Materiais do catálogo parecidos: sugestões que o usuário escolhe manualmente. */
   alternatives: { id: string; name: string }[];
 };
 
@@ -43,7 +59,9 @@ export type PatientSuggestion = {
 export type RequestAnalysis = {
   guide_type: RequestExtraction["guide_type"];
   clinical_indication: string | null;
-  patient: PatientSuggestion;
+  indication_confidence: Confidence;
+  observations: string | null;
+  patient: PatientSuggestion & { confidence: Confidence };
   procedures: ProcedureSuggestion[];
   materials: MaterialSuggestion[];
   legibility_notes: string[];
