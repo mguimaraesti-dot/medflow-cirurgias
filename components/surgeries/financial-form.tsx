@@ -28,23 +28,13 @@ export function FinancialForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="expected_value">Valor previsto (R$)</Label>
-          <CurrencyInput
-            id="expected_value"
-            name="expected_value"
-            defaultValue={record?.expected_value ?? null}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="agreed_value">Valor acordado (R$)</Label>
-          <CurrencyInput
-            id="agreed_value"
-            name="agreed_value"
-            defaultValue={record?.agreed_value ?? null}
-          />
-        </div>
+      <div className="flex flex-col gap-1.5 sm:max-w-xs">
+        <Label htmlFor="agreed_value">Valor acordado (R$)</Label>
+        <CurrencyInput
+          id="agreed_value"
+          name="agreed_value"
+          defaultValue={record?.agreed_value ?? null}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="notes">Observações financeiras</Label>

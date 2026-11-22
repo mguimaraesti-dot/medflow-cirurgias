@@ -38,7 +38,7 @@ export default async function FinancialPage({
     <div>
       <h1 className="text-lg font-medium text-foreground">Financeiro</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Particulares — valores previstos, recebidos e saldo por cirurgia.
+        Particulares — valor acordado, recebido e saldo por cirurgia.
       </p>
 
       <div className="mt-4">

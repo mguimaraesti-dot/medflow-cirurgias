@@ -963,14 +963,16 @@ export async function getFinancialRecord(supabase: SupabaseClient, surgeryId: st
 export async function upsertParticularFinancialRecord(
   supabase: SupabaseClient,
   surgeryId: string,
-  input: { expected_value?: number; agreed_value?: number; notes?: string }
+  input: { agreed_value?: number; notes?: string }
 ) {
+  // Particular tem um único valor (o acordado). expected_value fica nulo:
+  // todas as telas/relatórios já usam `agreed_value ?? expected_value`.
   const existing = await getFinancialRecord(supabase, surgeryId);
   if (existing) {
     const { data, error } = await supabase
       .from("financial_records")
       .update({
-        expected_value: input.expected_value ?? null,
+        expected_value: null,
         agreed_value: input.agreed_value ?? null,
         notes: input.notes ?? null,
       })
@@ -985,7 +987,7 @@ export async function upsertParticularFinancialRecord(
     const { error } = await supabase.from("financial_records").insert({
       surgery_id: surgeryId,
       attendance_type: "particular",
-      expected_value: input.expected_value ?? null,
+      expected_value: null,
       agreed_value: input.agreed_value ?? null,
       notes: input.notes ?? null,
     });

@@ -271,7 +271,6 @@ export async function saveParticularFinancialAction(
   formData: FormData
 ): Promise<FinancialFormState> {
   const parsed = particularFinancialSchema.safeParse({
-    expected_value: formData.get("expected_value"),
     agreed_value: formData.get("agreed_value"),
     notes: formData.get("notes"),
   });
