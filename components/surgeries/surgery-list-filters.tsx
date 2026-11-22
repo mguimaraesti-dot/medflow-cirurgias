@@ -8,6 +8,7 @@ import { SITUATIONS, SITUATION_LABEL } from "@/lib/surgery-situation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateRangeFilter } from "@/components/surgeries/date-range-filter";
 import { FilterDisclosure } from "@/components/shared/filter-disclosure";
 
 const ALL = "__all";
@@ -102,31 +103,14 @@ export function SurgeryListFilters({
     </div>
   );
 
-  const dateRange = (label: string, fromKey: string, toKey: string, idPrefix: string) => (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1.5">
-        <Input
-          id={`${idPrefix}-from`}
-          type="date"
-          aria-label={`${label} — de`}
-          className="h-10 w-full md:w-36"
-          value={get(fromKey)}
-          max={get(toKey) || undefined}
-          onChange={(e) => update({ [fromKey]: e.target.value || undefined })}
-        />
-        <span className="text-xs text-muted-foreground">até</span>
-        <Input
-          id={`${idPrefix}-to`}
-          type="date"
-          aria-label={`${label} — até`}
-          className="h-10 w-full md:w-36"
-          value={get(toKey)}
-          min={get(fromKey) || undefined}
-          onChange={(e) => update({ [toKey]: e.target.value || undefined })}
-        />
-      </div>
-    </div>
+  const dateRange = (label: string, kind: "past" | "future", fromKey: string, toKey: string) => (
+    <DateRangeFilter
+      label={label}
+      kind={kind}
+      from={get(fromKey)}
+      to={get(toKey)}
+      onChange={(r) => update({ [fromKey]: r?.from || undefined, [toKey]: r?.to || undefined })}
+    />
   );
 
   return (
@@ -143,7 +127,7 @@ export function SurgeryListFilters({
       </div>
 
       <FilterDisclosure activeCount={activeCount}>
-        <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-start">
           {selectFilter(
             "f-status",
             "Status",
@@ -180,13 +164,13 @@ export function SurgeryListFilters({
             ],
             "Todas"
           )}
-          {dateRange("Solicitação", "rf", "rt", "f-request")}
-          {dateRange("Data prevista", "ef", "et", "f-expected")}
+          {dateRange("Solicitação", "past", "rf", "rt")}
+          {dateRange("Data prevista", "future", "ef", "et")}
           {activeCount > 0 ? (
             <button
               type="button"
               onClick={clearAll}
-              className="inline-flex h-10 items-center gap-1.5 self-start rounded-md px-2 text-sm font-medium text-primary hover:underline md:self-end"
+              className="inline-flex h-10 items-center gap-1.5 self-start rounded-md px-2 text-sm font-medium text-primary hover:underline md:mt-6"
             >
               <RefreshCw className="h-4 w-4" />
               Limpar filtros

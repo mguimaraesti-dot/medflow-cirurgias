@@ -141,17 +141,17 @@ export function SurgeryListTable({
   return (
     <>
       {/* Desktop / tablet */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full min-w-[56rem] table-fixed text-sm">
           <colgroup>
             <col className="w-[8.5rem]" />
-            <col className="w-[14%]" />
-            <col className="w-[13%]" />
-            <col className="w-[18%]" />
+            <col className="w-[17%]" />
+            <col className="w-[16%]" />
+            <col className="w-[24%]" />
             <col className="w-[6.5rem]" />
             <col className="w-[6.5rem]" />
             <col className="w-[6.5rem]" />
-            <col className="w-[10.5rem]" />
+            <col className="w-[13rem]" />
             <col className="w-14" />
           </colgroup>
           <thead>
@@ -232,7 +232,7 @@ export function SurgeryListTable({
       </div>
 
       {/* Celular: cartões */}
-      <ul className="divide-y divide-border md:hidden">
+      <ul className="divide-y divide-border lg:hidden">
         {rows.map((row) => {
           const proc = procedureSummary(row);
           const priority = PRIORITY_TAG[row.priority];

@@ -32,7 +32,7 @@ export default async function SurgeriesPage({
   const filtered = activeFilterCount(params) > 0;
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto w-full max-w-[1920px]">
       <nav aria-label="Navegação" className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/kanban" className="hover:text-foreground">
           Mapa Cirúrgico
