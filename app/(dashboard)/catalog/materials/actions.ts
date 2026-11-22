@@ -16,7 +16,7 @@ import {
 } from "@/lib/data/materials";
 import { materialSchema, materialSupplierSchema } from "@/lib/validation/materials";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
-import { searchTussMaterials, type TussResult } from "@/lib/tuss";
+import { searchTussMaterials, describeTussError, type TussResult } from "@/lib/tuss";
 
 export type MaterialFormState = {
   error?: string;
@@ -46,9 +46,11 @@ export async function searchTussMaterialsAction(
     await requireActionPermission("materials", "view");
     const results = await searchTussMaterials(query);
     return { results };
-  } catch {
+  } catch (e) {
+    const reason = describeTussError(e);
+    console.error("[tuss] falha na busca:", e);
     return {
-      error: "Não foi possível consultar a tabela TUSS agora. Você pode informar os dados manualmente.",
+      error: `Não foi possível consultar a tabela TUSS agora (${reason}). Você pode informar os dados manualmente.`,
     };
   }
 }

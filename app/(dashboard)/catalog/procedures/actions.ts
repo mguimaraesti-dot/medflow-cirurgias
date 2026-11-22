@@ -19,7 +19,7 @@ import {
   type ProcedureDefaultMaterial,
 } from "@/lib/data/procedure-materials";
 import { procedureDefaultMaterialSchema } from "@/lib/validation/procedure-materials";
-import { searchTussProcedures, type TussResult } from "@/lib/tuss";
+import { searchTussProcedures, describeTussError, type TussResult } from "@/lib/tuss";
 
 export type ProcedureFormState = {
   error?: string;
@@ -199,9 +199,11 @@ export async function searchTussCodesAction(
     await requireActionPermission("procedures", "view");
     const results = await searchTussProcedures(query);
     return { results };
-  } catch {
+  } catch (e) {
+    const reason = describeTussError(e);
+    console.error("[tuss] falha na busca:", e);
     return {
-      error: "Não foi possível consultar a tabela TUSS agora. Você pode digitar o código manualmente.",
+      error: `Não foi possível consultar a tabela TUSS agora (${reason}). Você pode digitar o código manualmente.`,
     };
   }
 }

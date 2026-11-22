@@ -280,3 +280,15 @@ export function searchTussProcedures(query: string): Promise<TussResult[]> {
 export function searchTussMaterials(query: string): Promise<TussResult[]> {
   return searchTuss("tuss-19", query);
 }
+
+/** Motivo curto e legível de uma falha na consulta, pra aparecer na tela
+ * (e nos logs da Vercel) em vez de um erro genérico que esconde a causa. */
+export function describeTussError(e: unknown): string {
+  if (e instanceof Error) {
+    if (e.name === "AbortError") return "a base da ANS não respondeu a tempo";
+    if (e.message === "forbidden") return "sem permissão";
+    if (e.message.startsWith("Tabela TUSS")) return e.message;
+    return e.message || "erro desconhecido";
+  }
+  return "erro desconhecido";
+}
