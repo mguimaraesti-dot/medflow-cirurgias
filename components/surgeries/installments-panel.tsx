@@ -60,7 +60,10 @@ function ConfirmSinglePaymentForm({
   useActionToast(state, "Recebimento confirmado.");
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-3 rounded-lg bg-muted p-3">
+    <form
+      action={formAction}
+      className="grid grid-cols-1 gap-3 rounded-lg bg-muted p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+    >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="single_amount">Valor recebido</Label>
         <CurrencyInput id="single_amount" name="amount" defaultValue={defaultAmount} />
@@ -75,11 +78,15 @@ function ConfirmSinglePaymentForm({
         />
       </div>
       {state.error ? (
-        <p className="w-full text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400 sm:col-span-3" role="alert">
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button
+        type="submit"
+        disabled={pending}
+        className="h-10 w-full bg-emerald-600 px-6 text-white hover:bg-emerald-700 sm:w-auto"
+      >
         {pending ? "Salvando..." : "Confirmar recebimento"}
       </Button>
     </form>
@@ -100,25 +107,28 @@ function GenerateInstallmentsForm({
   useActionToast(state, "Parcelas geradas.");
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-border p-3">
+    <form
+      action={formAction}
+      className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-3 sm:grid-cols-2 lg:grid-cols-[1fr_8rem_1fr_auto] lg:items-end"
+    >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="total_amount">Valor total</Label>
         <CurrencyInput id="total_amount" name="total_amount" defaultValue={defaultAmount} />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="count">Nº de parcelas</Label>
-        <Input id="count" name="count" type="number" min={2} max={60} defaultValue={2} className="w-24" />
+        <Input id="count" name="count" type="number" min={2} max={60} defaultValue={2} />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="first_due_date">1º vencimento</Label>
         <Input id="first_due_date" name="first_due_date" type="date" />
       </div>
       {state.error ? (
-        <p className="w-full text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="text-sm text-red-600 dark:text-red-400 sm:col-span-2 lg:col-span-4" role="alert">
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      <Button type="submit" disabled={pending} className="h-10 w-full px-6 sm:col-span-2 lg:col-span-1 lg:w-auto">
         {pending ? "Gerando..." : "Dividir em parcelas"}
       </Button>
     </form>
@@ -146,14 +156,17 @@ function InstallmentRow({ surgeryId, installment }: { surgeryId: string; install
           </span>
           <Badge variant={STATUS_VARIANT[installment.status]}>{STATUS_LABEL[installment.status]}</Badge>
           {installment.status !== "received" && installment.status !== "cancelled" ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
+            <Button type="button" variant="outline" className="h-9 px-4" onClick={() => setOpen((v) => !v)}>
               Receber
             </Button>
           ) : null}
         </div>
       </div>
       {open ? (
-        <form action={formAction} className="flex flex-wrap items-end gap-2 rounded-md bg-muted p-2.5">
+        <form
+          action={formAction}
+          className="grid grid-cols-1 gap-2 rounded-md bg-muted p-2.5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+        >
           <div className="flex flex-col gap-1">
             <Label htmlFor={`amount-${installment.id}`} className="text-xs">
               Valor recebido
@@ -173,11 +186,15 @@ function InstallmentRow({ surgeryId, installment }: { surgeryId: string; install
             />
           </div>
           {state.error ? (
-            <p className="w-full text-xs text-red-600 dark:text-red-400" role="alert">
+            <p className="text-xs text-red-600 dark:text-red-400 sm:col-span-3" role="alert">
               {state.error}
             </p>
           ) : null}
-          <Button type="submit" size="sm" disabled={pending}>
+          <Button
+            type="submit"
+            disabled={pending}
+            className="h-9 w-full bg-emerald-600 px-5 text-white hover:bg-emerald-700 sm:w-auto"
+          >
             {pending ? "Salvando..." : "Confirmar"}
           </Button>
         </form>
@@ -221,7 +238,7 @@ export function InstallmentsPanel({
           <button
             type="button"
             onClick={() => setSplitOpen(true)}
-            className="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            className="self-start py-1.5 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
           >
             Em vez disso, dividir esse valor em parcelas
           </button>

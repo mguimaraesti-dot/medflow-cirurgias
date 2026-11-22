@@ -55,8 +55,8 @@ export function FinancialForm({
           {state.error}
         </p>
       ) : null}
-      <div>
-        <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      <div className="flex sm:justify-end">
+        <Button type="submit" disabled={pending} className="h-10 w-full px-6 sm:w-auto">
           {pending ? "Salvando..." : "Salvar valores"}
         </Button>
       </div>
