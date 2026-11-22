@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { Building2, CalendarClock, ShieldCheck, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
 
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
-import { moveSurgeryStageAction, toggleRequirementSatisfiedAction } from "@/app/(dashboard)/surgeries/actions";
+import { moveSurgeryStageAction } from "@/app/(dashboard)/surgeries/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,50 +70,17 @@ export function SurgeryDetailSheet({
   const open = openProp ?? internalOpen;
   const onOpenChange = onOpenChangeProp ?? setInternalOpen;
   const [stagePending, startStageTransition] = useTransition();
-  const [reqPending, startReqTransition] = useTransition();
-
-  // Estado otimista do checklist — atualiza na hora ao clicar, e
-  // resincroniza quando os dados do servidor chegarem (revalidatePath).
-  const [localRequirements, setLocalRequirements] = useState(surgery.requirements);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLocalRequirements(surgery.requirements);
-  }, [surgery.requirements]);
 
   const stageIndex = stages.findIndex((s) => s.id === surgery.stage_id);
   const nextStage = stageIndex >= 0 ? stages[stageIndex + 1] : undefined;
 
-  const byKey = new Map(localRequirements.map((r) => [r.requirement_key, r]));
+  const byKey = new Map(surgery.requirements.map((r) => [r.requirement_key, r]));
   const satisfiedCount = REQUIREMENT_ORDER.filter((key) => byKey.get(key)?.is_satisfied).length;
   const progressPct = Math.round((satisfiedCount / REQUIREMENT_ORDER.length) * 100);
 
   const date = surgery.confirmed_date ?? surgery.expected_date;
   const attendanceLabel =
     surgery.attendance_type === "particular" ? "Particular" : surgery.insurance_provider?.name ?? "Convênio";
-
-  function handleToggleRequirement(key: string) {
-    const req = byKey.get(key);
-    if (!req) return;
-    const nextSatisfied = !req.is_satisfied;
-
-    setLocalRequirements((prev) =>
-      prev.map((r) => (r.requirement_key === key ? { ...r, is_satisfied: nextSatisfied } : r))
-    );
-
-    startReqTransition(async () => {
-      try {
-        await toggleRequirementSatisfiedAction(req.id, surgery.id, nextSatisfied);
-        toast.success(
-          `${REQUIREMENT_LABEL[key]} marcada como ${nextSatisfied ? "concluída" : "pendente"}.`
-        );
-      } catch {
-        setLocalRequirements((prev) =>
-          prev.map((r) => (r.requirement_key === key ? { ...r, is_satisfied: req.is_satisfied } : r))
-        );
-        toast.error("Não foi possível atualizar o requisito.");
-      }
-    });
-  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -223,16 +189,13 @@ export function SurgeryDetailSheet({
                 const isSatisfied = req?.is_satisfied ?? false;
                 const isWaived = req?.waived ?? false;
                 return (
-                  <button
+                  // Somente leitura: o status vem dos dados reais (autorização,
+                  // reserva, pré-operatório). Para alterar, abre a ficha completa.
+                  <Link
                     key={key}
-                    type="button"
-                    disabled={!req || reqPending}
-                    onClick={() => handleToggleRequirement(key)}
-                    aria-pressed={isSatisfied}
-                    className={cn(
-                      "flex w-full items-start gap-2.5 rounded-lg border border-border bg-card p-3 text-left transition-colors",
-                      req && !reqPending ? "hover:border-ring cursor-pointer" : "cursor-default opacity-70"
-                    )}
+                    href={`/surgeries/${surgery.id}`}
+                    title="Abrir a ficha para registrar os dados"
+                    className="flex w-full items-start gap-2.5 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-ring"
                   >
                     <span
                       className={cn(
@@ -256,7 +219,7 @@ export function SurgeryDetailSheet({
                       </p>
                       <p className="text-xs text-muted-foreground">{REQUIREMENT_DESCRIPTION[key]}</p>
                     </div>
-                  </button>
+                  </Link>
                 );
               })}
             </div>

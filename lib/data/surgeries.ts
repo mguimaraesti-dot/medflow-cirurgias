@@ -926,22 +926,6 @@ export async function updateRequirement(
   if (error) throw error;
 }
 
-/** Alterna só o "satisfeito" de um requisito, sem mexer em waived/
- * waived_reason — usado pelo checklist rápido do painel lateral do Mapa
- * Cirúrgico (diferente do formulário completo da página da cirurgia, que
- * também lida com dispensa e justificativa). */
-export async function setRequirementSatisfied(
-  supabase: SupabaseClient,
-  id: string,
-  isSatisfied: boolean
-) {
-  const { error } = await supabase
-    .from("surgery_requirements")
-    .update({ is_satisfied: isSatisfied })
-    .eq("id", id);
-  if (error) throw error;
-}
-
 export type ParticularFinancialRecord = {
   id: string;
   surgery_id: string;

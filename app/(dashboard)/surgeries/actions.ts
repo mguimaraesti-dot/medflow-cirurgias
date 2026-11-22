@@ -14,7 +14,6 @@ import {
   setSurgerySchedule,
   getSurgeryHistoryTimeline,
   updateRequirement,
-  setRequirementSatisfied,
   upsertParticularFinancialRecord,
   setSurgeryProcedures,
   getSurgeryAuthorizationRequestData,
@@ -234,21 +233,6 @@ export async function updateRequirementAction(
 
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
-}
-
-/** Alterna o "satisfeito" direto do checklist rápido do painel lateral do
- * Mapa Cirúrgico — sem formulário, sem lidar com dispensa/justificativa
- * (isso continua só na página completa da cirurgia). */
-export async function toggleRequirementSatisfiedAction(
-  requirementId: string,
-  surgeryId: string,
-  isSatisfied: boolean
-) {
-  await requireActionPermission("surgeries");
-  const supabase = await createClient();
-  await setRequirementSatisfied(supabase, requirementId, isSatisfied);
-  revalidatePath("/kanban");
-  revalidatePath(`/surgeries/${surgeryId}`);
 }
 
 /**
