@@ -30,18 +30,9 @@ function parseForm(formData: FormData) {
     internal_code: formData.get("internal_code"),
     name: formData.get("name"),
     tuss_code: formData.get("tuss_code"),
-    specialty: formData.get("specialty"),
-    anatomical_region: formData.get("anatomical_region"),
-    classification: formData.get("classification"),
-    procedure_type: formData.get("procedure_type"),
     location: formData.get("location"),
     description: formData.get("description"),
     admin_notes: formData.get("admin_notes"),
-    requires_anesthesia: formData.get("requires_anesthesia"),
-    requires_hospitalization: formData.get("requires_hospitalization"),
-    requires_opme: formData.get("requires_opme"),
-    requires_special_equipment: formData.get("requires_special_equipment"),
-    requires_authorization: formData.get("requires_authorization"),
     active: formData.get("active"),
   });
 }
