@@ -9,6 +9,8 @@ import {
   createMaterialFromRequestAction,
   createProcedureFromRequestAction,
 } from "@/app/(dashboard)/surgeries/request-reader-actions";
+import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
+import type { TussResult } from "@/lib/tuss";
 import type { RequestAnalysis } from "@/lib/surgery-request-types";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +62,14 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [matChoice, setMatChoice] = useState<Record<string, string>>({});
   const [useIndication, setUseIndication] = useState(true);
   const [creating, setCreating] = useState<string | null>(null);
+  // Busca do código TUSS 19 (materiais) para o item que o usuário vai cadastrar.
+  const [picker, setPicker] = useState<{
+    key: string;
+    query: string;
+    loading: boolean;
+    results: TussResult[] | null;
+    error: string | null;
+  } | null>(null);
   const [createdProcedures, setCreatedProcedures] = useState<ReaderApplyResult["createdProcedures"]>([]);
 
   function reset() {
@@ -96,31 +106,56 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     toast.success(`Procedimento cadastrado: ${item.name}`);
   }
 
-  async function createMaterial(key: string) {
+  async function runPickerSearch(key: string, query: string) {
+    setPicker({ key, query, loading: true, results: null, error: null });
+    const res = await searchTussMaterialsAction(query);
+    setPicker((cur) =>
+      cur && cur.key === key
+        ? { ...cur, loading: false, results: res.results ?? [], error: res.error ?? null }
+        : cur
+    );
+  }
+
+  function openPicker(key: string) {
+    const m = analysis?.materials.find((x) => x.key === key);
+    if (!m) return;
+    void runPickerSearch(key, [m.read_name, m.details].filter(Boolean).join(" "));
+  }
+
+  async function createMaterial(key: string, tuss: TussResult | null) {
     const m = analysis?.materials.find((x) => x.key === key);
     if (!m || creating) return;
     setCreating(key);
-    const res = await createMaterialFromRequestAction({ name: m.read_name, details: m.details });
+    const res = await createMaterialFromRequestAction({
+      name: m.read_name,
+      details: m.details,
+      tuss: tuss
+        ? {
+            code: tuss.code,
+            manufacturer: tuss.manufacturer,
+            model: tuss.model,
+            anvisaRegistration: tuss.anvisaRegistration,
+          }
+        : null,
+    });
     setCreating(null);
     if (res.error || !res.item) {
       toast.error(res.error ?? "Não foi possível cadastrar.");
       return;
     }
     const item = res.item;
+    setPicker(null);
     setAnalysis((a) =>
       a ? { ...a, materials: a.materials.map((x) => (x.key === key ? { ...x, material: { id: item.id, name: item.name } } : x)) } : a
     );
     setMatChoice((s) => ({ ...s, [key]: item.id }));
     setMatChecked((s) => ({ ...s, [key]: true }));
-    toast.success(`Material cadastrado: ${item.name}`);
+    toast.success(`Material cadastrado: ${item.name}${item.tuss_code ? ` (TUSS ${item.tuss_code})` : " (sem código TUSS)"}`);
   }
 
   async function createAllMissing() {
     if (!analysis) return;
     for (const p of analysis.procedures.filter((x) => !x.procedure)) await createProcedure(p.key);
-    for (const m of analysis.materials.filter((x) => x.source === "guide" && !x.material && x.alternatives.length === 0)) {
-      await createMaterial(m.key);
-    }
   }
 
   function handleFile(file: File | undefined) {
@@ -391,17 +426,76 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                           </span>
                         </label>
                         {m.source === "guide" && !m.material ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="ml-6 mt-2 h-8"
-                            disabled={creating !== null}
-                            onClick={() => createMaterial(m.key)}
-                          >
-                            {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-                            Cadastrar no catálogo
-                          </Button>
+                          picker?.key === m.key ? (
+                            <div className="ml-6 mt-2 flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
+                              <p className="text-xs font-medium text-foreground">Escolha o código TUSS 19 do material</p>
+                              <div className="flex gap-2">
+                                <input
+                                  className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                                  value={picker.query}
+                                  onChange={(e) => setPicker((c) => (c ? { ...c, query: e.target.value } : c))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      void runPickerSearch(m.key, picker.query);
+                                    }
+                                  }}
+                                  aria-label="Buscar na TUSS 19"
+                                />
+                                <Button type="button" variant="outline" size="sm" className="h-9" disabled={picker.loading} onClick={() => runPickerSearch(m.key, picker.query)}>
+                                  Buscar
+                                </Button>
+                              </div>
+                              {picker.loading ? (
+                                <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando a tabela TUSS na ANS (pode levar alguns segundos)…
+                                </p>
+                              ) : null}
+                              {picker.error ? <p className="text-xs text-red-600 dark:text-red-400">{picker.error}</p> : null}
+                              {picker.results && picker.results.length === 0 && !picker.error ? (
+                                <p className="text-xs text-muted-foreground">Nada encontrado. Tente menos palavras (ex.: só “papilótomo”).</p>
+                              ) : null}
+                              <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+                                {(picker.results ?? []).map((r) => (
+                                  <li key={r.code}>
+                                    <button
+                                      type="button"
+                                      disabled={creating !== null}
+                                      onClick={() => createMaterial(m.key, r)}
+                                      className="w-full rounded-md border border-border p-2 text-left text-xs hover:bg-muted disabled:opacity-60"
+                                    >
+                                      <span className="block font-medium text-foreground">{r.code} · {r.name}</span>
+                                      <span className="block text-muted-foreground">
+                                        {[r.manufacturer, r.model ? `Modelo ${r.model}` : null, r.anvisaRegistration ? `ANVISA ${r.anvisaRegistration}` : null, r.active ? null : "não vigente"]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                              <div className="flex gap-2">
+                                <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => createMaterial(m.key, null)}>
+                                  {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                                  Cadastrar sem código TUSS
+                                </Button>
+                                <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setPicker(null)}>
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="ml-6 mt-2 h-8"
+                              disabled={creating !== null}
+                              onClick={() => openPicker(m.key)}
+                            >
+                              Cadastrar no catálogo (buscar código TUSS)
+                            </Button>
+                          )
                         ) : null}
                         {m.source === "guide" && (m.alternatives.length > 0 || m.material) ? (
                           <select
@@ -437,10 +531,9 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
               <Button type="button" variant="outline" className="h-10" onClick={() => { reset(); inputRef.current?.click(); }}>
                 Usar outra foto
               </Button>
-              {analysis.procedures.some((p) => !p.procedure) ||
-              analysis.materials.some((m) => m.source === "guide" && !m.material && m.alternatives.length === 0) ? (
+              {analysis.procedures.some((p) => !p.procedure) ? (
                 <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={createAllMissing}>
-                  Cadastrar tudo que falta
+                  Cadastrar procedimentos que faltam
                 </Button>
               ) : null}
               <Button type="button" className="h-10" onClick={apply}>

@@ -130,6 +130,8 @@ export async function createProcedureFromRequestAction(input: {
 export async function createMaterialFromRequestAction(input: {
   name: string;
   details: string | null;
+  /** Dados da TUSS 19 escolhidos pelo usuário na busca (opcionais). */
+  tuss?: { code: string; manufacturer?: string; model?: string; anvisaRegistration?: string } | null;
 }): Promise<QuickCreateResult> {
   try {
     await requireActionPermission("surgeries", "edit");
@@ -149,11 +151,19 @@ export async function createMaterialFromRequestAction(input: {
       .maybeSingle();
     if (existing) return { item: { ...(existing as { id: string; name: string }), tuss_code: null } };
 
-    const parsed = materialSchema.safeParse({ name, active: "on" });
+    const tuss = input.tuss && /^\d{8,9}$/.test(input.tuss.code) ? input.tuss : null;
+    const parsed = materialSchema.safeParse({
+      name,
+      active: "on",
+      tuss_code: tuss?.code ?? "",
+      manufacturer: tuss?.manufacturer ?? "",
+      model: tuss?.model ?? "",
+      anvisa_registration: tuss?.anvisaRegistration ?? "",
+    });
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
     const created = await createMaterial(supabase, parsed.data);
     revalidatePath("/catalog/materials");
-    return { item: { id: created.id, name: created.name, tuss_code: null } };
+    return { item: { id: created.id, name: created.name, tuss_code: tuss?.code ?? null } };
   } catch (e) {
     console.error("[reader] cadastro de material:", e);
     return { error: "Não foi possível cadastrar o material." };
