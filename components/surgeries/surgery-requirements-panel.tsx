@@ -50,9 +50,9 @@ export function SurgeryRequirementsPanel({
   const orReservationReq = byKey("or_reservation");
   const preoperativeReq = byKey("preoperative");
 
+  // Fechados: cards da mesma altura. Com um aberto, cada um volta à altura
+  // natural para o vizinho não esticar junto com o formulário.
   return (
-    {/* Fechados: cards da mesma altura. Com um aberto, cada um volta à altura
-        natural para o vizinho não esticar junto com o formulário. */}
     <div className={cn("grid grid-cols-1 gap-3 lg:grid-cols-2", openKey !== null && "items-start")}>
       <HospitalRequestCard
         surgeryId={surgeryId}
