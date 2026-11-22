@@ -159,6 +159,7 @@ export function SurgeryForm({
   const [hospitalOptions, setHospitalOptions] = useState(hospitals);
   const [confirmDialog, setConfirmDialog] = useState<"clear" | "cancel" | null>(null);
   // Materiais sugeridos pela leitura do pedido: gravados junto com a cirurgia nova.
+  const [extraProcedures, setExtraProcedures] = useState<ProcedureOption[]>([]);
   const [suggestedMaterials, setSuggestedMaterials] = useState<ReaderApplyResult["materials"]>([]);
 
   useEffect(() => {
@@ -182,8 +183,10 @@ export function SurgeryForm({
     const extra = (surgery?.procedures ?? [])
       .filter((p) => !known.has(p.id))
       .map((p) => ({ id: p.id, name: p.name, tuss_code: null }));
-    return [...procedures, ...extra];
-  }, [procedures, surgery]);
+    const withExtra = [...procedures, ...extra];
+    const have = new Set(withExtra.map((p) => p.id));
+    return [...withExtra, ...extraProcedures.filter((p) => !have.has(p.id))];
+  }, [procedures, surgery, extraProcedures]);
 
   function set<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -238,6 +241,7 @@ export function SurgeryForm({
       };
     });
     setErrors({});
+    setExtraProcedures((prev) => [...prev, ...result.createdProcedures]);
     setSuggestedMaterials(result.materials);
   }
 

@@ -4,7 +4,11 @@ import { useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, CheckCircle2, Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
-import { analyzeSurgeryRequestAction } from "@/app/(dashboard)/surgeries/request-reader-actions";
+import {
+  analyzeSurgeryRequestAction,
+  createMaterialFromRequestAction,
+  createProcedureFromRequestAction,
+} from "@/app/(dashboard)/surgeries/request-reader-actions";
 import type { RequestAnalysis } from "@/lib/surgery-request-types";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +25,8 @@ export type ReaderApplyResult = {
   procedureIds: string[];
   clinicalIndication: string | null;
   materials: { id: string; name: string; quantity: number }[];
+  /** Procedimentos cadastrados agora, a partir da guia (precisam entrar nas opções do formulário). */
+  createdProcedures: { id: string; name: string; tuss_code: string | null }[];
 };
 
 const MAX_SIDE = 1800;
@@ -53,12 +59,68 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [matChecked, setMatChecked] = useState<Record<string, boolean>>({});
   const [matChoice, setMatChoice] = useState<Record<string, string>>({});
   const [useIndication, setUseIndication] = useState(true);
+  const [creating, setCreating] = useState<string | null>(null);
+  const [createdProcedures, setCreatedProcedures] = useState<ReaderApplyResult["createdProcedures"]>([]);
 
   function reset() {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
     setAnalysis(null);
     setError(null);
+    setCreatedProcedures([]);
+  }
+
+  async function createProcedure(key: string) {
+    const p = analysis?.procedures.find((x) => x.key === key);
+    if (!p || creating) return;
+    setCreating(key);
+    const res = await createProcedureFromRequestAction({ code: p.read_code, description: p.read_description });
+    setCreating(null);
+    if (res.error || !res.item) {
+      toast.error(res.error ?? "Não foi possível cadastrar.");
+      return;
+    }
+    const item = res.item;
+    setCreatedProcedures((prev) => (prev.some((x) => x.id === item.id) ? prev : [...prev, item]));
+    setAnalysis((a) =>
+      a
+        ? {
+            ...a,
+            procedures: a.procedures.map((x) =>
+              x.key === key ? { ...x, match: "exact", procedure: { id: item.id, name: item.name, tuss_code: item.tuss_code } } : x
+            ),
+          }
+        : a
+    );
+    setProcChecked((s) => ({ ...s, [key]: true }));
+    toast.success(`Procedimento cadastrado: ${item.name}`);
+  }
+
+  async function createMaterial(key: string) {
+    const m = analysis?.materials.find((x) => x.key === key);
+    if (!m || creating) return;
+    setCreating(key);
+    const res = await createMaterialFromRequestAction({ name: m.read_name, details: m.details });
+    setCreating(null);
+    if (res.error || !res.item) {
+      toast.error(res.error ?? "Não foi possível cadastrar.");
+      return;
+    }
+    const item = res.item;
+    setAnalysis((a) =>
+      a ? { ...a, materials: a.materials.map((x) => (x.key === key ? { ...x, material: { id: item.id, name: item.name } } : x)) } : a
+    );
+    setMatChoice((s) => ({ ...s, [key]: item.id }));
+    setMatChecked((s) => ({ ...s, [key]: true }));
+    toast.success(`Material cadastrado: ${item.name}`);
+  }
+
+  async function createAllMissing() {
+    if (!analysis) return;
+    for (const p of analysis.procedures.filter((x) => !x.procedure)) await createProcedure(p.key);
+    for (const m of analysis.materials.filter((x) => x.source === "guide" && !x.material && x.alternatives.length === 0)) {
+      await createMaterial(m.key);
+    }
   }
 
   function handleFile(file: File | undefined) {
@@ -105,6 +167,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
         .map((p) => p.procedure!.id),
       clinicalIndication: useIndication ? analysis.clinical_indication : null,
       materials,
+      createdProcedures,
     });
     toast.success("Dados do pedido aplicados. Revise o formulário antes de salvar.");
     setOpen(false);
@@ -272,11 +335,24 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                             ) : null}
                             {!p.procedure ? (
                               <span className="block text-xs text-amber-700 dark:text-amber-400">
-                                Cadastre este procedimento em Catálogo → Procedimentos ou selecione-o manualmente no formulário.
+                                Ainda não está no seu catálogo de procedimentos.
                               </span>
                             ) : null}
                           </span>
                         </label>
+                        {!p.procedure ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="ml-6 mt-2 h-8"
+                            disabled={creating !== null}
+                            onClick={() => createProcedure(p.key)}
+                          >
+                            {creating === p.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                            Cadastrar no catálogo{p.tuss_official_name ? " (nome oficial TUSS)" : ""}
+                          </Button>
+                        ) : null}
                       </li>
                     ))}
                     {analysis.procedures.length === 0 ? <li className="text-xs text-muted-foreground">Nenhum procedimento lido.</li> : null}
@@ -309,11 +385,24 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                               <span className="block text-xs text-amber-700 dark:text-amber-400">
                                 {m.alternatives.length > 0
                                   ? "Sem correspondência exata — escolha um parecido ou deixe de fora:"
-                                  : "Não encontrado no catálogo de materiais (cadastre em Catálogo → Materiais)."}
+                                  : "Ainda não está no seu catálogo de materiais."}
                               </span>
                             ) : null}
                           </span>
                         </label>
+                        {m.source === "guide" && !m.material ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="ml-6 mt-2 h-8"
+                            disabled={creating !== null}
+                            onClick={() => createMaterial(m.key)}
+                          >
+                            {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                            Cadastrar no catálogo
+                          </Button>
+                        ) : null}
                         {m.source === "guide" && (m.alternatives.length > 0 || m.material) ? (
                           <select
                             className="ml-6 mt-1.5 h-9 w-[calc(100%-1.5rem)] rounded-md border border-input bg-background px-2 text-xs"
@@ -348,6 +437,12 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
               <Button type="button" variant="outline" className="h-10" onClick={() => { reset(); inputRef.current?.click(); }}>
                 Usar outra foto
               </Button>
+              {analysis.procedures.some((p) => !p.procedure) ||
+              analysis.materials.some((m) => m.source === "guide" && !m.material && m.alternatives.length === 0) ? (
+                <Button type="button" variant="outline" className="h-10" disabled={creating !== null} onClick={createAllMissing}>
+                  Cadastrar tudo que falta
+                </Button>
+              ) : null}
               <Button type="button" className="h-10" onClick={apply}>
                 Aplicar ao formulário
               </Button>

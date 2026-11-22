@@ -1,9 +1,15 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
 import { requireActionPermission } from "@/lib/auth/guard";
 import { analyzeExtraction } from "@/lib/data/surgery-request-match";
 import { isAllowedMedia, isReaderConfigured, readSurgeryRequest } from "@/lib/ai/surgery-request-reader";
+import { createProcedure } from "@/lib/data/procedures";
+import { createMaterial } from "@/lib/data/materials";
+import { procedureSchema } from "@/lib/validation/procedures";
+import { materialSchema } from "@/lib/validation/materials";
 import type { RequestAnalysis } from "@/lib/surgery-request-types";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -61,5 +67,95 @@ export async function analyzeSurgeryRequestAction(
       return { error: "A leitura demorou demais. Tente novamente com uma foto menor." };
     }
     return { error: "Não foi possível ler a imagem agora. Tente novamente." };
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Cadastro rápido, a partir da tela de revisão, do que ainda não está no catálogo
+// ----------------------------------------------------------------------------
+
+export type QuickCreateResult = { item?: { id: string; name: string; tuss_code: string | null }; error?: string };
+
+/**
+ * Cadastra no catálogo um procedimento lido da guia. O nome vem da TUSS 22
+ * (descrição oficial do código) quando o código existe; senão, da descrição lida.
+ * Se já houver procedimento com esse código TUSS, devolve o existente.
+ */
+export async function createProcedureFromRequestAction(input: {
+  code: string | null;
+  description: string;
+}): Promise<QuickCreateResult> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+    await requireActionPermission("procedures", "edit");
+  } catch {
+    return { error: "Você não tem permissão para cadastrar procedimentos." };
+  }
+  const code = input.code && /^\d{8}$/.test(input.code) ? input.code : null;
+  const supabase = await createClient();
+  try {
+    if (code) {
+      const { data: existing } = await supabase
+        .from("procedures")
+        .select("id,name,tuss_code")
+        .eq("tuss_code", code)
+        .limit(1)
+        .maybeSingle();
+      if (existing) return { item: existing as { id: string; name: string; tuss_code: string | null } };
+    }
+    let name = input.description.trim();
+    if (code) {
+      const { data: official } = await supabase
+        .from("tuss_terms")
+        .select("name")
+        .eq("table_name", "tuss-22")
+        .eq("code", code)
+        .maybeSingle();
+      if (official?.name) name = official.name as string;
+    }
+    if (!name) return { error: "Sem nome para cadastrar este procedimento." };
+
+    const parsed = procedureSchema.safeParse({ name, tuss_code: code ?? "", active: "on" });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+    const created = await createProcedure(supabase, parsed.data);
+    revalidatePath("/catalog/procedures");
+    return { item: { id: created.id, name, tuss_code: code } };
+  } catch (e) {
+    console.error("[reader] cadastro de procedimento:", e);
+    return { error: "Não foi possível cadastrar o procedimento." };
+  }
+}
+
+/** Cadastra no catálogo um material lido da guia (nome + marca/medidas escritos). */
+export async function createMaterialFromRequestAction(input: {
+  name: string;
+  details: string | null;
+}): Promise<QuickCreateResult> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+    await requireActionPermission("materials", "edit");
+  } catch {
+    return { error: "Você não tem permissão para cadastrar materiais." };
+  }
+  const name = [input.name.trim(), input.details?.trim()].filter(Boolean).join(" ");
+  if (!name) return { error: "Sem nome para cadastrar este material." };
+  const supabase = await createClient();
+  try {
+    const { data: existing } = await supabase
+      .from("materials_catalog")
+      .select("id,name")
+      .ilike("name", name.replace(/[%_\\]/g, (c) => `\\${c}`))
+      .limit(1)
+      .maybeSingle();
+    if (existing) return { item: { ...(existing as { id: string; name: string }), tuss_code: null } };
+
+    const parsed = materialSchema.safeParse({ name, active: "on" });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+    const created = await createMaterial(supabase, parsed.data);
+    revalidatePath("/catalog/materials");
+    return { item: { id: created.id, name: created.name, tuss_code: null } };
+  } catch (e) {
+    console.error("[reader] cadastro de material:", e);
+    return { error: "Não foi possível cadastrar o material." };
   }
 }
