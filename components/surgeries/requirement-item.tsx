@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import {
   updateRequirementAction,
@@ -11,6 +12,7 @@ import { useActionToast } from "@/lib/hooks/use-action-toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 const initialState: RequirementFormState = {};
 
@@ -44,13 +46,26 @@ export function RequirementItem({
   const action = updateRequirementAction.bind(null, requirement.id, requirement.surgery_id);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [waived, setWaived] = useState(requirement.waived);
+  // Recolhido por padrão: é uma opção avançada (o status já é calculado
+  // sozinho). Abre direto só se o requisito já está dispensado.
+  const [expanded, setExpanded] = useState(requirement.waived);
   useActionToast(state, "Controle manual salvo.");
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 border-t border-border pt-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Controle manual
-      </p>
+    <div className="flex flex-col gap-3 border-t border-border pt-3">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between py-1 text-left text-sm text-muted-foreground hover:text-foreground"
+      >
+        <span>
+          Controle manual
+          {requirement.waived ? <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">dispensado</span> : null}
+        </span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")} />
+      </button>
+      <form action={formAction} className={cn("flex flex-col gap-3", !expanded && "hidden")}>
 
       {hideManualSatisfied ? (
         <input type="hidden" name="is_satisfied" value={requirement.is_satisfied ? "on" : ""} />
@@ -85,11 +100,12 @@ export function RequirementItem({
         </p>
       ) : null}
 
-      <div>
-        <Button type="submit" variant="outline" size="sm" disabled={pending}>
-          {pending ? "Salvando..." : "Salvar"}
+      <div className="flex sm:justify-end">
+        <Button type="submit" variant="outline" disabled={pending} className="h-10 w-full px-6 sm:w-auto">
+          {pending ? "Salvando..." : "Salvar controle manual"}
         </Button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }

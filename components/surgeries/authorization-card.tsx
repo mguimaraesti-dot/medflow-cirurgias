@@ -9,6 +9,7 @@ import {
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import type { AuthorizationRequest } from "@/lib/data/operations";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,14 +50,22 @@ export function AuthorizationCard({
 
   const isDenied = status === "denied";
   const isApproved = status === "approved" || status === "partially_approved";
+  // Enquanto nada foi solicitado, só o status importa: protocolo e datas
+  // só aparecem a partir de "Enviada". Os campos escondidos continuam no
+  // formulário (só com `hidden`), então nada que já foi salvo se perde ao
+  // trocar o status de volta.
+  const started = status !== "not_requested";
+
+  const [procedure, setProcedure] = useState(authorization?.requested_procedure ?? procedureLabel);
+  const [editingProcedure, setEditingProcedure] = useState(false);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form action={formAction} className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+        <div className={cn("flex flex-col gap-1.5", !started && "sm:col-span-2")}>
           <Label htmlFor="status">Status</Label>
           <Select name="status" value={status} onValueChange={setStatus}>
-            <SelectTrigger>
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -68,33 +77,51 @@ export function AuthorizationCard({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className={cn("flex flex-col gap-1.5", !started && "hidden")}>
           <Label htmlFor="protocol_number">Nº do protocolo</Label>
           <Input
             id="protocol_number"
             name="protocol_number"
+            className="h-10"
             defaultValue={authorization?.protocol_number ?? ""}
           />
         </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="requested_procedure">Procedimento solicitado à operadora</Label>
-        <Input
-          id="requested_procedure"
-          name="requested_procedure"
-          defaultValue={authorization?.requested_procedure ?? procedureLabel}
-        />
-        <p className="text-xs text-muted-foreground">
-          Preenchido com o(s) procedimento(s) da cirurgia — ajuste aqui só se o nome enviado ao
-          convênio precisar ser diferente.
-        </p>
+        <Label htmlFor="requested_procedure">Procedimento solicitado</Label>
+        {editingProcedure ? (
+          <Input
+            id="requested_procedure"
+            name="requested_procedure"
+            className="h-10"
+            value={procedure}
+            onChange={(e) => setProcedure(e.target.value)}
+          />
+        ) : (
+          <div className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2.5">
+            <p className="min-w-0 text-sm text-foreground">{procedure}</p>
+            <button
+              type="button"
+              onClick={() => setEditingProcedure(true)}
+              className="shrink-0 py-0.5 text-sm text-primary underline underline-offset-2"
+            >
+              Alterar
+            </button>
+            <input type="hidden" name="requested_procedure" value={procedure} readOnly />
+          </div>
+        )}
+        {editingProcedure ? (
+          <p className="text-xs text-muted-foreground">
+            Use só se o nome enviado ao convênio precisar ser diferente do procedimento da cirurgia.
+          </p>
+        ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", !started && "hidden")}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="sent_at">Enviada em</Label>
-          <Input id="sent_at" name="sent_at" type="date" defaultValue={authorization?.sent_at ?? ""} />
+          <Input id="sent_at" name="sent_at" type="date" className="h-10" defaultValue={authorization?.sent_at ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="returned_at">Retorno em</Label>
@@ -102,7 +129,21 @@ export function AuthorizationCard({
             id="returned_at"
             name="returned_at"
             type="date"
+            className="h-10"
             defaultValue={authorization?.returned_at ?? ""}
+          />
+        </div>
+      </div>
+
+      <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", !isApproved && "hidden")}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="approved_at">Data de aprovação</Label>
+          <Input
+            id="approved_at"
+            name="approved_at"
+            type="date"
+            className="h-10"
+            defaultValue={authorization?.approved_at ?? ""}
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -111,22 +152,11 @@ export function AuthorizationCard({
             id="validity_date"
             name="validity_date"
             type="date"
+            className="h-10"
             defaultValue={authorization?.validity_date ?? ""}
           />
         </div>
       </div>
-
-      {isApproved ? (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="approved_at">Data de aprovação</Label>
-          <Input
-            id="approved_at"
-            name="approved_at"
-            type="date"
-            defaultValue={authorization?.approved_at ?? ""}
-          />
-        </div>
-      ) : null}
 
       {isDenied ? (
         <div className="flex flex-col gap-1.5">
@@ -148,8 +178,8 @@ export function AuthorizationCard({
         </p>
       ) : null}
 
-      <div>
-        <Button type="submit" variant="outline" size="sm" disabled={pending}>
+      <div className="flex sm:justify-end">
+        <Button type="submit" disabled={pending} className="h-10 w-full px-6 sm:w-auto">
           {pending ? "Salvando..." : authorization ? "Salvar autorização" : "Registrar solicitação"}
         </Button>
       </div>
