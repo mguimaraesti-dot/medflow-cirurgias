@@ -967,15 +967,20 @@ export async function upsertParticularFinancialRecord(
 ) {
   const existing = await getFinancialRecord(supabase, surgeryId);
   if (existing) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("financial_records")
       .update({
         expected_value: input.expected_value ?? null,
         agreed_value: input.agreed_value ?? null,
         notes: input.notes ?? null,
       })
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+      .select("id");
     if (error) throw error;
+    // RLS não dá erro ao barrar UPDATE — só não altera nada.
+    if (!data || data.length === 0) {
+      throw new Error("Nenhuma linha foi atualizada (sem permissão ou registro inexistente).");
+    }
   } else {
     const { error } = await supabase.from("financial_records").insert({
       surgery_id: surgeryId,

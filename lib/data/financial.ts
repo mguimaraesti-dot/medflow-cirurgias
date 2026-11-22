@@ -92,8 +92,15 @@ export async function updateFinancialRecord(
     >
   >
 ) {
-  const { error } = await supabase.from("financial_records").update(input).eq("id", id);
+  const { data, error } = await supabase
+    .from("financial_records")
+    .update(input)
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
+  // O RLS do Supabase não devolve erro quando barra um UPDATE — só não
+  // altera nada. Sem esta checagem, o app mostraria "salvo" sem ter salvo.
+  if (!data || data.length === 0) throw new Error("Nenhuma linha foi atualizada (sem permissão ou registro inexistente).");
 }
 
 // ---------------------------------------------------------------------------
@@ -192,11 +199,13 @@ export async function recordInstallmentPayment(
   const newReceived = Math.min(row.amount, Number(row.received_amount) + amount);
   const status = newReceived >= row.amount ? "received" : newReceived > 0 ? "partially_received" : "open";
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("receivable_installments")
     .update({ received_amount: newReceived, received_at: receivedAt, status })
-    .eq("id", installmentId);
+    .eq("id", installmentId)
+    .select("id");
   if (updateError) throw updateError;
+  if (!updated || updated.length === 0) throw new Error("Nenhuma linha foi atualizada (sem permissão ou registro inexistente).");
 
   // O dashboard financeiro soma received_value direto de financial_records
   // — pro particular, esse total é sempre a soma das parcelas, nunca
@@ -208,11 +217,13 @@ export async function recordInstallmentPayment(
   if (listError) throw listError;
   const total = (installments ?? []).reduce((sum, i) => sum + (Number(i.received_amount) || 0), 0);
 
-  const { error: syncError } = await supabase
+  const { data: synced, error: syncError } = await supabase
     .from("financial_records")
     .update({ received_value: total })
-    .eq("id", row.financial_record_id);
+    .eq("id", row.financial_record_id)
+    .select("id");
   if (syncError) throw syncError;
+  if (!synced || synced.length === 0) throw new Error("Nenhuma linha foi atualizada (sem permissão ou registro inexistente).");
 }
 
 export async function markInstallmentLate(supabase: SupabaseClient, installmentId: string) {
@@ -270,8 +281,13 @@ export async function upsertInsuranceBilling(
 ) {
   const existing = await getInsuranceBilling(supabase, financialRecordId);
   if (existing) {
-    const { error } = await supabase.from("insurance_billing").update(input).eq("id", existing.id);
+    const { data, error } = await supabase
+      .from("insurance_billing")
+      .update(input)
+      .eq("id", existing.id)
+      .select("id");
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Nenhuma linha foi atualizada (sem permissão ou registro inexistente).");
   } else {
     const { error } = await supabase.from("insurance_billing").insert({
       financial_record_id: financialRecordId,
@@ -365,8 +381,13 @@ export async function updateGlosaStatus(
     .single();
   if (fetchError) throw fetchError;
 
-  const { error } = await supabase.from("insurance_glosas").update(input).eq("id", glosaId);
+  const { data, error } = await supabase
+    .from("insurance_glosas")
+    .update(input)
+    .eq("id", glosaId)
+    .select("id");
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error("Nenhuma linha foi atualizada (sem permissão ou registro inexistente).");
   await syncGlossedValue(supabase, row.financial_record_id);
 }
 
