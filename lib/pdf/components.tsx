@@ -138,10 +138,10 @@ export function IndicatorCard({
           borderWidth: 1,
           borderColor: C.border,
           borderRadius: 4,
-          padding: 10,
+          padding: 8,
         }}
       >
-        <Text style={{ fontSize: 7.5, color: C.textMuted, letterSpacing: 0.5 }}>{label.toUpperCase()}</Text>
+        <Text style={{ fontSize: 7.5, color: C.textMuted, letterSpacing: 0.3 }}>{label.toUpperCase()}</Text>
         <Text style={{ fontSize: 16, fontWeight: 700, color: C.textDark, marginTop: 4 }}>{value}</Text>
       </View>
     );
@@ -153,10 +153,10 @@ export function IndicatorCard({
         flex: 1,
         backgroundColor: TONE_SOLID[tone],
         borderRadius: 4,
-        padding: 10,
+        padding: 8,
       }}
     >
-      <Text style={{ fontSize: 7.5, color: C.white, letterSpacing: 0.5, opacity: 0.9 }}>{label.toUpperCase()}</Text>
+      <Text style={{ fontSize: 7.5, color: C.white, letterSpacing: 0.3, opacity: 0.9 }}>{label.toUpperCase()}</Text>
       <Text style={{ fontSize: 14, fontWeight: 700, color: C.white, marginTop: 4 }}>{value}</Text>
     </View>
   );

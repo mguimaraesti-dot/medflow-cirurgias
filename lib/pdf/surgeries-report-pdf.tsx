@@ -26,14 +26,14 @@ const STATUS_TONE: Record<ScheduleStatus, Exclude<IndicatorTone, "neutral">> = {
 };
 
 const COLUMNS: { key: string; label: string; flex: number; align?: "right" | "center" }[] = [
-  { key: "code", label: "Código", flex: 0.9 },
-  { key: "patient", label: "Paciente", flex: 1.5 },
-  { key: "hospital", label: "Hospital", flex: 1.3 },
-  { key: "procedure", label: "Procedimento", flex: 1.7 },
-  { key: "attendance", label: "Atendimento", flex: 1.3 },
-  { key: "date", label: "Data", flex: 0.75, align: "center" },
-  { key: "time", label: "Horário", flex: 0.6, align: "center" },
-  { key: "status", label: "Status", flex: 0.9, align: "center" },
+  { key: "code", label: "Código", flex: 1.15 },
+  { key: "patient", label: "Paciente", flex: 1.75 },
+  { key: "hospital", label: "Hospital", flex: 1.25 },
+  { key: "procedure", label: "Procedimento", flex: 1.85 },
+  { key: "attendance", label: "Atendimento", flex: 1.35 },
+  { key: "date", label: "Data", flex: 0.85, align: "center" },
+  { key: "time", label: "Horário", flex: 0.65, align: "center" },
+  { key: "status", label: "Status", flex: 1.3, align: "center" },
 ];
 
 /**
@@ -50,11 +50,11 @@ const TABLE_CONTENT_WIDTH =
   PAGE.width - PAGE.margin * 2 - 8 /* paddingHorizontal da linha */;
 const COLUMNS_FLEX_TOTAL = COLUMNS.reduce((sum, col) => sum + col.flex, 0);
 const AVG_CHAR_WIDTH_PT = 4.3; // Helvetica 8pt, texto em pt-BR (acentos inclusos)
-const LINE_HEIGHT_PT = 12;
+const LINE_HEIGHT_PT = 10.5;
 const ROW_VERTICAL_PADDING_PT = 10; // paddingVertical: 5 em cima + 5 embaixo
 
 function columnWidthPt(flex: number) {
-  return (flex / COLUMNS_FLEX_TOTAL) * TABLE_CONTENT_WIDTH - 4; // menos padding da célula
+  return (flex / COLUMNS_FLEX_TOTAL) * TABLE_CONTENT_WIDTH - 8; // menos padding da célula (4 + 4)
 }
 
 function estimateLines(text: string, columnFlex: number) {
@@ -114,7 +114,7 @@ function TableHeaderRow() {
             color: C.white,
             textAlign: col.align ?? "left",
             letterSpacing: 0.3,
-            paddingHorizontal: 2,
+            paddingHorizontal: 4,
           }}
         >
           {col.label.toUpperCase()}
@@ -171,7 +171,7 @@ function TableDataRow({ row, index }: { row: ScheduleSurgeryItem; index: number 
               fontSize: 8,
               color: C.textDark,
               textAlign: col.align ?? "left",
-              paddingHorizontal: 2,
+              paddingHorizontal: 4,
             }}
           >
             {content}
@@ -228,10 +228,10 @@ export function SurgeriesReportPdf({
   periodLabel: string;
   emittedAtLabel: string;
 }) {
-  // Altura aproximada ocupada só na 1ª página pelos 2 cards de
-  // indicadores (2 linhas de cards + espaçamento) — entra na conta de
+  // Altura aproximada ocupada só na 1ª página pela linha única de
+  // cards de indicadores (card + espaçamento) — entra na conta de
   // quantas linhas cabem ali, pra não estourar a página.
-  const CARDS_HEIGHT = 2 * 52 + 8;
+  const CARDS_HEIGHT = 52 + 8;
   const pages = paginateRows(rows, estimateRowHeight, CARDS_HEIGHT);
 
   return (
@@ -249,15 +249,12 @@ export function SurgeriesReportPdf({
             {pageIndex === 0 ? (
               <>
                 <IndicatorCardRow>
-                  <IndicatorCard label="Total de cirurgias" value={String(counts.total)} />
+                  <IndicatorCard label="Total" value={String(counts.total)} />
                   <IndicatorCard label="Previstas" value={String(counts.prevista)} tone="amber" />
                   <IndicatorCard label="Confirmadas" value={String(counts.confirmada)} tone="emerald" />
                   <IndicatorCard label="Realizadas" value={String(counts.realizada)} tone="blue" />
-                </IndicatorCardRow>
-                <IndicatorCardRow>
                   <IndicatorCard label="Canceladas" value={String(counts.cancelada)} tone="gray" />
                   <IndicatorCard label="Atrasadas" value={String(counts.atrasada)} tone="red" />
-                  <View style={{ flex: 2 }} />
                 </IndicatorCardRow>
               </>
             ) : null}
