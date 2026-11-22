@@ -64,7 +64,9 @@ export function RequirementCardShell({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border bg-card shadow-sm transition-colors",
+        "flex h-full flex-col rounded-xl border bg-card shadow-sm transition-colors",
+        // Aberto: ocupa a linha inteira (os vizinhos não esticam).
+        open && "lg:col-span-2",
         TONE_BORDER[tone]
       )}
     >
@@ -98,7 +100,7 @@ export function RequirementCardShell({
       </button>
 
       {!open ? (
-        <div className="px-4 pb-4">
+        <div className="mt-auto px-4 pb-4">
           <Button type="button" variant="outline" size="sm" onClick={onToggle}>
             {actionLabel}
           </Button>
