@@ -20,6 +20,8 @@ const optionalUuid = z.preprocess(
   z.string().uuid().optional()
 );
 
+export const ADMIN_NOTES_MAX = 500;
+
 export const surgerySchema = z.object({
   patient_id: z.string().uuid("Selecione um paciente."),
   hospital_id: z.string().uuid("Selecione um hospital."),
@@ -30,7 +32,21 @@ export const surgerySchema = z.object({
   confirmed_date: optionalDate,
   confirmed_time: optionalTime,
   priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
-  admin_notes: optionalText,
+  admin_notes: z.preprocess(
+    (v) => (typeof v !== "string" || v.trim() === "" ? undefined : v),
+    z.string().max(ADMIN_NOTES_MAX, `Observações: no máximo ${ADMIN_NOTES_MAX} caracteres.`).optional()
+  ),
+}).superRefine((data, ctx) => {
+  // Regras de consistência (valem também no servidor, não só na tela).
+  if (data.attendance_type === "convenio" && !data.insurance_provider_id) {
+    ctx.addIssue({ code: "custom", path: ["insurance_provider_id"], message: "Selecione a operadora do convênio." });
+  }
+  if (data.confirmed_time && !data.confirmed_date) {
+    ctx.addIssue({ code: "custom", path: ["confirmed_time"], message: "Informe a data confirmada para usar o horário confirmado." });
+  }
+  if (data.confirmed_date && data.indication_date && data.confirmed_date < data.indication_date) {
+    ctx.addIssue({ code: "custom", path: ["confirmed_date"], message: "A data confirmada não pode ser anterior à data da solicitação." });
+  }
 });
 
 export type SurgeryInput = z.infer<typeof surgerySchema>;

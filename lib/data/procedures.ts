@@ -44,11 +44,11 @@ export async function listProcedures(supabase: SupabaseClient, search?: string) 
 export async function listActiveProceduresForSelect(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("procedures")
-    .select("id,name")
+    .select("id,name,tuss_code")
     .eq("active", true)
     .order("name", { ascending: true });
   if (error) throw error;
-  return data as Pick<Procedure, "id" | "name">[];
+  return data as Pick<Procedure, "id" | "name" | "tuss_code">[];
 }
 
 export async function getProcedure(supabase: SupabaseClient, id: string) {

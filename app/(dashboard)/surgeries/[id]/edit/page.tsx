@@ -27,7 +27,7 @@ export default async function EditSurgeryPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       <Link
         href={`/surgeries/${id}`}
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -36,9 +36,9 @@ export default async function EditSurgeryPage({
         {surgery.code}
       </Link>
 
-      <h1 className="text-lg font-medium text-foreground">Editar cirurgia {surgery.code}</h1>
+      <h1 className="text-xl font-semibold text-foreground">Editar cirurgia {surgery.code}</h1>
 
-      <div className="mt-6 rounded-xl border border-border bg-card p-6">
+      <div className="mt-6">
         <SurgeryForm
           surgery={surgery}
           patients={patients}
