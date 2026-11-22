@@ -1,16 +1,18 @@
+import { cache } from "react";
+
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 /**
  * Retorna o usuário autenticado (ou null). Usar em Server Components /
  * Server Actions que precisam saber quem está logado.
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});
 
 export type CurrentAccess = {
   roleId: string;
@@ -33,36 +35,40 @@ export type CurrentAccess = {
  * atribuída (ex: acesso revogado) — quem chama trata isso como "sem
  * acesso nenhum".
  */
-export async function getCurrentAccess(userId: string): Promise<CurrentAccess | null> {
+export const getCurrentAccess = cache(async (userId: string): Promise<CurrentAccess | null> => {
   const admin = createAdminClient();
 
-  const { data: userRole, error: userRoleError } = await admin
+  // Uma única consulta aninhada (user_roles -> roles -> role_permissions
+  // -> permissions) em vez de duas em sequência: cada ida ao banco custa
+  // uma viagem de rede, e isto roda em toda troca de tela. `cache()` do
+  // React ainda evita repetir a consulta quando layout, guard da página e
+  // a própria página pedem o acesso na mesma requisição.
+  const { data: userRole, error } = await admin
     .from("user_roles")
-    .select("role_id, role:roles(name)")
+    .select("role_id, role:roles(name, role_permissions(permission:permissions(module, action)))")
     .eq("user_id", userId)
     .maybeSingle();
-  if (userRoleError) throw userRoleError;
+  if (error) throw error;
   if (!userRole) return null;
 
-  const { data: rolePerms, error: permError } = await admin
-    .from("role_permissions")
-    .select("permission:permissions(module, action)")
-    .eq("role_id", userRole.role_id);
-  if (permError) throw permError;
+  const role = userRole.role as unknown as {
+    name: string;
+    role_permissions: { permission: { module: string; action: string } | null }[];
+  } | null;
 
   const permissions = new Set(
-    (rolePerms ?? [])
-      .map((rp) => rp.permission as unknown as { module: string; action: string } | null)
+    (role?.role_permissions ?? [])
+      .map((rp) => rp.permission)
       .filter((p): p is { module: string; action: string } => p != null)
       .map((p) => `${p.module}:${p.action}`)
   );
 
   return {
     roleId: userRole.role_id,
-    roleName: (userRole.role as unknown as { name: string } | null)?.name ?? "",
+    roleName: role?.name ?? "",
     permissions,
   };
-}
+});
 
 /**
  * Checagem de permissão — camada 2 de defesa (a 1ª é a navegação/UI, a 3ª
