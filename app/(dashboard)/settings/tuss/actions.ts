@@ -20,8 +20,10 @@ export type TussSyncResult = {
   saved?: number;
 };
 
+// Só a tabela 22 (procedimentos, ~6 mil termos) é copiada. A 19 (materiais
+// e OPME) passa de 1 milhão de itens — inviável pela API paginada.
 function isTable(value: string): value is TussTable {
-  return value === "tuss-22" || value === "tuss-19";
+  return value === "tuss-22";
 }
 
 /**

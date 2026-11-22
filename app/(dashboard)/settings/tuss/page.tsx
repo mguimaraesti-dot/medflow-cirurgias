@@ -11,7 +11,6 @@ export const maxDuration = 60;
 
 const TABLES = [
   { key: "tuss-22", title: "Procedimentos (TUSS 22)", description: "Usada no cadastro de procedimentos." },
-  { key: "tuss-19", title: "Materiais e OPME (TUSS 19)", description: "Usada no cadastro de materiais." },
 ] as const;
 
 export default async function TussSettingsPage() {
@@ -54,6 +53,11 @@ export default async function TussSettingsPage() {
 
       <div className="mt-6">
         <TussSyncPanel tables={states} canEdit={canEdit} />
+        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
+          Materiais e OPME (TUSS 19) ficam de fora: a ANS lista mais de 1 milhão de itens nessa
+          tabela, grande demais para copiar. A busca de materiais continua consultando a ANS ao
+          vivo.
+        </p>
       </div>
     </div>
   );

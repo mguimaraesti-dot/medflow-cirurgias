@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 type TableInfo = {
-  key: "tuss-22" | "tuss-19";
+  key: "tuss-22";
   title: string;
   description: string;
   count: number;

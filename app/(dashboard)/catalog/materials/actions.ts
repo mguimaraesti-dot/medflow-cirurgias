@@ -16,8 +16,6 @@ import {
 } from "@/lib/data/materials";
 import { materialSchema, materialSupplierSchema } from "@/lib/validation/materials";
 import { toDeleteErrorMessage } from "@/lib/delete-error";
-import { searchLocalTuss } from "@/lib/data/tuss-local";
-import { todayInSaoPaulo } from "@/lib/utils";
 import { searchTussMaterials, describeTussError, type TussResult } from "@/lib/tuss";
 
 export type MaterialFormState = {
@@ -46,10 +44,8 @@ export async function searchTussMaterialsAction(
 ): Promise<{ results?: TussResult[]; error?: string }> {
   try {
     await requireActionPermission("materials", "view");
-    const supabase = await createClient();
-    const local = await searchLocalTuss(supabase, "tuss-19", query, todayInSaoPaulo());
-    if (local) return { results: local };
-    // Cópia local ainda não carregada: consulta a ANS ao vivo (mais lenta).
+    // Materiais/OPME (TUSS 19) têm mais de 1 milhão de itens: não cabe em
+    // cópia local pela API, então a busca é sempre ao vivo na ANS.
     const results = await searchTussMaterials(query);
     return { results };
   } catch (e) {
