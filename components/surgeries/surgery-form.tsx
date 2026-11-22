@@ -50,6 +50,7 @@ import {
   type SelectedProcedure,
 } from "@/components/surgeries/procedures-multi-select";
 import { SearchSelect } from "@/components/surgeries/search-select";
+import { RequestReader, type ReaderApplyResult } from "@/components/surgeries/request-reader";
 
 const initialState: SurgeryFormState = {};
 
@@ -157,6 +158,8 @@ export function SurgeryForm({
   const [patientOptions, setPatientOptions] = useState(patients);
   const [hospitalOptions, setHospitalOptions] = useState(hospitals);
   const [confirmDialog, setConfirmDialog] = useState<"clear" | "cancel" | null>(null);
+  // Materiais sugeridos pela leitura do pedido: gravados junto com a cirurgia nova.
+  const [suggestedMaterials, setSuggestedMaterials] = useState<ReaderApplyResult["materials"]>([]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -219,7 +222,27 @@ export function SurgeryForm({
     }
   }
 
+  function applyReader(result: ReaderApplyResult) {
+    setValues((prev) => {
+      const known = new Set(prev.procedures.map((p) => p.id));
+      const added = result.procedureIds.filter((id) => !known.has(id));
+      const merged = [...prev.procedures, ...added.map((id) => ({ id, is_primary: false }))];
+      if (merged.length > 0 && !merged.some((p) => p.is_primary)) merged[0] = { ...merged[0], is_primary: true };
+      const line = result.clinicalIndication ? `Indicação clínica: ${result.clinicalIndication}` : "";
+      const notes = line && !prev.notes.includes(line) ? [prev.notes.trim(), line].filter(Boolean).join("\n") : prev.notes;
+      return {
+        ...prev,
+        patientId: result.patientId && patientOptions.some((p) => p.id === result.patientId) ? result.patientId : prev.patientId,
+        procedures: merged,
+        notes,
+      };
+    });
+    setErrors({});
+    setSuggestedMaterials(result.materials);
+  }
+
   function resetToInitial() {
+    setSuggestedMaterials([]);
     setValues(initial);
     setErrors({});
     setConfirmDialog(null);
@@ -249,6 +272,8 @@ export function SurgeryForm({
       >
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="flex flex-col gap-6 p-4 sm:p-6">
+            {!surgery ? <RequestReader onApply={applyReader} /> : null}
+
             {/* Dados principais */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="flex flex-col gap-2">
@@ -343,6 +368,29 @@ export function SurgeryForm({
                 invalid={!!errors.procedures}
               />
               <FieldError message={errors.procedures} />
+              {suggestedMaterials.length > 0 ? (
+                <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                    Materiais que serão adicionados à cirurgia (vindos do pedido):
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {suggestedMaterials.map((m) => (
+                      <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="min-w-0 truncate">{m.name} × {m.quantity}</span>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setSuggestedMaterials((prev) => prev.filter((x) => x.id !== m.id))}
+                        >
+                          Remover
+                        </button>
+                        <input type="hidden" name="suggested_material_id" value={m.id} />
+                        <input type="hidden" name="suggested_material_qty" value={m.quantity} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
 
             <hr className="border-border" />

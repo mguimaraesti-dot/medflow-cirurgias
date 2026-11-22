@@ -19,6 +19,7 @@ import {
   getSurgeryAuthorizationRequestData,
   type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
+import { addSurgeryMaterialItem } from "@/lib/data/operations";
 import { buildAuthorizationRequestText } from "@/lib/authorization-request";
 import {
   surgerySchema,
@@ -97,6 +98,22 @@ export async function createSurgeryAction(
     );
   } catch {
     return { error: "Não foi possível criar a cirurgia. Tente novamente." };
+  }
+
+  // Materiais sugeridos pela leitura do pedido (já revisados pelo usuário).
+  // Falha aqui não desfaz a cirurgia: eles podem ser adicionados na ficha.
+  const materialIds = formData.getAll("suggested_material_id").map(String);
+  const materialQtys = formData.getAll("suggested_material_qty").map(Number);
+  const seen = new Set<string>();
+  for (const [i, materialId] of materialIds.slice(0, 40).entries()) {
+    if (!/^[0-9a-f-]{36}$/i.test(materialId) || seen.has(materialId)) continue;
+    seen.add(materialId);
+    const quantity = Number.isFinite(materialQtys[i]) && materialQtys[i] > 0 ? materialQtys[i] : 1;
+    try {
+      await addSurgeryMaterialItem(supabase, surgeryId, { material_id: materialId, quantity });
+    } catch (e) {
+      console.error("[surgery] material sugerido não adicionado:", e);
+    }
   }
 
   revalidatePath("/kanban");
