@@ -103,7 +103,9 @@ async function fetchTussPage(table: TussTable, term: string): Promise<TussResult
   // processo do servidor).
   const url = `${TUSS_BASE_URL}/${table}?q=${encodeURIComponent(trimmed)}&page=1`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  // A tabela 19 (materiais/OPME) tem >1 milhão de itens e responde bem mais
+  // devagar que a 22 — dá mais tempo pra ela.
+  const timeoutId = setTimeout(() => controller.abort(), table === "tuss-19" ? 25000 : 12000);
   let response: Response;
   try {
     response = await fetch(url, {

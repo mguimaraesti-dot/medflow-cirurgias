@@ -8,7 +8,7 @@ import { MaterialsTable } from "@/components/materials/materials-table";
 
 // A busca de código TUSS (Tabela 19) na base da ANS pode demorar mais que
 // o padrão de 10s das Server Actions na Vercel.
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export default async function MaterialsCatalogPage({
   searchParams,
