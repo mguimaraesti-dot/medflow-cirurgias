@@ -50,6 +50,16 @@ export async function analyzeSurgeryRequestAction(
       return { error: "A chave da API de IA foi recusada. Verifique a configuração no servidor." };
     }
     if (msg.startsWith("reader_api_429")) return { error: "Limite de uso da IA atingido. Tente novamente em instantes." };
+    if (/credit balance/i.test(msg)) {
+      return { error: "A conta da API de IA está sem crédito. Adicione crédito em console.anthropic.com → Billing." };
+    }
+    if (msg.startsWith("reader_api_")) {
+      // Motivo devolvido pela API (não contém segredos) para facilitar o diagnóstico.
+      return { error: `A IA recusou a leitura (${msg.slice("reader_api_".length)}).` };
+    }
+    if (e instanceof Error && e.name === "TimeoutError") {
+      return { error: "A leitura demorou demais. Tente novamente com uma foto menor." };
+    }
     return { error: "Não foi possível ler a imagem agora. Tente novamente." };
   }
 }

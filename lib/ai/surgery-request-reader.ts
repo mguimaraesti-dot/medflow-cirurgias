@@ -118,8 +118,15 @@ export async function readSurgeryRequest(
   });
 
   if (!res.ok) {
-    console.error("[reader] API", res.status, (await res.text()).slice(0, 300));
-    throw new Error(`reader_api_${res.status}`);
+    const body = (await res.text()).slice(0, 400);
+    console.error("[reader] API", res.status, body);
+    let detail = "";
+    try {
+      detail = ((JSON.parse(body) as { error?: { message?: string } }).error?.message ?? "").slice(0, 160);
+    } catch {
+      /* corpo não era JSON */
+    }
+    throw new Error(`reader_api_${res.status}:${detail}`);
   }
   const json = (await res.json()) as { content?: { type: string; input?: unknown }[] };
   const block = json.content?.find((c) => c.type === "tool_use");

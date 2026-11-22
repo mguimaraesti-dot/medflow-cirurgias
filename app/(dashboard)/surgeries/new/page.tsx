@@ -9,6 +9,9 @@ import { listActiveInsuranceProvidersForSelect } from "@/lib/data/insurance-prov
 import { listActiveProceduresForSelect } from "@/lib/data/procedures";
 import { SurgeryForm } from "@/components/surgeries/surgery-form";
 
+// Server actions desta página (leitura de pedido por IA) podem levar até ~30 s.
+export const maxDuration = 60;
+
 export default async function NewSurgeryPage() {
   await requireModuleEdit("surgeries");
   const supabase = await createClient();
