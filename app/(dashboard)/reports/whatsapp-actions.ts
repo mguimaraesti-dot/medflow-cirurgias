@@ -67,7 +67,9 @@ export async function loadWhatsappScheduleAction(input: {
         return {
           id: s.id,
           patientName: s.patient?.full_name ?? null,
-          procedureName: s.primary_procedure?.name ?? null,
+          procedureNames: [...s.procedures]
+            .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+            .map((p) => p.name),
           hospitalName: s.hospital?.name ?? null,
           attendanceType: s.attendance_type ?? null,
           insuranceName: s.insurance_provider?.name ?? null,

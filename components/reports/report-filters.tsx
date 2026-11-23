@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { WhatsappScheduleDialog } from "@/components/reports/whatsapp-schedule-dialog";
 import { FilterDisclosure } from "@/components/shared/filter-disclosure";
 
 function pad(n: number) {
@@ -217,6 +218,9 @@ export function ReportFilters({ hospitals }: { hospitals: { id: string; name: st
             Imprimir / PDF
           </Button>
         )}
+        <div className="print:hidden">
+          <WhatsappScheduleDialog />
+        </div>
       </div>
     </div>
   );

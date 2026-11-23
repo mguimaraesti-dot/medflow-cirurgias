@@ -22,7 +22,8 @@ const STATUS_ORDER: ScheduleStatusKey[] = ["confirmed", "predicted", "authorizat
 export type ScheduleInputRow = {
   id: string;
   patientName: string | null;
-  procedureName: string | null;
+  /** Todos os procedimentos solicitados (principal primeiro). */
+  procedureNames: string[];
   hospitalName: string | null;
   attendanceType: "particular" | "convenio" | null;
   insuranceName: string | null;
@@ -66,6 +67,12 @@ export function modalityText(row: ScheduleInputRow): string {
   if (m === "particular") return "👤 Particular";
   if (m === "convenio") return row.insuranceName ? `🏥 Convênio – ${row.insuranceName}` : "🏥 Convênio";
   return "Não informado";
+}
+
+function procedureLines(names: string[]): string[] {
+  if (names.length === 0) return ["*Procedimento:* Não informado"];
+  if (names.length === 1) return [`*Procedimento:* ${names[0]}`];
+  return ["*Procedimentos:*", ...names.map((n) => `• ${n}`)];
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -148,7 +155,7 @@ export function buildSurgerySchedule(input: { doctorName: string; rows: Schedule
           L.push(
             `*${i + 1}. Status:* ${STATUS_META[it.statusKey].emoji} ${STATUS_META[it.statusKey].label}`,
             `*Paciente:* ${it.patientName ?? "Não informado"}`,
-            `*Procedimento:* ${it.procedureName ?? "Não informado"}`,
+            ...procedureLines(it.procedureNames),
             `*Local:* ${it.hospitalName ?? "Não informado"}`,
             `*Atendimento:* ${modalityText(it)}`,
             ""
