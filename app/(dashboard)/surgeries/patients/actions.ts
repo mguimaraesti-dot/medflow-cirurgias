@@ -34,7 +34,7 @@ function parseForm(formData: FormData) {
     "full_name", "cpf", "birth_date", "phone", "whatsapp", "email",
     "address_cep", "address_street", "address_number", "address_complement",
     "address_neighborhood", "address_city", "address_state",
-    "insurance_provider_id", "insurance_card_number", "insurance_card_validity", "admin_notes",
+    "insurance_provider_id", "insurance_card_number", "insurance_card_validity", "insurance_plan", "insurance_accommodation", "admin_notes",
   ];
   return patientSchema.safeParse(Object.fromEntries(keys.map((k) => [k, formData.get(k)])));
 }
@@ -71,6 +71,8 @@ function toRow(formData: FormData, p: Parsed): PatientUpdateInput {
     insurance_provider_id: isParticular ? null : (p.insurance_provider_id ?? null),
     insurance_card_number: isParticular ? null : (p.insurance_card_number ?? null),
     insurance_card_validity: isParticular ? null : (p.insurance_card_validity ?? null),
+    insurance_plan: isParticular ? null : (p.insurance_plan ?? null),
+    insurance_accommodation: isParticular ? null : (p.insurance_accommodation ?? null),
   };
 }
 

@@ -53,6 +53,8 @@ export const patientSchema = z.object({
   insurance_provider_id: optionalUuid,
   insurance_card_number: optionalText,
   insurance_card_validity: optionalDate,
+  insurance_plan: optionalText,
+  insurance_accommodation: optionalText,
   admin_notes: optionalText,
 });
 

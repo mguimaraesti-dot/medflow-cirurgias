@@ -15,6 +15,8 @@ export type Patient = {
   insurance_provider_id: string | null;
   insurance_card_number: string | null;
   insurance_card_validity: string | null;
+  insurance_plan: string | null;
+  insurance_accommodation: string | null;
   admin_notes: string | null;
   created_at: string;
   insurance_provider: { id: string; name: string } | null;
@@ -36,7 +38,7 @@ export function calculateAge(birthDate: string | null): number | null {
 }
 
 const SELECT_COLUMNS =
-  "id,full_name,cpf,birth_date,phone,whatsapp,email,address,insurance_provider_id,insurance_card_number,insurance_card_validity,admin_notes,created_at,insurance_provider:insurance_providers(id,name)";
+  "id,full_name,cpf,birth_date,phone,whatsapp,email,address,insurance_provider_id,insurance_card_number,insurance_card_validity,insurance_plan,insurance_accommodation,admin_notes,created_at,insurance_provider:insurance_providers(id,name)";
 
 export async function listPatients(supabase: SupabaseClient, search?: string) {
   let query = supabase
@@ -134,6 +136,8 @@ export type PatientUpdateInput = {
   insurance_provider_id?: string | null;
   insurance_card_number?: string | null;
   insurance_card_validity?: string | null;
+  insurance_plan?: string | null;
+  insurance_accommodation?: string | null;
   admin_notes?: string | null;
 };
 

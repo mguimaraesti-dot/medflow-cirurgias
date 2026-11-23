@@ -115,6 +115,9 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
+const hasInsuranceData = (pat?: PatientSelectOption) =>
+  Boolean(pat && (pat.insurance_provider_id || pat.insurance_card_number || pat.insurance_card_validity || pat.insurance_plan || pat.insurance_accommodation));
+
 function formatDate(iso: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
   const [y, m, d] = iso.split("-");
@@ -179,10 +182,13 @@ export function SurgeryForm({
         cardNumber: pat?.insurance_card_number ?? "",
         cardValidity: pat?.insurance_card_validity ?? "",
         accommodation: pat?.insurance_accommodation ?? "",
-        updatePatient: false,
+        // Paciente sem convênio no cadastro: já sugere gravar estes dados nele.
+        updatePatient: surgery?.attendance_type === "convenio" && !hasInsuranceData(pat),
       },
     };
   }, [surgery, patients]);
+
+
 
   const [values, setValues] = useState<FormValues>(initial);
   const [errors, setErrors] = useState<Errors>({});
@@ -193,7 +199,9 @@ export function SurgeryForm({
   const [extraProcedures, setExtraProcedures] = useState<ProcedureOption[]>([]);
   // Criação: materiais ainda não gravados (vindos da guia ou digitados). Edição: usa os do banco.
   const [staged, setStaged] = useState<EditorItem[]>([]);
-  const [insuranceRecovered, setInsuranceRecovered] = useState(false);
+  const [insuranceRecovered, setInsuranceRecovered] = useState(() =>
+    hasInsuranceData(patients.find((x) => x.id === surgery?.patient_id))
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -241,8 +249,8 @@ export function SurgeryForm({
   /** Recupera operadora/carteirinha do cadastro do paciente (sem inventar nada). */
   function recoverInsurance(patientId: string) {
     const pat = patientOptions.find((x) => x.id === patientId);
-    const has = pat && (pat.insurance_provider_id || pat.insurance_card_number || pat.insurance_card_validity || pat.insurance_plan || pat.insurance_accommodation);
-    setInsuranceRecovered(Boolean(has));
+    const has = hasInsuranceData(pat);
+    setInsuranceRecovered(has);
     if (!pat) return;
     setValues((prev) => ({
       ...prev,
@@ -252,7 +260,7 @@ export function SurgeryForm({
         cardNumber: pat.insurance_card_number ?? "",
         cardValidity: pat.insurance_card_validity ?? "",
         accommodation: pat.insurance_accommodation ?? "",
-        updatePatient: false,
+        updatePatient: !has,
       },
     }));
   }
@@ -649,6 +657,7 @@ export function SurgeryForm({
               onChange={setInsurance}
               providerError={errors.insuranceProviderId}
               recovered={insuranceRecovered}
+              patientWithoutInsurance={Boolean(values.patientId) && !hasInsuranceData(patientOptions.find((x) => x.id === values.patientId))}
               canUploadCards={canUploadCards}
             />
           ) : null}

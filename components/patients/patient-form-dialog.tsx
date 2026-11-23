@@ -572,6 +572,12 @@ export function PatientFormDialog({
                     <Field id="insurance_card_validity" label="Validade da carteirinha">
                       <Input id="insurance_card_validity" name="insurance_card_validity" type="date" defaultValue={patient?.insurance_card_validity ?? ""} className="h-11" />
                     </Field>
+                    <Field id="insurance_plan" label="Plano / categoria">
+                      <Input id="insurance_plan" name="insurance_plan" defaultValue={patient?.insurance_plan ?? ""} className="h-11" maxLength={120} />
+                    </Field>
+                    <Field id="insurance_accommodation" label="Acomodação">
+                      <Input id="insurance_accommodation" name="insurance_accommodation" defaultValue={patient?.insurance_accommodation ?? ""} className="h-11" maxLength={120} placeholder="Quando aplicável" />
+                    </Field>
                   </div>
                 ) : null}
               </section>

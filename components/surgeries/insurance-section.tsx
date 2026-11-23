@@ -61,6 +61,7 @@ export function InsuranceSection({
   onChange,
   providerError,
   recovered,
+  patientWithoutInsurance,
   canUploadCards,
 }: {
   patientId: string;
@@ -70,6 +71,8 @@ export function InsuranceSection({
   providerError?: string;
   /** Os dados foram recuperados do cadastro do paciente. */
   recovered: boolean;
+  /** O cadastro do paciente ainda não tem convênio. */
+  patientWithoutInsurance: boolean;
   canUploadCards: boolean;
 }) {
   const [cards, setCards] = useState<Card[] | null>(null);
@@ -137,7 +140,11 @@ export function InsuranceSection({
         </span>
       </div>
 
-      {recovered ? (
+      {patientWithoutInsurance ? (
+        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          Este paciente ainda não tem convênio no cadastro. Preencha abaixo e mantenha marcado “Salvar no cadastro do paciente” para reutilizar nas próximas cirurgias.
+        </p>
+      ) : recovered ? (
         <p className="mt-2 text-xs text-muted-foreground">Dados recuperados do cadastro do paciente. Altere o que for necessário.</p>
       ) : null}
 

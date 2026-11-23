@@ -116,6 +116,12 @@ export default async function PatientDetailPage({
                   <dt className="text-xs text-muted-foreground">Validade da carteirinha</dt>
                   <dd className="text-foreground">{formatDate(patient.insurance_card_validity)}</dd>
                 </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Plano / acomodação</dt>
+                  <dd className="text-foreground">
+                    {[patient.insurance_plan, patient.insurance_accommodation].filter(Boolean).join(" · ") || "—"}
+                  </dd>
+                </div>
               </>
             ) : null}
           </dl>
