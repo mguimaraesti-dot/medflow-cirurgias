@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, CalendarDays, ChevronDown, ExternalLink, ListTodo, Package, Plus, SlidersHorizontal, Stethoscope } from "lucide-react";
+import { Building2, CalendarDays, Check, ChevronDown, ExternalLink, ListTodo, Plus, SlidersHorizontal, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 
 import { moveSurgeryStageAction } from "@/app/(dashboard)/surgeries/actions";
@@ -11,22 +11,13 @@ import { ClearFiltersButton, MapFilters } from "@/components/kanban/map-filters"
 import { RequirementBadges } from "@/components/kanban/requirement-badges";
 import { getStageColor } from "@/components/kanban/stage-palette";
 import { SearchInput } from "@/components/shared/search-input";
-import { SurgeryProgressBar, type ProgressStep } from "@/components/surgeries/surgery-progress-bar";
+import type { ProgressStep } from "@/components/surgeries/surgery-progress-bar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { MapStats, SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { cn } from "@/lib/utils";
 
-/** Rótulos curtos por etapa (cabem em telas de 360px). */
-const SHORT_LABEL: Record<string, string> = {
-  new_indication: "Recebida",
-  authorization: "Autoriz.",
-  or_reservation: "Agenda",
-  preoperative: "Pré-op.",
-  released: "Liberada",
-  completed: "Realizada",
-};
 const STATUS_CHIP: Record<string, string> = {
   new_indication: "Recebida",
   authorization: "Aguardando autorização",
@@ -66,12 +57,10 @@ function dateInfo(s: SurgeryListItem): { label: string; value: string } {
 function MobileCard({
   surgery,
   stages,
-  materials,
   openTasks,
 }: {
   surgery: SurgeryListItem;
   stages: WorkflowStage[];
-  materials: string[];
   openTasks: number;
 }) {
   const router = useRouter();
@@ -87,13 +76,9 @@ function MobileCard({
   const attendance = surgery.attendance_type === "particular" ? "Particular" : (surgery.insurance_provider?.name ? `Convênio - ${surgery.insurance_provider.name}` : "Convênio");
   const steps: ProgressStep[] = useMemo(
     () =>
-      computeSurgeryProgressSteps(stages, { stage_id: surgery.stage_id, status: surgery.status }).map((st, i) => ({
-        ...st,
-        label: SHORT_LABEL[stages[i]?.code ?? ""] ?? st.label,
-      })),
+      computeSurgeryProgressSteps(stages, { stage_id: surgery.stage_id, status: surgery.status }),
     [stages, surgery.stage_id, surgery.status]
   );
-  const extraProcedures = surgery.procedures.length - 1;
 
   function move(stageId: string) {
     if (stageId === surgery.stage_id) return;
@@ -152,30 +137,55 @@ function MobileCard({
         <div className="space-y-3 border-t border-border px-3 pb-3 pt-3">
           <div className="flex gap-2.5">
             <Stethoscope className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground">Procedimento principal</p>
-              <p className="text-sm text-muted-foreground">{surgery.primary_procedure?.name ?? "—"}</p>
-              {extraProcedures > 0 ? <p className="text-xs text-muted-foreground">+{extraProcedures} procedimento{extraProcedures === 1 ? "" : "s"} adicional{extraProcedures === 1 ? "" : "is"}</p> : null}
-            </div>
-          </div>
-          <div className="flex gap-2.5 border-t border-border pt-3">
-            <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground">Materiais ({materials.length})</p>
-              {materials.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum material.</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-foreground">
+                Procedimentos a realizar ({surgery.procedures.length})
+              </p>
+              {surgery.procedures.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum procedimento informado.</p>
               ) : (
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {materials.slice(0, 3).map((m, i) => (
-                    <span key={`${m}-${i}`} className="max-w-[10rem] truncate rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-foreground">{m}</span>
-                  ))}
-                  {materials.length > 3 ? <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">+{materials.length - 3}</span> : null}
-                </div>
+                <ol className="mt-1 space-y-1.5">
+                  {[...surgery.procedures]
+                    .sort((x, y) => Number(y.is_primary) - Number(x.is_primary))
+                    .map((p, i) => (
+                      <li key={p.id} className="flex gap-2 text-sm text-muted-foreground">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-semibold text-foreground">{i + 1}</span>
+                        <span className="min-w-0">
+                          {p.name}
+                          {p.is_primary ? <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">principal</span> : null}
+                          {p.tuss_code ? <span className="block font-mono text-[11px] text-muted-foreground/80">TUSS {p.tuss_code}</span> : null}
+                        </span>
+                      </li>
+                    ))}
+                </ol>
               )}
             </div>
           </div>
           <div className="border-t border-border pt-3">
-            <SurgeryProgressBar steps={steps} />
+            <ol>
+              {steps.map((st, i) => (
+                <li key={`${st.label}-${i}`} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-medium",
+                        st.state === "done" && "border-emerald-500 bg-emerald-500 text-white",
+                        st.state === "current" && "border-primary bg-card text-primary",
+                        st.state === "pending" && "border-border bg-card text-muted-foreground",
+                        st.state === "blocked" && "border-red-500 bg-red-500/15 text-red-400"
+                      )}
+                    >
+                      {st.state === "done" ? <Check className="h-3 w-3" /> : i + 1}
+                    </span>
+                    {i < steps.length - 1 ? <span className={cn("my-0.5 w-0.5 flex-1 min-h-3 rounded", st.state === "done" ? "bg-emerald-500" : "bg-border")} /> : null}
+                  </div>
+                  <p className={cn("pb-2 pt-0.5 text-sm", st.state === "pending" ? "text-muted-foreground" : "font-medium text-foreground")}>
+                    {st.label}
+                    {st.state === "current" ? <span className="ml-1.5 text-[11px] font-normal text-primary">etapa atual</span> : null}
+                  </p>
+                </li>
+              ))}
+            </ol>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
             <RequirementBadges requirements={surgery.requirements} />
@@ -216,7 +226,6 @@ export function MobileSurgeryMap({
   stats,
   stages,
   surgeries,
-  materialsBySurgery,
   openTasksBySurgery,
   procedures,
   hospitals,
@@ -225,7 +234,6 @@ export function MobileSurgeryMap({
   stats: MapStats;
   stages: WorkflowStage[];
   surgeries: SurgeryListItem[];
-  materialsBySurgery: Record<string, string[]>;
   openTasksBySurgery: Record<string, number>;
   procedures: { id: string; name: string }[];
   hospitals: { id: string; name: string }[];
@@ -311,13 +319,13 @@ export function MobileSurgeryMap({
       ) : null}
 
       <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-        {[{ id: "all", name: "Todas", count: surgeries.length, color: "" }, ...stages.map((s, i) => ({ id: s.id, name: SHORT_LABEL[s.code] ?? s.name, count: counts.get(s.id) ?? 0, color: getStageColor(i, stages.length) }))].map((c) => (
+        {[{ id: "all", name: "Todas", count: surgeries.length, color: "" }, ...stages.map((s, i) => ({ id: s.id, name: s.name, count: counts.get(s.id) ?? 0, color: getStageColor(i, stages.length) }))].map((c) => (
           <button
             key={c.id}
             type="button"
             onClick={() => setStageFilter(c.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs",
+              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs",
               stageFilter === c.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground",
               c.id !== "all" && c.count === 0 && stageFilter !== c.id && "opacity-50"
             )}
@@ -346,7 +354,7 @@ export function MobileSurgeryMap({
               ) : null}
               <ul className="space-y-2">
                 {g.items.map((s) => (
-                  <MobileCard key={s.id} surgery={s} stages={stages} materials={materialsBySurgery[s.id] ?? []} openTasks={openTasksBySurgery[s.id] ?? 0} />
+                  <MobileCard key={s.id} surgery={s} stages={stages} openTasks={openTasksBySurgery[s.id] ?? 0} />
                 ))}
               </ul>
             </section>

@@ -10,7 +10,6 @@ import {
   type SurgeryMapFilters,
 } from "@/lib/data/surgeries";
 import { countOpenTasksBySurgery } from "@/lib/data/tasks";
-import { listMaterialNamesBySurgery } from "@/lib/data/operations";
 import { MobileSurgeryMap } from "@/components/kanban/mobile-surgery-map";
 import { countSurgeryDocumentsBySurgery } from "@/lib/data/surgery-documents";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
@@ -81,11 +80,6 @@ export default async function KanbanPage({
     listActiveInsuranceProvidersForSelect(supabase),
   ]);
 
-  const materialsBySurgery = await listMaterialNamesBySurgery(
-    supabase,
-    surgeries.map((s) => s.id)
-  );
-
   // O board só mostra cirurgias ativas (abaixo) — qualquer filtro de
   // situação diferente de "ativa" (ex: clicar no indicador "Realizadas")
   // não faria sentido nele, então cai automaticamente pra lista.
@@ -99,7 +93,6 @@ export default async function KanbanPage({
           stats={stats}
           stages={stages}
           surgeries={surgeries}
-          materialsBySurgery={materialsBySurgery}
           openTasksBySurgery={openTasksBySurgery}
           procedures={procedures}
           hospitals={hospitals}
