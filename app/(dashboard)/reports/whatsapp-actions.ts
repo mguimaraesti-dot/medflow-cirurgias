@@ -2,7 +2,7 @@
 
 import { requireActionPermission } from "@/lib/auth/guard";
 import { createClient } from "@/lib/supabase/server";
-import { listSurgeriesForReport, listWorkflowStages } from "@/lib/data/surgeries";
+import { listSurgeriesForReport, listSurgeriesWithoutDate, listWorkflowStages } from "@/lib/data/surgeries";
 import type { ScheduleInputRow } from "@/lib/whatsapp/surgery-schedule";
 import { todayInSaoPaulo } from "@/lib/utils";
 
@@ -41,7 +41,7 @@ export async function loadWhatsappScheduleAction(input: {
   let from = today;
   let to = addDays(today, typeof input.preset === "number" ? input.preset : 0);
   if (input.preset === "all") {
-    // Todas as cirurgias com data (inclui atrasadas e futuras); realizadas são removidas na montagem.
+    // Todas as cirurgias (com ou sem data, atrasadas e futuras); realizadas são removidas na montagem.
     from = "1900-01-01";
     to = "2999-12-31";
   }
@@ -55,15 +55,16 @@ export async function loadWhatsappScheduleAction(input: {
   }
   try {
     const supabase = await createClient();
-    const [surgeries, stages] = await Promise.all([
+    const [dated, undated, stages] = await Promise.all([
       listSurgeriesForReport(supabase, { from, to }),
+      input.preset === "all" ? listSurgeriesWithoutDate(supabase) : Promise.resolve([]),
       listWorkflowStages(supabase),
     ]);
+    const surgeries = [...dated, ...undated];
     const stageCode = new Map(stages.map((s) => [s.id, s.code]));
     const rows: ScheduleInputRow[] = surgeries
       .map((s): ScheduleInputRow | null => {
-        const date = s.confirmed_date ?? s.expected_date;
-        if (!date) return null;
+        const date = s.confirmed_date ?? s.expected_date ?? null;
         return {
           id: s.id,
           patientName: s.patient?.full_name ?? null,
@@ -79,7 +80,7 @@ export async function loadWhatsappScheduleAction(input: {
           confirmed: Boolean(s.confirmed_date),
         };
       })
-      .filter((r): r is ScheduleInputRow => r !== null && r.date >= from && r.date <= to);
+      .filter((r): r is ScheduleInputRow => r !== null && (r.date === null ? input.preset === "all" : r.date >= from && r.date <= to));
     return { data: { from, to, rows, loadedAt: new Date().toISOString() } };
   } catch (e) {
     console.error("[whatsapp] falha ao carregar programação:", e);

@@ -31,8 +31,8 @@ export type ScheduleInputRow = {
   status: string;
   /** código da etapa atual no Kanban (ex.: authorization) */
   stageCode: string | null;
-  /** data efetiva: confirmada, senão prevista (YYYY-MM-DD) */
-  date: string;
+  /** data efetiva: confirmada, senão prevista (YYYY-MM-DD); nula = data a definir */
+  date: string | null;
   confirmed: boolean;
 };
 
@@ -114,22 +114,23 @@ export function buildSurgerySchedule(input: { doctorName: string; rows: Schedule
     if (!statusKey) continue;
     items.push({ ...r, statusKey });
   }
-  items.sort((a, b) => a.date.localeCompare(b.date) || (a.patientName ?? "").localeCompare(b.patientName ?? "", "pt-BR"));
+  items.sort((a, b) => (a.date ?? "9999").localeCompare(b.date ?? "9999") || (a.patientName ?? "").localeCompare(b.patientName ?? "", "pt-BR"));
 
   const monthMap = new Map<string, Map<string, ScheduleItem[]>>();
   for (const it of items) {
-    const ym = it.date.slice(0, 7);
+    const ym = it.date ? it.date.slice(0, 7) : "none";
     const days = monthMap.get(ym) ?? new Map<string, ScheduleItem[]>();
-    days.set(it.date, [...(days.get(it.date) ?? []), it]);
+    const key = it.date ?? "none";
+    days.set(key, [...(days.get(key) ?? []), it]);
     monthMap.set(ym, days);
   }
   const months: ScheduleMonth[] = [...monthMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => (a === "none" ? "9999" : a).localeCompare(b === "none" ? "9999" : b))
     .map(([ym, days]) => {
       const dayList: ScheduleDay[] = [...days.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, list]) => ({ date, label: weekdayAndDate(date), items: list }));
-      return { ym, label: monthLabel(ym), count: dayList.reduce((s, d) => s + d.items.length, 0), days: dayList };
+        .map(([date, list]) => ({ date, label: date === "none" ? "" : weekdayAndDate(date), items: list }));
+      return { ym, label: ym === "none" ? "Data a definir" : monthLabel(ym), count: dayList.reduce((s, d) => s + d.items.length, 0), days: dayList };
     });
 
   const byStatus = Object.fromEntries(STATUS_ORDER.map((k) => [k, 0])) as Record<ScheduleStatusKey, number>;
@@ -150,7 +151,7 @@ export function buildSurgerySchedule(input: { doctorName: string; rows: Schedule
     for (const m of months) {
       L.push(`*📅 ${m.label.toUpperCase()} — ${plural(m.count)}*`, "");
       for (const d of m.days) {
-        L.push(`*${d.label}*`, "");
+        if (d.label) L.push(`*${d.label}*`, "");
         d.items.forEach((it, i) => {
           L.push(
             `*${i + 1}. Status:* ${STATUS_META[it.statusKey].emoji} ${STATUS_META[it.statusKey].label}`,
