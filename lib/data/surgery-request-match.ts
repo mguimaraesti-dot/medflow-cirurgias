@@ -109,6 +109,16 @@ export async function analyzeExtraction(
   const materialCatalog = await fetchAll<{ id: string; name: string }>((from, to) =>
     supabase.from("materials_catalog").select("id,name").eq("active", true).order("name").range(from, to)
   );
+  const { data: supplierRows } = await supabase.from("suppliers").select("id,company_name,trade_name").eq("active", true);
+  const suppliers = (supplierRows ?? []) as { id: string; company_name: string; trade_name: string | null }[];
+  const findSupplier = (text: string | null) => {
+    if (!text) return null;
+    const n = normalizeText(text).replace(/\s+/g, " ").trim();
+    const hit = suppliers.find(
+      (s) => normalizeText(s.company_name).trim() === n || (s.trade_name && normalizeText(s.trade_name).trim() === n)
+    );
+    return hit ? { id: hit.id, name: hit.company_name } : null;
+  };
   const materialSuggestions: MaterialSuggestion[] = [];
   const usedIds = new Set<string>();
   for (const [i, m] of extraction.materials.entries()) {
@@ -144,6 +154,8 @@ export async function analyzeExtraction(
       confidence: m.confidence,
       quantity: m.quantity ?? 1,
       details: m.details,
+      supplier_text: m.supplier,
+      supplier: findSupplier(m.supplier),
       material: strong ? { id: strong.id, name: strong.name } : null,
       alternatives: candidates.filter((c) => c.id !== strong?.id).slice(0, 4),
     });
@@ -162,6 +174,8 @@ export async function analyzeExtraction(
       confidence: "high",
       quantity: k.quantity,
       details: null,
+      supplier_text: null,
+      supplier: null,
       material: { id: k.material.id, name: k.material.name },
       alternatives: [],
     });

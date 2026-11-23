@@ -104,13 +104,15 @@ export async function createSurgeryAction(
   // Falha aqui não desfaz a cirurgia: eles podem ser adicionados na ficha.
   const materialIds = formData.getAll("suggested_material_id").map(String);
   const materialQtys = formData.getAll("suggested_material_qty").map(Number);
+  const materialSuppliers = formData.getAll("suggested_material_supplier").map(String);
   const seen = new Set<string>();
   for (const [i, materialId] of materialIds.slice(0, 40).entries()) {
     if (!/^[0-9a-f-]{36}$/i.test(materialId) || seen.has(materialId)) continue;
     seen.add(materialId);
     const quantity = Number.isFinite(materialQtys[i]) && materialQtys[i] > 0 ? materialQtys[i] : 1;
     try {
-      await addSurgeryMaterialItem(supabase, surgeryId, { material_id: materialId, quantity });
+      const supplierId = /^[0-9a-f-]{36}$/i.test(materialSuppliers[i] ?? "") ? materialSuppliers[i] : undefined;
+      await addSurgeryMaterialItem(supabase, surgeryId, { material_id: materialId, quantity, supplier_id: supplierId });
     } catch (e) {
       console.error("[surgery] material sugerido não adicionado:", e);
     }

@@ -187,7 +187,13 @@ export function sanitizeExtraction(raw: unknown): RequestExtraction {
       .map((m) => {
         const o = (m ?? {}) as Record<string, unknown>;
         const q = typeof o.quantity === "number" && o.quantity > 0 && o.quantity < 1000 ? o.quantity : null;
-        return { name: str(o.name, 200) ?? "", quantity: q, details: str(o.details, 200), confidence: conf(o.confidence) };
+        return {
+          name: str(o.name, 200) ?? "",
+          quantity: q,
+          details: str(o.details, 200),
+          supplier: str(o.supplier, 150),
+          confidence: conf(o.confidence),
+        };
       })
       .filter((m) => m.name),
     legibility_notes: list(r.legibility_notes)

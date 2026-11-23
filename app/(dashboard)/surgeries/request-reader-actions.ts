@@ -12,7 +12,7 @@ import {
   sanitizeExtraction,
 } from "@/lib/ai/surgery-request-reader";
 import { createProcedure } from "@/lib/data/procedures";
-import { createMaterial } from "@/lib/data/materials";
+import { addMaterialSupplier, createMaterial } from "@/lib/data/materials";
 import { fetchAll, normalizeText } from "@/lib/data/fetch-all";
 import { procedureSchema } from "@/lib/validation/procedures";
 import { materialSchema } from "@/lib/validation/materials";
@@ -202,12 +202,14 @@ export async function createProcedureFromRequestAction(input: {
   }
 }
 
-/** Cadastra no catálogo um material lido da guia (nome + marca/medidas escritos). */
+/**
+ * Cadastra no catálogo um material conforme a descrição preenchida na conferência
+ * (nome + marca/medida). Não usa a tabela TUSS. Se houver fornecedor, vincula como preferencial.
+ */
 export async function createMaterialFromRequestAction(input: {
   name: string;
   details: string | null;
-  /** Dados da TUSS 19 escolhidos pelo usuário na busca (opcionais). */
-  tuss?: { code: string; manufacturer?: string; model?: string; anvisaRegistration?: string } | null;
+  supplierId?: string | null;
 }): Promise<QuickCreateResult> {
   try {
     await requireActionPermission("surgeries", "edit");
@@ -215,7 +217,7 @@ export async function createMaterialFromRequestAction(input: {
   } catch {
     return { error: "Você não tem permissão para cadastrar materiais." };
   }
-  const name = [input.name.trim(), input.details?.trim()].filter(Boolean).join(" ");
+  const name = [input.name.trim(), input.details?.trim()].filter(Boolean).join(" ").slice(0, 300);
   if (!name) return { error: "Sem nome para cadastrar este material." };
   const supabase = await createClient();
   try {
@@ -225,24 +227,58 @@ export async function createMaterialFromRequestAction(input: {
       .ilike("name", name.replace(/[%_\\]/g, (c) => `\\${c}`))
       .limit(1)
       .maybeSingle();
-    if (existing) return { item: { ...(existing as { id: string; name: string }), tuss_code: null } };
+    if (existing) return { existing: true, item: { ...(existing as { id: string; name: string }), tuss_code: null } };
 
-    const tuss = input.tuss && /^\d{8,9}$/.test(input.tuss.code) ? input.tuss : null;
-    const parsed = materialSchema.safeParse({
-      name,
-      active: "on",
-      tuss_code: tuss?.code ?? "",
-      manufacturer: tuss?.manufacturer ?? "",
-      model: tuss?.model ?? "",
-      anvisa_registration: tuss?.anvisaRegistration ?? "",
-    });
+    const parsed = materialSchema.safeParse({ name, active: "on" });
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
     const created = await createMaterial(supabase, parsed.data);
+    if (input.supplierId && /^[0-9a-f-]{36}$/i.test(input.supplierId)) {
+      try {
+        await addMaterialSupplier(supabase, created.id, input.supplierId, true);
+      } catch (e) {
+        console.error("[reader] vínculo de fornecedor:", e);
+      }
+    }
     revalidatePath("/catalog/materials");
-    return { item: { id: created.id, name: created.name, tuss_code: tuss?.code ?? null } };
+    return { item: { id: created.id, name: created.name, tuss_code: null } };
   } catch (e) {
     console.error("[reader] cadastro de material:", e);
     return { error: "Não foi possível cadastrar o material." };
+  }
+}
+
+/** Cadastro inicial de fornecedor (só o nome); o restante é completado depois. */
+export async function createSupplierFromRequestAction(input: {
+  name: string;
+}): Promise<{ supplier?: { id: string; name: string }; error?: string }> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+    await requireActionPermission("suppliers", "edit");
+  } catch {
+    return { error: "Você não tem permissão para cadastrar fornecedores." };
+  }
+  const name = input.name.replace(/\s+/g, " ").trim().slice(0, 150);
+  if (name.length < 2) return { error: "Informe o nome do fornecedor." };
+  const supabase = await createClient();
+  try {
+    const { data: same } = await supabase
+      .from("suppliers")
+      .select("id,company_name")
+      .ilike("company_name", name.replace(/[%_\\]/g, (c) => `\\${c}`))
+      .limit(1)
+      .maybeSingle();
+    if (same) return { supplier: { id: same.id as string, name: same.company_name as string } };
+    const { data, error } = await supabase
+      .from("suppliers")
+      .insert({ company_name: name, active: true })
+      .select("id,company_name")
+      .single();
+    if (error) throw error;
+    revalidatePath("/catalog/suppliers");
+    return { supplier: { id: data.id as string, name: data.company_name as string } };
+  } catch (e) {
+    console.error("[reader] cadastro de fornecedor:", e);
+    return { error: "Não foi possível cadastrar o fornecedor." };
   }
 }
 
@@ -268,5 +304,17 @@ export async function searchCatalogMaterialsAction(
     return { results: found.map((r) => ({ id: r.id, name: r.name })) };
   } catch {
     return { results: [] };
+  }
+}
+
+/** Nomes dos fornecedores ativos, para sugerir na conferência (campo opcional). */
+export async function listSupplierNamesAction(): Promise<{ names: string[] }> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+    const supabase = await createClient();
+    const { data } = await supabase.from("suppliers").select("company_name").eq("active", true).order("company_name");
+    return { names: ((data ?? []) as { company_name: string }[]).map((r) => r.company_name) };
+  } catch {
+    return { names: [] };
   }
 }

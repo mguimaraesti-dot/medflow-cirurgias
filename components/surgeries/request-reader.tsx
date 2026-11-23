@@ -27,12 +27,12 @@ import {
   createMaterialFromRequestAction,
   createPatientFromRequestAction,
   createProcedureFromRequestAction,
+  createSupplierFromRequestAction,
+  listSupplierNamesAction,
   matchSurgeryRequestAction,
   readSurgeryRequestPhotoAction,
   searchCatalogMaterialsAction,
 } from "@/app/(dashboard)/surgeries/request-reader-actions";
-import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
-import type { TussResult } from "@/lib/tuss";
 import type {
   Confidence,
   ProcedureSuggestion,
@@ -50,7 +50,7 @@ export type ReaderApplyResult = {
   clinicalIndication: string | null;
   /** Texto do campo Observação/Justificativa da guia (opcional) */
   observations: string | null;
-  materials: { id: string; name: string; quantity: number }[];
+  materials: { id: string; name: string; quantity: number; supplier_id: string | null; supplier_name: string | null }[];
   /** Procedimentos cadastrados agora, a partir da guia (precisam entrar nas opções do formulário). */
   createdProcedures: { id: string; name: string; tuss_code: string | null }[];
   /** Paciente cadastrado agora (cadastro inicial) — precisa entrar nas opções do formulário. */
@@ -82,7 +82,7 @@ async function shrinkImage(file: File): Promise<File> {
 // ----------------------------------------------------------------------------
 
 type DraftProcedure = { id: string; code: string; description: string; conf: Confidence; origCode: string; origDesc: string };
-type DraftMaterial = { id: string; name: string; quantity: string; details: string; conf: Confidence; origName: string; origDetails: string };
+type DraftMaterial = { id: string; name: string; quantity: string; details: string; supplier: string; conf: Confidence; origName: string; origDetails: string };
 type Draft = {
   patientName: string;
   origPatientName: string;
@@ -119,6 +119,7 @@ function toDraft(e: RequestExtraction): Draft {
       name: m.name,
       quantity: m.quantity ? String(m.quantity) : "1",
       details: m.details ?? "",
+      supplier: m.supplier ?? "",
       conf: m.confidence,
       origName: m.name,
       origDetails: m.details ?? "",
@@ -146,7 +147,7 @@ function fromDraft(d: Draft, guideType: RequestExtraction["guide_type"]): Reques
     })),
     materials: keptMaterials(d).map((m) => {
       const q = Number(m.quantity.replace(",", "."));
-      return { name: m.name.trim(), quantity: q > 0 ? q : null, details: m.details.trim() || null, confidence: m.conf };
+      return { name: m.name.trim(), quantity: q > 0 ? q : null, details: m.details.trim() || null, supplier: m.supplier.trim() || null, confidence: m.conf };
     }),
     legibility_notes: [],
   };
@@ -283,7 +284,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [patientForm, setPatientForm] = useState<{ name: string } | null>(null);
   const [procForm, setProcForm] = useState<{ key: string; name: string; code: string; specialty: string } | null>(null);
   const [catalog, setCatalog] = useState<{ key: string; query: string; loading: boolean; results: { id: string; name: string }[] | null } | null>(null);
-  const [picker, setPicker] = useState<{ key: string; query: string; loading: boolean; results: TussResult[] | null; error: string | null } | null>(null);
+  const [supplierNames, setSupplierNames] = useState<string[]>([]);
 
   function reset() {
     if (preview) URL.revokeObjectURL(preview);
@@ -293,7 +294,6 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     setConfirmed(false);
     setAnalysis(null);
     setError(null);
-    setPicker(null);
     setCatalog(null);
     setProcForm(null);
     setPatientForm(null);
@@ -350,8 +350,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       setMatChoice(Object.fromEntries(a.materials.map((m) => [m.key, m.material?.id ?? ""])));
       setUseIndication(Boolean(a.clinical_indication));
       setUseObservations(Boolean(a.observations));
-      setPicker(null);
-      setCatalog(null);
+        setCatalog(null);
       setProcForm(null);
       setPatientForm(null);
       setStep("match");
@@ -446,41 +445,40 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     setCatalog(null);
   }
 
-  async function runPickerSearch(key: string, query: string) {
-    setPicker({ key, query, loading: true, results: null, error: null });
-    const res = await searchTussMaterialsAction(query);
-    setPicker((cur) => (cur && cur.key === key ? { ...cur, loading: false, results: res.results ?? [], error: res.error ?? null } : cur));
-  }
-
-  function openPicker(key: string) {
-    const m = analysis?.materials.find((x) => x.key === key);
-    if (!m) return;
-    setCatalog(null);
-    // Só o nome: marca/medida escritas ("Microtech 16 mm") restringem demais; o usuário pode refinar.
-    void runPickerSearch(key, m.read_name);
-  }
-
-  async function createMaterial(key: string, tuss: TussResult | null) {
+  /** Cadastra o material conforme a descrição preenchida na conferência (sem consultar a TUSS). */
+  async function createMaterial(key: string) {
     const m = analysis?.materials.find((x) => x.key === key);
     if (!m || creating) return;
     setCreating(key);
-    const res = await createMaterialFromRequestAction({
-      name: m.read_name,
-      details: m.details,
-      tuss: tuss ? { code: tuss.code, manufacturer: tuss.manufacturer, model: tuss.model, anvisaRegistration: tuss.anvisaRegistration } : null,
-    });
+    const res = await createMaterialFromRequestAction({ name: m.read_name, details: m.details, supplierId: m.supplier?.id ?? null });
     setCreating(null);
     if (res.error || !res.item) {
       toast.error(res.error ?? "Não foi possível cadastrar.");
       return;
     }
     const item = res.item;
-    setPicker(null);
     setCatalog(null);
     setAnalysis((a) => (a ? { ...a, materials: a.materials.map((x) => (x.key === key ? { ...x, material: { id: item.id, name: item.name } } : x)) } : a));
     setMatChoice((s) => ({ ...s, [key]: item.id }));
     setMatChecked((s) => ({ ...s, [key]: true }));
-    toast.success(`Material cadastrado: ${item.name}${item.tuss_code ? ` (TUSS ${item.tuss_code})` : " (sem código TUSS)"}`);
+    toast.success(res.existing ? `Já existia no catálogo: ${item.name}.` : `Material cadastrado: ${item.name}`);
+  }
+
+  /** Cadastro inicial do fornecedor informado (só o nome). */
+  async function createSupplier(key: string) {
+    const m = analysis?.materials.find((x) => x.key === key);
+    if (!m?.supplier_text || creating) return;
+    setCreating(`sup-${key}`);
+    const res = await createSupplierFromRequestAction({ name: m.supplier_text });
+    setCreating(null);
+    if (res.error || !res.supplier) {
+      toast.error(res.error ?? "Não foi possível cadastrar o fornecedor.");
+      return;
+    }
+    const sup = res.supplier;
+    setAnalysis((a) => (a ? { ...a, materials: a.materials.map((x) => (x.supplier_text && x.supplier_text.toLowerCase() === m.supplier_text!.toLowerCase() ? { ...x, supplier: sup } : x)) } : a));
+    setSupplierNames((n) => (n.includes(sup.name) ? n : [...n, sup.name]));
+    toast.success(`Fornecedor cadastrado: ${sup.name}. Complete os dados depois em Fornecedores.`);
   }
 
   // --- Resumo e aplicação -----------------------------------------------------
@@ -495,7 +493,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     const materials = selectedMaterials.map((m) => {
       const id = matChoice[m.key];
       const name = m.material?.id === id ? m.material.name : (m.alternatives.find((a) => a.id === id)?.name ?? m.read_name);
-      return { id, name, quantity: m.quantity };
+      return { id, name, quantity: m.quantity, supplier_id: m.supplier?.id ?? null, supplier_name: m.supplier?.name ?? null };
     });
     onApply({
       patientId: patientId || null,
@@ -537,7 +535,15 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
             </p>
           </div>
         </div>
-        <Button type="button" variant="outline" className="h-10 shrink-0" onClick={() => setOpen(true)}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 shrink-0"
+          onClick={() => {
+            setOpen(true);
+            void listSupplierNamesAction().then((r) => setSupplierNames(r.names));
+          }}
+        >
           <Camera className="mr-2 h-4 w-4" />
           Ler pedido por foto
         </Button>
@@ -701,14 +707,20 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                       </div>
                     </Section>
 
-                    <Section icon={<Package />} title="Materiais / OPME citados">
+                    <Section icon={<Package />} title="Materiais / OPME citados" right={<span className="text-xs text-muted-foreground">marca e fornecedor são opcionais</span>}>
+                      <datalist id="rd-suppliers">
+                        {supplierNames.map((n) => (
+                          <option key={n} value={n} />
+                        ))}
+                      </datalist>
                       <div className="flex flex-col gap-2">
                         {draft.materials.map((m) => (
                           <div key={m.id} className={cn("rounded-lg border p-2", m.conf !== "high" ? "border-amber-500/40 bg-amber-500/5" : "border-border")}>
                             <div className="flex flex-wrap gap-2">
                               <input className={cn(inputCls, "min-w-40 flex-1")} value={m.name} placeholder="material" aria-label="Nome do material" onChange={(e) => patchMat(m.id, { name: e.target.value })} />
                               <input className={cn(inputCls, "w-16 shrink-0")} inputMode="decimal" value={m.quantity} aria-label="Quantidade" onChange={(e) => patchMat(m.id, { quantity: e.target.value })} />
-                              <input className={cn(inputCls, "min-w-32 flex-1")} value={m.details} placeholder="marca / medida" aria-label="Marca ou medida" onChange={(e) => patchMat(m.id, { details: e.target.value })} />
+                              <input className={cn(inputCls, "min-w-32 flex-1")} value={m.details} placeholder="marca / medida (opcional)" aria-label="Marca ou medida" onChange={(e) => patchMat(m.id, { details: e.target.value })} />
+                              <input className={cn(inputCls, "min-w-32 flex-1")} value={m.supplier} list="rd-suppliers" placeholder="fornecedor (opcional)" aria-label="Fornecedor" onChange={(e) => patchMat(m.id, { supplier: e.target.value })} />
                               <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Remover material" onClick={() => patch("materials", draft.materials.filter((x) => x.id !== m.id))}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -718,7 +730,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                             </div>
                           </div>
                         ))}
-                        <Button type="button" variant="outline" size="sm" className="h-8 w-fit" onClick={() => patch("materials", [...draft.materials, { id: nextId(), name: "", quantity: "1", details: "", conf: "high", origName: "", origDetails: "" }])}>
+                        <Button type="button" variant="outline" size="sm" className="h-8 w-fit" onClick={() => patch("materials", [...draft.materials, { id: nextId(), name: "", quantity: "1", details: "", supplier: "", conf: "high", origName: "", origDetails: "" }])}>
                           <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar material
                         </Button>
                       </div>
@@ -991,13 +1003,28 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                     <p className="text-xs text-amber-700 dark:text-amber-400">Só há materiais parecidos: nada é vinculado sem você escolher.</p>
                                   ) : null}
 
-                                  {isGuide && picker?.key !== m.key ? (
+                                  {isGuide ? (
+                                    m.supplier ? (
+                                      <Line icon={<Package />} label="Fornecedor">{m.supplier.name}</Line>
+                                    ) : m.supplier_text ? (
+                                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                        <span>Fornecedor informado: <span className="text-foreground">{m.supplier_text}</span> (não cadastrado)</span>
+                                        <Button type="button" variant="outline" size="sm" className="h-7" disabled={creating !== null} onClick={() => createSupplier(m.key)}>
+                                          {creating === `sup-${m.key}` ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : null}
+                                          Cadastrar fornecedor
+                                        </Button>
+                                      </div>
+                                    ) : null
+                                  ) : null}
+
+                                  {isGuide ? (
                                     <div className="flex flex-wrap gap-x-2 gap-y-1">
-                                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" disabled={creating !== null} onClick={() => { setPicker(null); void runCatalogSearch(m.key, m.read_name); }}>
+                                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" disabled={creating !== null} onClick={() => void runCatalogSearch(m.key, m.read_name)}>
                                         Buscar no catálogo
                                       </Button>
-                                      <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" disabled={creating !== null} onClick={() => openPicker(m.key)}>
-                                        {m.material ? "Cadastrar como novo (buscar código TUSS)" : "Cadastrar no catálogo (buscar código TUSS)"}
+                                      <Button type="button" variant="outline" size="sm" className="h-8 px-2 text-xs" disabled={creating !== null} onClick={() => createMaterial(m.key)}>
+                                        {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                                        {m.material ? "Cadastrar como novo" : "Cadastrar no catálogo"}
                                       </Button>
                                     </div>
                                   ) : null}
@@ -1008,7 +1035,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                         <input
                                           className={cn(inputCls, "flex-1")}
                                           value={catalog.query}
-                                          placeholder="Nome, código interno ou TUSS"
+                                          placeholder="Nome ou código interno"
                                           aria-label="Buscar no catálogo de materiais"
                                           onChange={(e) => setCatalog((c) => (c ? { ...c, query: e.target.value } : c))}
                                           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void runCatalogSearch(m.key, catalog.query); } }}
@@ -1024,48 +1051,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                           </li>
                                         ))}
                                       </ul>
-                                      <div className="flex gap-2">
-                                        <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => openPicker(m.key)}>Não está no catálogo: cadastrar</Button>
-                                        <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setCatalog(null)}>Fechar</Button>
-                                      </div>
-                                    </div>
-                                  ) : null}
-
-                                  {picker?.key === m.key ? (
-                                    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-2.5">
-                                      <p className="text-xs font-medium text-foreground">Escolha o código TUSS 19 do material</p>
-                                      <div className="flex gap-2">
-                                        <input
-                                          className={cn(inputCls, "flex-1")}
-                                          value={picker.query}
-                                          aria-label="Buscar na TUSS 19"
-                                          onChange={(e) => setPicker((c) => (c ? { ...c, query: e.target.value } : c))}
-                                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void runPickerSearch(m.key, picker.query); } }}
-                                        />
-                                        <Button type="button" variant="outline" size="sm" className="h-9" disabled={picker.loading} onClick={() => runPickerSearch(m.key, picker.query)}>Buscar</Button>
-                                      </div>
-                                      {picker.loading ? <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando a tabela TUSS…</p> : null}
-                                      {picker.error ? <p className="text-xs text-red-600 dark:text-red-400">{picker.error}</p> : null}
-                                      {picker.results && picker.results.length === 0 && !picker.error ? <p className="text-xs text-muted-foreground">Nada encontrado. Tente menos palavras (ex.: só “papilótomo”).</p> : null}
-                                      <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
-                                        {(picker.results ?? []).map((r) => (
-                                          <li key={r.code}>
-                                            <button type="button" disabled={creating !== null} onClick={() => createMaterial(m.key, r)} className="w-full rounded-md border border-border p-2 text-left text-xs hover:bg-muted disabled:opacity-60">
-                                              <span className="block font-medium text-foreground">{r.code} · {r.name}</span>
-                                              <span className="block text-muted-foreground">
-                                                {[r.manufacturer, r.model ? `Modelo ${r.model}` : null, r.anvisaRegistration ? `ANVISA ${r.anvisaRegistration}` : null, r.active ? null : "não vigente"].filter(Boolean).join(" · ")}
-                                              </span>
-                                            </button>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                      <div className="flex gap-2">
-                                        <Button type="button" variant="outline" size="sm" className="h-8" disabled={creating !== null} onClick={() => createMaterial(m.key, null)}>
-                                          {creating === m.key ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-                                          Cadastrar sem código TUSS
-                                        </Button>
-                                        <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setPicker(null)}>Cancelar</Button>
-                                      </div>
+                                      <Button type="button" variant="ghost" size="sm" className="h-8 w-fit" onClick={() => setCatalog(null)}>Fechar</Button>
                                     </div>
                                   ) : null}
                                 </div>

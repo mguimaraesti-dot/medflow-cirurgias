@@ -12,7 +12,15 @@ export type RequestExtraction = {
   /** Texto do campo Observação/Justificativa da guia */
   observations: string | null;
   procedures: { tuss_code: string | null; description: string; confidence: Confidence }[];
-  materials: { name: string; quantity: number | null; details: string | null; confidence: Confidence }[];
+  materials: {
+    name: string;
+    quantity: number | null;
+    /** Marca / medida escritas */
+    details: string | null;
+    /** Fornecedor (opcional), informado pelo usuário na conferência */
+    supplier: string | null;
+    confidence: Confidence;
+  }[];
   legibility_notes: string[];
 };
 
@@ -43,6 +51,9 @@ export type MaterialSuggestion = {
   confidence: Confidence;
   quantity: number;
   details: string | null;
+  /** Fornecedor digitado pelo usuário e, se existir no cadastro, o fornecedor correspondente */
+  supplier_text: string | null;
+  supplier: { id: string; name: string } | null;
   /** Só preenchido quando o nome é igual ao do catálogo (ou vem do kit padrão). */
   material: { id: string; name: string } | null;
   /** Materiais do catálogo parecidos: sugestões que o usuário escolhe manualmente. */

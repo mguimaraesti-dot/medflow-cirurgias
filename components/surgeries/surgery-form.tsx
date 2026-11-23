@@ -391,7 +391,7 @@ export function SurgeryForm({
                   <ul className="flex flex-col gap-1">
                     {suggestedMaterials.map((m) => (
                       <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
-                        <span className="min-w-0 truncate">{m.name} × {m.quantity}</span>
+                        <span className="min-w-0 truncate">{m.name} × {m.quantity}{m.supplier_name ? ` · ${m.supplier_name}` : ""}</span>
                         <button
                           type="button"
                           className="text-xs text-muted-foreground hover:text-foreground"
@@ -401,6 +401,7 @@ export function SurgeryForm({
                         </button>
                         <input type="hidden" name="suggested_material_id" value={m.id} />
                         <input type="hidden" name="suggested_material_qty" value={m.quantity} />
+                        <input type="hidden" name="suggested_material_supplier" value={m.supplier_id ?? ""} />
                       </li>
                     ))}
                   </ul>
