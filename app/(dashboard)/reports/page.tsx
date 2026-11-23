@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { getSurgeriesReport, getFinancialReport, getProductivityReport } from "@/lib/data/reports";
+import { WhatsappScheduleDialog } from "@/components/reports/whatsapp-schedule-dialog";
 import { ReportFilters } from "@/components/reports/report-filters";
 import { SurgeriesReportTable } from "@/components/reports/surgeries-report-table";
 import { FinancialOverviewTable } from "@/components/financial/financial-overview-table";
@@ -85,7 +86,12 @@ export default async function ReportsPage({
 
   return (
     <div>
-      <h1 className="text-lg font-medium text-foreground">Relatórios</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-lg font-medium text-foreground">Relatórios</h1>
+        <div className="print:hidden">
+          <WhatsappScheduleDialog />
+        </div>
+      </div>
       <p className="mt-1 text-sm text-muted-foreground">
         Cirurgias, financeiro (particular) e produtividade por período, com exportação em CSV.
       </p>
