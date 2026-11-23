@@ -301,6 +301,10 @@ const FILTER_PARAM_KEYS = [
   "overdue",
   "pending",
   "scheduled",
+  "confirmed",
+  "dfrom",
+  "dto",
+  "stage",
 ];
 
 /**

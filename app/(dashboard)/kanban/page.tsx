@@ -35,6 +35,10 @@ type SearchParams = {
   overdue?: string;
   pending?: string;
   scheduled?: string;
+  confirmed?: string;
+  dfrom?: string;
+  dto?: string;
+  stage?: string;
 };
 
 export default async function KanbanPage({
@@ -58,6 +62,10 @@ export default async function KanbanPage({
     overdueOnly: params.overdue === "1",
     pendingRequirement: params.pending as SurgeryMapFilters["pendingRequirement"],
     scheduledOnly: params.scheduled === "1",
+    confirmedOnly: params.confirmed === "1",
+    effectiveFrom: params.dfrom,
+    effectiveTo: params.dto,
+    stageId: params.stage,
   };
 
   const [

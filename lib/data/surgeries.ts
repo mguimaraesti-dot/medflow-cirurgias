@@ -68,6 +68,15 @@ function withDerivedProcedures<T extends { surgery_procedures: SurgeryProcedureL
   };
 }
 
+/** Expressão OR do PostgREST: data efetiva = confirmada, senão prevista, senão solicitação. */
+export function effectiveDateOr(from: string, to: string) {
+  return (
+    `and(confirmed_date.gte.${from},confirmed_date.lte.${to}),` +
+    `and(confirmed_date.is.null,expected_date.gte.${from},expected_date.lte.${to}),` +
+    `and(confirmed_date.is.null,expected_date.is.null,indication_date.gte.${from},indication_date.lte.${to})`
+  );
+}
+
 export type SurgeryMapFilters = {
   q?: string;
   procedureId?: string;
@@ -84,6 +93,12 @@ export type SurgeryMapFilters = {
   pendingRequirement?: "authorization" | "or_reservation" | "preoperative";
   /** só cirurgias com data confirmada (hoje em diante) */
   scheduledOnly?: boolean;
+  /** só cirurgias com qualquer data confirmada */
+  confirmedOnly?: boolean;
+  /** janela pela data efetiva (confirmada, senão prevista, senão solicitação) — usada pelo Dashboard */
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  stageId?: string;
 };
 
 export type MapStats = {
@@ -247,8 +262,17 @@ export async function listSurgeriesForMap(
   if (filters.to) query = query.lte("expected_date", filters.to);
   if (filters.attendance === "particular") {
     query = query.eq("attendance_type", "particular");
+  } else if (filters.attendance === "convenio") {
+    query = query.eq("attendance_type", "convenio");
   } else if (filters.attendance) {
     query = query.eq("insurance_provider_id", filters.attendance);
+  }
+  if (filters.stageId) query = query.eq("stage_id", filters.stageId);
+  if (filters.confirmedOnly) query = query.not("confirmed_date", "is", null);
+  if (filters.effectiveFrom && filters.effectiveTo) {
+    const f = filters.effectiveFrom;
+    const t = filters.effectiveTo;
+    query = query.or(effectiveDateOr(f, t));
   }
   if (filters.overdueOnly) {
     const today = todayInSaoPaulo();
