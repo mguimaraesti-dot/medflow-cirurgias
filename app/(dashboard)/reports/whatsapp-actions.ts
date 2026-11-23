@@ -28,7 +28,7 @@ export type WhatsappScheduleData = {
  * Flávio), então não há filtro por médico — todas as cirurgias são dele.
  */
 export async function loadWhatsappScheduleAction(input: {
-  preset: 7 | 15 | 30 | "custom";
+  preset: 7 | 15 | 30 | "all" | "custom";
   from?: string;
   to?: string;
 }): Promise<{ data?: WhatsappScheduleData; error?: string }> {
@@ -39,7 +39,12 @@ export async function loadWhatsappScheduleAction(input: {
   }
   const today = todayInSaoPaulo();
   let from = today;
-  let to = addDays(today, input.preset === "custom" ? 0 : input.preset);
+  let to = addDays(today, typeof input.preset === "number" ? input.preset : 0);
+  if (input.preset === "all") {
+    // Todas as cirurgias com data (inclui atrasadas e futuras); realizadas são removidas na montagem.
+    from = "1900-01-01";
+    to = "2999-12-31";
+  }
   if (input.preset === "custom") {
     if (!input.from || !input.to || !ISO.test(input.from) || !ISO.test(input.to)) {
       return { error: "Informe a data inicial e a final." };
