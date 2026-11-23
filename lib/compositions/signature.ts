@@ -1,0 +1,45 @@
+/**
+ * Assinatura canônica de uma composição (procedimentos + materiais).
+ *
+ * Regras:
+ * - Procedimentos: identificados pelo código TUSS; sem TUSS, pelo ID do cadastro.
+ * - Materiais: identificados pelo ID do cadastro no catálogo (o TUSS do
+ *   material é opcional e, quando existe, já é único por cadastro).
+ * - Quantidades diferentes geram composições diferentes.
+ * - A ordem NÃO influencia: tudo é ordenado e repetições são somadas.
+ */
+export type SignatureProcedure = { id: string; tuss_code: string | null };
+export type SignatureMaterial = { material_id: string; quantity: number };
+
+function normQty(q: number): string {
+  const n = Number.isFinite(q) && q > 0 ? q : 1;
+  return String(Math.round(n * 1000) / 1000);
+}
+
+export function procedureKey(p: SignatureProcedure): string {
+  const code = (p.tuss_code ?? "").trim();
+  return code ? `T${code}` : `I${p.id}`;
+}
+
+export function buildCompositionSignature(
+  procedures: SignatureProcedure[],
+  materials: SignatureMaterial[]
+): string {
+  const procKeys = [...new Set(procedures.map(procedureKey))].sort();
+
+  const qtyByMaterial = new Map<string, number>();
+  for (const m of materials) {
+    const q = Number.isFinite(m.quantity) && m.quantity > 0 ? m.quantity : 1;
+    qtyByMaterial.set(m.material_id, (qtyByMaterial.get(m.material_id) ?? 0) + q);
+  }
+  const matKeys = [...qtyByMaterial.entries()]
+    .map(([id, q]) => `${id}x${normQty(q)}`)
+    .sort();
+
+  return `P:${procKeys.join(",")}|M:${matKeys.join(",")}`;
+}
+
+/** Assinatura só dos procedimentos (para achar composições do mesmo conjunto). */
+export function procedureSetKey(procedures: SignatureProcedure[]): string {
+  return [...new Set(procedures.map(procedureKey))].sort().join(",");
+}

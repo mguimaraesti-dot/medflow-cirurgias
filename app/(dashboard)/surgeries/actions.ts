@@ -20,6 +20,7 @@ import {
   type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
 import { addSurgeryMaterialItem } from "@/lib/data/operations";
+import { syncSurgeryComposition } from "@/lib/data/compositions";
 import { buildAuthorizationRequestText } from "@/lib/authorization-request";
 import {
   surgerySchema,
@@ -118,6 +119,8 @@ export async function createSurgeryAction(
     }
   }
 
+  await syncSurgeryComposition(supabase, surgeryId);
+
   revalidatePath("/kanban");
   revalidatePath("/surgeries");
   redirect(`/surgeries/${surgeryId}`);
@@ -154,6 +157,7 @@ export async function updateSurgeryAction(
   } catch {
     return { error: "Não foi possível salvar a cirurgia. Tente novamente." };
   }
+  await syncSurgeryComposition(supabase, id);
 
   revalidatePath("/kanban");
   revalidatePath("/surgeries");

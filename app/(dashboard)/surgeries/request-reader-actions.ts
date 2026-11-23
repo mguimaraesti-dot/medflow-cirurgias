@@ -11,6 +11,7 @@ import {
   readSurgeryRequest,
   sanitizeExtraction,
 } from "@/lib/ai/surgery-request-reader";
+import { listCompositionsForProcedures, previewComposition } from "@/lib/data/compositions";
 import { createProcedure } from "@/lib/data/procedures";
 import { addMaterialSupplier, createMaterial } from "@/lib/data/materials";
 import { fetchAll, normalizeText } from "@/lib/data/fetch-all";
@@ -316,5 +317,45 @@ export async function listSupplierNamesAction(): Promise<{ names: string[] }> {
     return { names: ((data ?? []) as { company_name: string }[]).map((r) => r.company_name) };
   } catch {
     return { names: [] };
+  }
+}
+
+const UUID = /^[0-9a-f-]{36}$/i;
+
+/**
+ * Regra de composições: diz se a combinação (procedimentos + materiais +
+ * quantidades) já existe (será reutilizada), é uma variação de um
+ * conjunto de procedimentos já conhecido, ou é inédita. Não grava nada.
+ * Também devolve as composições já cadastradas para o mesmo conjunto.
+ */
+export async function previewCompositionAction(input: {
+  procedureIds: string[];
+  materials: { id: string; quantity: number }[];
+}): Promise<{
+  preview?: Awaited<ReturnType<typeof previewComposition>>;
+  existing?: Awaited<ReturnType<typeof listCompositionsForProcedures>>;
+  error?: string;
+}> {
+  try {
+    await requireActionPermission("surgeries", "edit");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
+  const procedureIds = (input.procedureIds ?? []).filter((id) => UUID.test(id)).slice(0, 20);
+  const materials = (input.materials ?? [])
+    .filter((m) => UUID.test(m.id))
+    .slice(0, 60)
+    .map((m) => ({ material_id: m.id, quantity: Number(m.quantity) > 0 ? Number(m.quantity) : 1 }));
+  try {
+    const supabase = await createClient();
+    const [preview, existing] = await Promise.all([
+      previewComposition(supabase, procedureIds, materials),
+      listCompositionsForProcedures(supabase, procedureIds),
+    ]);
+    return { preview, existing };
+  } catch (e) {
+    // Migração 0024 ainda não aplicada, etc.: o fluxo segue sem a informação.
+    console.error("[reader] composição:", e);
+    return { error: "unavailable" };
   }
 }

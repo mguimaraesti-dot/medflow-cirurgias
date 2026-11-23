@@ -1,5 +1,6 @@
 "use server";
 
+import { syncSurgeryComposition } from "@/lib/data/compositions";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
@@ -300,6 +301,7 @@ export async function addSurgeryMaterialItemAction(
   } catch {
     return { error: "Não foi possível adicionar o material." };
   }
+  await syncSurgeryComposition(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }
@@ -319,6 +321,7 @@ export async function removeSurgeryMaterialItemAction(itemId: string, surgeryId:
   await requireActionPermission("surgeries");
   const supabase = await createClient();
   await removeSurgeryMaterialItem(supabase, itemId);
+  await syncSurgeryComposition(supabase, surgeryId);
   revalidateSurgery(surgeryId);
 }
 
@@ -329,6 +332,7 @@ export async function importProcedureDefaultMaterialsAction(
   await requireActionPermission("surgeries");
   const supabase = await createClient();
   await importProcedureDefaultMaterials(supabase, surgeryId, procedureIds);
+  await syncSurgeryComposition(supabase, surgeryId);
   revalidateSurgery(surgeryId);
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -30,6 +30,7 @@ import {
   createSupplierFromRequestAction,
   listSupplierNamesAction,
   matchSurgeryRequestAction,
+  previewCompositionAction,
   readSurgeryRequestPhotoAction,
   searchCatalogMaterialsAction,
 } from "@/app/(dashboard)/surgeries/request-reader-actions";
@@ -296,6 +297,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [guideType, setGuideType] = useState<RequestExtraction["guide_type"]>("outro");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [comp, setComp] = useState<Awaited<ReturnType<typeof previewCompositionAction>> | null>(null);
   const [analysis, setAnalysis] = useState<RequestAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -535,6 +537,51 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const patientName = analysis
     ? ([analysis.patient.patient, ...analysis.patient.alternatives].find((p) => p?.id === patientId)?.full_name ?? createdPatient?.full_name ?? null)
     : null;
+
+  // Regra de composições: consulta se a combinação (procedimentos + materiais +
+  // quantidades) já existe e deve ser reutilizada. Não grava nada.
+  const compKey = JSON.stringify([
+    selectedProcedures.map((p) => p.procedure!.id).sort(),
+    selectedMaterials.map((m) => [matChoice[m.key], m.quantity]).sort(),
+  ]);
+  useEffect(() => {
+    if (step !== "match") return;
+    const [procIds, mats] = JSON.parse(compKey) as [string[], [string, number][]];
+    if (procIds.length === 0) return;
+    let cancelled = false;
+    void previewCompositionAction({ procedureIds: procIds, materials: mats.map(([id, quantity]) => ({ id, quantity })) }).then((r) => {
+      if (!cancelled) setComp(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [compKey, step]);
+
+  function applyExistingComposition(c: NonNullable<NonNullable<typeof comp>["existing"]>[number]) {
+    setAnalysis((a) => {
+      if (!a) return a;
+      const have = new Set(a.materials.map((m) => matChoice[m.key] || m.material?.id).filter(Boolean));
+      const extra = c.materials
+        .filter((m) => !have.has(m.material_id))
+        .map((m) => ({
+          key: `c${c.number}-${m.material_id}`,
+          source: "kit" as const,
+          read_name: m.name,
+          confidence: "high" as Confidence,
+          quantity: m.quantity,
+          details: null,
+          supplier_text: null,
+          supplier: null,
+          material: { id: m.material_id, name: m.name },
+          alternatives: [],
+        }));
+      return { ...a, materials: [...a.materials, ...extra] };
+    });
+    const ids = Object.fromEntries(c.materials.map((m) => [`c${c.number}-${m.material_id}`, m.material_id]));
+    setMatChoice((x) => ({ ...x, ...ids }));
+    setMatChecked((x) => ({ ...x, ...Object.fromEntries(Object.keys(ids).map((k) => [k, true])) }));
+    toast.success(`Materiais da composição #${c.number} incluídos. Confira as quantidades.`);
+  }
 
   function apply() {
     if (!analysis) return;
@@ -1034,6 +1081,26 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                       </ul>
                     </Section>
 
+                    {/* Composições já cadastradas */}
+                    {comp?.existing && comp.existing.length > 0 ? (
+                      <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-3 text-xs dark:border-amber-500/30 dark:bg-amber-500/10">
+                        <p className="font-semibold text-foreground">Composições já cadastradas para este conjunto de procedimentos</p>
+                        <ul className="mt-2 flex flex-col gap-2">
+                          {comp.existing.map((c) => (
+                            <li key={c.id} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-medium">Composição #{c.number} · usada em {c.uses} guia(s)</span>
+                                <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => applyExistingComposition(c)}>
+                                  Incluir estes materiais
+                                </Button>
+                              </div>
+                              <p className="text-muted-foreground">{c.materials.map((m) => `${m.quantity}× ${m.name}`).join(" · ")}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
                     {/* Materiais */}
                     <Section
                       kind="material"
@@ -1201,6 +1268,15 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                 </Chip>
                 <Chip tone={selectedProcedures.length ? "ok" : "warn"}>{selectedProcedures.length} procedimento(s)</Chip>
                 <Chip tone="muted">{selectedMaterials.length} material(is)</Chip>
+                {comp?.preview && comp.preview.status !== "unavailable" ? (
+                  <Chip tone={comp.preview.status === "reused" ? "ok" : comp.preview.status === "variant" ? "info" : "muted"}>
+                    {comp.preview.status === "reused"
+                      ? `Composição #${comp.preview.number} existente será reutilizada`
+                      : comp.preview.status === "variant"
+                        ? "Nova composição (variação de uma existente)"
+                        : "Nova composição será cadastrada"}
+                  </Chip>
+                ) : null}
                 {(useIndication && analysis.clinical_indication) || (useObservations && analysis.observations) ? <Chip tone="muted">Indicação/observações incluídas</Chip> : null}
               </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
