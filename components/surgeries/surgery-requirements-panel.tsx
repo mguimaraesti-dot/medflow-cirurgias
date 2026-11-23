@@ -23,6 +23,7 @@ export function SurgeryRequirementsPanel({
   defaultOpenKey = null,
   surgeryId,
   procedureLabel,
+  procedureNames,
   hospitalId,
   insuranceProviderId,
   requirements,
@@ -34,6 +35,7 @@ export function SurgeryRequirementsPanel({
   defaultOpenKey?: RequirementKey | null;
   surgeryId: string;
   procedureLabel: string;
+  procedureNames?: string[];
   hospitalId: string;
   insuranceProviderId: string | null;
   requirements: SurgeryRequirement[];
@@ -67,6 +69,7 @@ export function SurgeryRequirementsPanel({
         <AuthorizationRequirementCard
           surgeryId={surgeryId}
           procedureLabel={procedureLabel}
+          procedureNames={procedureNames}
           insuranceProviderId={insuranceProviderId}
           authorization={authorization}
           requirement={authorizationReq}

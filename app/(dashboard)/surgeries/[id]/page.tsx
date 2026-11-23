@@ -291,6 +291,7 @@ export default async function SurgeryDetailPage({
               defaultOpenKey={defaultOpenKey}
               surgeryId={surgery.id}
               procedureLabel={surgery.procedures.map((p) => p.name).join(", ")}
+              procedureNames={surgery.procedures.map((p) => p.name)}
               hospitalId={surgery.hospital_id}
               insuranceProviderId={surgery.insurance_provider_id}
               requirements={requirements}

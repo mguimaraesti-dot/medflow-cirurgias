@@ -40,6 +40,7 @@ function formatDate(value: string | null) {
 export function AuthorizationRequirementCard({
   surgeryId,
   procedureLabel,
+  procedureNames,
   insuranceProviderId,
   authorization,
   requirement,
@@ -48,6 +49,7 @@ export function AuthorizationRequirementCard({
 }: {
   surgeryId: string;
   procedureLabel: string;
+  procedureNames?: string[];
   insuranceProviderId: string | null;
   authorization: AuthorizationRequest | null;
   requirement: SurgeryRequirement;
@@ -80,6 +82,7 @@ export function AuthorizationRequirementCard({
       <AuthorizationCard
         surgeryId={surgeryId}
         procedureLabel={procedureLabel}
+        procedureNames={procedureNames}
         insuranceProviderId={insuranceProviderId}
         authorization={authorization}
       />
