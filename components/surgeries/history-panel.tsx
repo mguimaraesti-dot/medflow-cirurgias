@@ -10,8 +10,10 @@ export type HistoryEntry = { id: string; description: string; changedAt: string;
 const fmt = (value: string) => new Date(value).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
 /** Histórico recolhível: consultável sem ocupar espaço permanente. */
-export function HistoryPanel({ history }: { history: HistoryEntry[] }) {
+export function HistoryPanel({ history: entries }: { history: HistoryEntry[] }) {
   const [open, setOpen] = useState(false);
+  // Mais recente no topo, independente da ordem em que os dados chegam.
+  const history = [...entries].sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
   return (
     <section className="rounded-xl border border-border bg-card">
       <button
