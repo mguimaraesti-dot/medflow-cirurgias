@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ListTodo, Building2, Clock, Stethoscope, CalendarClock } from "lucide-react";
@@ -8,7 +8,6 @@ import { ListTodo, Building2, Clock, Stethoscope, CalendarClock } from "lucide-r
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
 import { RequirementBadges } from "@/components/kanban/requirement-badges";
-import { SurgeryDetailSheet } from "@/components/kanban/surgery-detail-sheet";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_LABEL: Record<SurgeryListItem["priority"], string> = {
@@ -42,14 +41,14 @@ function daysSinceIndication(value: string): number {
 
 export function KanbanCard({
   surgery,
-  stages,
+  stages: _stages,
   openTasksCount = 0,
 }: {
   surgery: SurgeryListItem;
   stages: WorkflowStage[];
   openTasksCount?: number;
 }) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: surgery.id,
   });
@@ -69,14 +68,6 @@ export function KanbanCard({
   const waitingDays = daysSinceIndication(surgery.indication_date);
 
   return (
-    // O painel de detalhe (SurgeryDetailSheet) é renderizado como irmão
-    // desta div, fora dela de propósito: mesmo o conteúdo do Sheet
-    // aparecendo em outro lugar da tela (via portal), o React ainda o
-    // considera filho desta div pra fins de propagação de evento — se
-    // ficasse aninhado aqui dentro, os `listeners` do dnd-kit (arrastar o
-    // card) capturariam cliques e arrastos feitos dentro do painel,
-    // inclusive no botão de fechar (X), que o dnd-kit interpretava como
-    // início de um arraste do card.
     <>
       <div
         ref={setNodeRef}
@@ -84,7 +75,8 @@ export function KanbanCard({
         {...listeners}
         {...attributes}
         onClick={() => {
-          if (!isDragging) setOpen(true);
+          // Clique abre direto a edição da cirurgia (arrastar continua movendo o card).
+          if (!isDragging) router.push(`/surgeries/${surgery.id}/edit`);
         }}
         className={cn(
           "cursor-grab rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-ring active:cursor-grabbing",
@@ -135,7 +127,6 @@ export function KanbanCard({
         <RequirementBadges requirements={surgery.requirements} />
       </div>
       </div>
-      <SurgeryDetailSheet surgery={surgery} stages={stages} open={open} onOpenChange={setOpen} />
     </>
   );
 }
