@@ -29,26 +29,21 @@ export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestD
     ? "Não se aplica (atendimento particular)"
     : (data.patient_insurance_card_number ?? "[Número da carteirinha]");
 
-  const procedureBlocks =
+  const procedureRows =
     data.procedures.length > 0
       ? data.procedures
-          .map(
-            (p) =>
-              `- Procedimento: ${p.name}\n` +
-              `- Código TUSS: ${p.tuss_code ?? "[Código TUSS]"}\n` +
-              `- Quantidade: 1`
-          )
-          .join("\n\n")
-      : "- Procedimento: [Descrição do procedimento]\n- Código TUSS: [Código TUSS]\n- Quantidade: [Quantidade]";
+          .map((p) => `| ${p.tuss_code ?? "[Código TUSS]"} | 1 | ${p.name} |`)
+          .join("\n")
+      : "| [Código TUSS] | [Qtd.] | [Descrição do procedimento] |";
 
   const materialRows =
     data.materials.length > 0
-      ? data.materials
-          .map((m) => `| ${m.name} | ${m.code ?? ""} | ${m.quantity} |`)
-          .join("\n")
-      : "| [Descrição do material] | [Código] | [Qtd.] |";
+      ? data.materials.map((m) => `| ${m.name} | ${m.quantity} |`).join("\n")
+      : "| [Descrição do material] | [Qtd.] |";
 
-  return `Solicitamos a análise e autorização para realização do procedimento cirúrgico abaixo:
+  return `Olá,
+
+Solicitamos a análise e autorização para realização do procedimento cirúrgico abaixo:
 
 1. IDENTIFICAÇÃO DO PACIENTE
 
@@ -61,12 +56,14 @@ export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestD
 
 2. PROCEDIMENTO CIRÚRGICO
 
-${procedureBlocks}
+| Código TUSS | Qtd | Descrição |
+|---|---|---|
+${procedureRows}
 
 3. MATERIAIS / OPME SOLICITADOS
 
-| Material | Código | Quantidade |
-|---|---|---|
+| Material | Quantidade |
+|---|---|
 ${materialRows}
 
 4. CRITICIDADE DO PACIENTE
