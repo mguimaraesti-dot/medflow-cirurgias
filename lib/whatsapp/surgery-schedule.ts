@@ -63,7 +63,7 @@ function modalityOf(row: ScheduleInputRow): ModalityKey {
 
 export function modalityText(row: ScheduleInputRow): string {
   const m = modalityOf(row);
-  if (m === "particular") return "💲 Particular";
+  if (m === "particular") return "👤 Particular";
   if (m === "convenio") return row.insuranceName ? `🏥 Convênio – ${row.insuranceName}` : "🏥 Convênio";
   return "Não informado";
 }
@@ -135,9 +135,9 @@ export function buildSurgerySchedule(input: { doctorName: string; rows: Schedule
   const byMonth = months.map((m) => ({ ym: m.ym, label: m.label, count: m.count }));
 
   const L: string[] = [];
-  L.push("*📋 PROGRAMAÇÃO CIRÚRGICA*", "*MedFlow – Cirurgias*", "", `Olá, ${input.doctorName}!`, "");
+  L.push("*📋 PROGRAMAÇÃO CIRÚRGICA*", "", `Olá, ${input.doctorName}!`, "");
   if (total === 0) {
-    L.push("Não há cirurgias programadas no período selecionado.", "", SEP, "");
+    L.push("Não há cirurgias programadas no período selecionado.");
   } else {
     L.push("Confira a programação das suas próximas cirurgias:", "", SEP, "");
     for (const m of months) {
@@ -146,11 +146,11 @@ export function buildSurgerySchedule(input: { doctorName: string; rows: Schedule
         L.push(`*${d.label}*`, "");
         d.items.forEach((it, i) => {
           L.push(
-            `*${i + 1}. Paciente:* ${it.patientName ?? "Não informado"}`,
+            `*${i + 1}. Status:* ${STATUS_META[it.statusKey].emoji} ${STATUS_META[it.statusKey].label}`,
+            `*Paciente:* ${it.patientName ?? "Não informado"}`,
             `*Procedimento:* ${it.procedureName ?? "Não informado"}`,
             `*Local:* ${it.hospitalName ?? "Não informado"}`,
             `*Atendimento:* ${modalityText(it)}`,
-            `*Status:* ${STATUS_META[it.statusKey].emoji} ${STATUS_META[it.statusKey].label}`,
             ""
           );
         });
@@ -159,19 +159,12 @@ export function buildSurgerySchedule(input: { doctorName: string; rows: Schedule
     }
     L.push("*📊 RESUMO DA PROGRAMAÇÃO*", "", `*Total de cirurgias: ${pad2(total)}*`, "", "*Por mês:*");
     for (const m of byMonth) L.push(`• ${m.label}: ${pad2(m.count)}`);
-    L.push("", "*Por modalidade:*", `• 💲 Particulares: ${pad2(byModality.particular)}`, `• 🏥 Convênios: ${pad2(byModality.convenio)}`);
+    L.push("", "*Por modalidade:*", `• 👤 Particulares: ${pad2(byModality.particular)}`, `• 🏥 Convênios: ${pad2(byModality.convenio)}`);
     if (byModality.unknown > 0) L.push(`• Não informado: ${pad2(byModality.unknown)}`);
     L.push("", "*Por status:*");
     for (const k of STATUS_ORDER) L.push(`• ${STATUS_META[k].emoji} ${STATUS_META[k].plural}: ${pad2(byStatus[k])}`);
-    L.push("", SEP, "");
   }
-  L.push(
-    "*MedFlow – Cirurgias*",
-    "Gestão inteligente da sua programação cirúrgica.",
-    "",
-    "Em caso de dúvidas ou necessidade de atualização, entre em contato com a equipe responsável."
-  );
-  return { text: L.join("\n"), total, months, byMonth, byModality, byStatus };
+  return { text: L.join("\n").trimEnd(), total, months, byMonth, byModality, byStatus };
 }
 
 /** Normaliza telefone brasileiro para o formato do wa.me (apenas dígitos, com 55). */
