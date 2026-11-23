@@ -58,6 +58,8 @@ export type ReaderApplyResult = {
   createdProcedures: { id: string; name: string; tuss_code: string | null }[];
   /** Paciente cadastrado agora (cadastro inicial) — precisa entrar nas opções do formulário. */
   createdPatient: { id: string; full_name: string } | null;
+  /** Foto da guia (já reduzida) para anexar à cirurgia ao salvar. */
+  guideFile: File | null;
 };
 
 // ----------------------------------------------------------------------------
@@ -294,6 +296,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<Step>("upload");
   const [preview, setPreview] = useState<string | null>(null);
+  const [guideFile, setGuideFile] = useState<File | null>(null);
   const [guideType, setGuideType] = useState<RequestExtraction["guide_type"]>("outro");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -352,6 +355,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       try {
         const small = await shrinkImage(file);
         setPreview(URL.createObjectURL(small));
+        setGuideFile(small);
         const fd = new FormData();
         fd.set("image", small);
         const res = await readSurgeryRequestPhotoAction(fd);
@@ -598,6 +602,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       materials,
       createdProcedures,
       createdPatient,
+      guideFile: guideFile ? new File([guideFile], "guia-pedido-cirurgico.jpg", { type: guideFile.type || "image/jpeg" }) : null,
     });
     toast.success("Dados do pedido aplicados. Revise o formulário antes de salvar.");
     setOpen(false);

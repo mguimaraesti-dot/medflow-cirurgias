@@ -20,6 +20,8 @@ import {
   type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
 import { addSurgeryMaterialItem } from "@/lib/data/operations";
+import { addSurgeryDocument } from "@/lib/data/surgery-documents";
+import { getCurrentUser } from "@/lib/auth/session";
 import { syncSurgeryComposition } from "@/lib/data/compositions";
 import { buildAuthorizationRequestText } from "@/lib/authorization-request";
 import {
@@ -120,6 +122,28 @@ export async function createSurgeryAction(
   }
 
   await syncSurgeryComposition(supabase, surgeryId);
+
+  // Foto da guia lida pela IA: fica anexada à cirurgia para consulta.
+  const guidePhoto = formData.get("guide_photo");
+  if (
+    guidePhoto instanceof File &&
+    guidePhoto.size > 0 &&
+    guidePhoto.size <= 5 * 1024 * 1024 &&
+    guidePhoto.type.startsWith("image/")
+  ) {
+    try {
+      const user = await getCurrentUser();
+      await addSurgeryDocument(
+        supabase,
+        surgeryId,
+        guidePhoto,
+        "Guia de pedido cirúrgico (foto lida pela IA)",
+        user?.id ?? null
+      );
+    } catch (e) {
+      console.error("[surgery] foto da guia não anexada:", e);
+    }
+  }
 
   revalidatePath("/kanban");
   revalidatePath("/surgeries");

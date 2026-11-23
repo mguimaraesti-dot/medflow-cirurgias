@@ -15,6 +15,7 @@ import {
   getOrCreateChecklist,
   listPreoperativeItems,
 } from "@/lib/data/operations";
+import { getSurgeryCompositionBrief } from "@/lib/data/compositions";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
 import { getOrCreateFinancialRecord, listInstallments } from "@/lib/data/financial";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
@@ -84,6 +85,8 @@ export default async function SurgeryDetailPage({
     getOrCreateChecklist(supabase, id),
   ]);
 
+  const compositionBrief = await getSurgeryCompositionBrief(supabase, id);
+
   const [preoperativeItems, documents, financialRecord] = await Promise.all([
     listPreoperativeItems(supabase, checklistId),
     listSurgeryDocuments(supabase, id),
@@ -131,6 +134,15 @@ export default async function SurgeryDetailPage({
             <Building2 className="h-3.5 w-3.5 shrink-0" />
             {surgery.hospital?.name ?? "—"}
           </p>
+          {compositionBrief ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Composição{" "}
+              <Link href={`/catalog/compositions#comp-${compositionBrief.number}`} className="font-medium text-foreground hover:underline">
+                #{compositionBrief.number}
+              </Link>{" "}
+              · usada em {compositionBrief.uses} guia(s)
+            </p>
+          ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {surgery.procedures.map((p) => (
               <Badge

@@ -204,3 +204,85 @@ export async function syncSurgeryComposition(supabase: SupabaseClient, surgeryId
     console.error("[composition] não foi possível vincular a composição:", e);
   }
 }
+
+export type CompositionListItem = {
+  id: string;
+  number: number;
+  created_at: string;
+  procedures: { id: string; name: string; tuss_code: string | null; is_primary: boolean }[];
+  materials: { material_id: string; name: string; quantity: number }[];
+  /** Códigos das cirurgias/guias que usaram esta composição (sem dados do paciente). */
+  surgeries: { id: string; code: string }[];
+};
+
+/** Todas as composições, da mais usada para a menos usada. */
+export async function listAllCompositions(supabase: SupabaseClient): Promise<CompositionListItem[]> {
+  const { data, error } = await supabase
+    .from("procedure_compositions")
+    .select(
+      "id,number,created_at," +
+        "procedures:procedure_composition_procedures(is_primary,procedure:procedures(id,name,tuss_code))," +
+        "materials:procedure_composition_materials(material_id,quantity,material:materials_catalog(name))"
+    )
+    .order("number", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+
+  const { data: used, error: usedError } = await supabase
+    .from("surgeries")
+    .select("id,code,composition_id")
+    .not("composition_id", "is", null)
+    .limit(5000);
+  if (usedError) throw usedError;
+  const byComposition = new Map<string, { id: string; code: string }[]>();
+  for (const s of used ?? []) {
+    const list = byComposition.get(s.composition_id as string) ?? [];
+    list.push({ id: s.id as string, code: s.code as string });
+    byComposition.set(s.composition_id as string, list);
+  }
+
+  type Row = {
+    id: string;
+    number: number;
+    created_at: string;
+    procedures: { is_primary: boolean; procedure: { id: string; name: string; tuss_code: string | null } | null }[];
+    materials: { material_id: string; quantity: number; material: { name: string } | null }[];
+  };
+  return ((data ?? []) as unknown as Row[])
+    .map((c) => ({
+      id: c.id,
+      number: Number(c.number),
+      created_at: c.created_at,
+      procedures: c.procedures
+        .filter((p) => p.procedure)
+        .map((p) => ({ ...p.procedure!, is_primary: p.is_primary }))
+        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary)),
+      materials: c.materials.map((m) => ({
+        material_id: m.material_id,
+        name: m.material?.name ?? "—",
+        quantity: Number(m.quantity),
+      })),
+      surgeries: byComposition.get(c.id) ?? [],
+    }))
+    .sort((a, b) => b.surgeries.length - a.surgeries.length || b.number - a.number);
+}
+
+/** Composição vinculada a uma cirurgia (para a ficha). Null se não houver / migração ausente. */
+export async function getSurgeryCompositionBrief(
+  supabase: SupabaseClient,
+  surgeryId: string
+): Promise<{ number: number; uses: number } | null> {
+  try {
+    const { data } = await supabase.from("surgeries").select("composition_id").eq("id", surgeryId).single();
+    const compositionId = data?.composition_id as string | null | undefined;
+    if (!compositionId) return null;
+    const [{ data: comp }, { count }] = await Promise.all([
+      supabase.from("procedure_compositions").select("number").eq("id", compositionId).single(),
+      supabase.from("surgeries").select("id", { count: "exact", head: true }).eq("composition_id", compositionId),
+    ]);
+    if (!comp) return null;
+    return { number: Number(comp.number), uses: count ?? 1 };
+  } catch {
+    return null;
+  }
+}

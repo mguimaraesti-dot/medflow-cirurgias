@@ -225,6 +225,20 @@ export function SurgeryForm({
     }
   }
 
+  const guidePhotoRef = useRef<HTMLInputElement>(null);
+  const guideFileRef = useRef<File | null>(null);
+
+  // O React limpa campos não controlados depois de enviar o formulário; se o
+  // envio voltou com erro, recoloca a foto para não perdê-la.
+  useEffect(() => {
+    if (state.error && guideFileRef.current && guidePhotoRef.current && !guidePhotoRef.current.files?.length) {
+      const dt = new DataTransfer();
+      dt.items.add(guideFileRef.current);
+      guidePhotoRef.current.files = dt.files;
+    }
+  }, [state]);
+  const [guidePhotoName, setGuidePhotoName] = useState<string | null>(null);
+
   function applyReader(result: ReaderApplyResult) {
     setValues((prev) => {
       const known = new Set(prev.procedures.map((p) => p.id));
@@ -254,9 +268,23 @@ export function SurgeryForm({
       setPatientOptions((prev) => (prev.some((p) => p.id === created.id) ? prev : [...prev, { ...created, cpf: null }]));
     }
     setSuggestedMaterials(result.materials);
+    attachGuidePhoto(result.guideFile);
+  }
+
+  // A foto da guia segue junto com o formulário (campo de arquivo oculto) e é
+  // anexada à cirurgia ao salvar.
+  function attachGuidePhoto(file: File | null) {
+    guideFileRef.current = file;
+    const input = guidePhotoRef.current;
+    if (!input) return;
+    const dt = new DataTransfer();
+    if (file) dt.items.add(file);
+    input.files = dt.files;
+    setGuidePhotoName(file ? file.name : null);
   }
 
   function resetToInitial() {
+    attachGuidePhoto(null);
     setSuggestedMaterials([]);
     setValues(initial);
     setErrors({});
@@ -288,6 +316,15 @@ export function SurgeryForm({
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="flex flex-col gap-6 p-4 sm:p-6">
             {!surgery ? <RequestReader onApply={applyReader} /> : null}
+            <input ref={guidePhotoRef} type="file" name="guide_photo" accept="image/*" className="hidden" tabIndex={-1} aria-hidden="true" />
+            {guidePhotoName ? (
+              <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                A foto da guia será anexada a esta cirurgia ao salvar.
+                <button type="button" className="underline hover:text-foreground" onClick={() => attachGuidePhoto(null)}>
+                  Não anexar
+                </button>
+              </p>
+            ) : null}
 
             {/* Dados principais */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
