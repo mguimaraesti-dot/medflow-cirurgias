@@ -42,6 +42,8 @@ export type ProcedureSuggestion = {
   tuss_official_name: string | null;
   /** O código lido não existe na TUSS 22 local (possível erro de leitura) */
   tuss_code_unknown: boolean;
+  /** A descrição lida na guia não se parece com o nome oficial do código na TUSS (código ou texto possivelmente errado) */
+  tuss_mismatch: boolean;
 };
 
 export type MaterialSuggestion = {

@@ -308,6 +308,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
 
   // Etapa 3: escolhas e metadados
   const [procEdited, setProcEdited] = useState<Record<string, boolean>>({});
+  const [procAck, setProcAck] = useState<Record<string, boolean>>({});
   const [matEdited, setMatEdited] = useState<Record<string, boolean>>({});
   const [patientEdited, setPatientEdited] = useState(false);
   const [patientId, setPatientId] = useState("");
@@ -346,6 +347,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     setCreatedProcedures([]);
     setCreatedPatient(null);
     setProcSource({});
+    setProcAck({});
   }
 
   // ETAPA 1 → 2: a IA lê a foto
@@ -393,6 +395,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       setPatientId(a.patient.patient?.id ?? "");
       setProcChecked(Object.fromEntries(a.procedures.map((p) => [p.key, Boolean(p.procedure)])));
       setProcSource({});
+      setProcAck({});
       setMatChecked(Object.fromEntries(a.materials.map((m) => [m.key, m.source === "guide" && !!m.material])));
       setMatChoice(Object.fromEntries(a.materials.map((m) => [m.key, m.material?.id ?? ""])));
       setUseIndication(Boolean(a.clinical_indication));
@@ -997,7 +1000,8 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                           const checked = Boolean(procChecked[p.key]);
                           const digits = digitsOf(p.read_code ?? "");
                           const userLinked = procSource[p.key];
-                          const lowConf = p.confidence === "low" && !userLinked && !procEdited[p.key];
+                          const mismatch = p.tuss_mismatch && !procAck[p.key] && !userLinked && !procEdited[p.key];
+                          const lowConf = (p.confidence === "low" || mismatch) && !userLinked && !procEdited[p.key];
                           const review = !p.procedure && (Boolean(p.suggestion) || p.tuss_code_unknown || p.confidence !== "high" || (digits.length > 0 && digits.length !== 8));
                           let status: ReactNode;
                           if (p.procedure && !lowConf) {
@@ -1039,6 +1043,22 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                     {procEdited[p.key] ? <Chip tone="muted" icon={<PencilLine />}>Corrigido</Chip> : <ConfChip c={p.confidence} />}
                                   </Line>
                                   {p.tuss_official_name ? <Line icon={<BookOpen />} label="TUSS oficial">{p.tuss_official_name}</Line> : null}
+                                  {mismatch ? (
+                                    <div className="flex flex-col gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+                                      <p className="flex items-start gap-1 text-amber-800 dark:text-amber-300">
+                                        <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                                        <span>
+                                          O código <span className="font-mono">{p.read_code}</span> é <span className="font-medium">“{p.tuss_official_name}”</span> na TUSS, mas a guia diz <span className="font-medium">“{p.read_description}”</span>. Pode ser o código ou o texto lido errado.
+                                        </span>
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => setProcAck((s) => ({ ...s, [p.key]: true }))}>
+                                          Está correto, manter
+                                        </Button>
+                                        <span className="self-center text-muted-foreground">ou volte e corrija o código/descrição.</span>
+                                      </div>
+                                    </div>
+                                  ) : null}
                                   {p.tuss_code_unknown ? (
                                     <p className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="h-3 w-3" /> Código não existe na TUSS — possível erro de leitura. Volte e corrija.</p>
                                   ) : null}

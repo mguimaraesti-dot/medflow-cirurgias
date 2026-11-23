@@ -25,6 +25,20 @@ function overlap(a: string[], b: string[]): number {
   return a.filter((t) => set.has(t) || [...set].some((s) => s.startsWith(t) || t.startsWith(s))).length / a.length;
 }
 
+/**
+ * Compara a descrição lida com o nome oficial da TUSS. Só aponta divergência
+ * quando quase nenhuma palavra coincide (abreviações curtas, como "CPRE", não
+ * têm como ser comparadas e não geram alerta).
+ */
+function descriptionDivergesFromTuss(description: string, official: string | null): boolean {
+  if (!official) return false;
+  const d = tokens(description);
+  const o = tokens(official);
+  if (d.length === 0 || o.length === 0) return false;
+  if (d.length === 1 && d[0].length <= 5) return false;
+  return Math.max(overlap(d, o), overlap(o, d)) < 0.34;
+}
+
 function matchPatient(name: string | null, patients: { id: string; full_name: string }[]): PatientSuggestion {
   if (!name) return { read_name: null, match: "none", patient: null, alternatives: [] };
   const norm = normalizeText(name).replace(/\s+/g, " ").trim();
@@ -101,6 +115,7 @@ export async function analyzeExtraction(
       suggestion,
       tuss_official_name: code ? (official.get(code) ?? null) : null,
       tuss_code_unknown: Boolean(code) && haveLocalTuss && !official.has(code as string),
+      tuss_mismatch: descriptionDivergesFromTuss(p.description, code ? (official.get(code) ?? null) : null),
     };
   });
 
