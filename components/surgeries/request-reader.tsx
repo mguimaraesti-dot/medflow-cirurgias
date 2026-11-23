@@ -42,6 +42,7 @@ import type {
 } from "@/lib/surgery-request-types";
 import { searchTussCodesAction } from "@/app/(dashboard)/catalog/procedures/actions";
 import type { TussResult } from "@/lib/tuss";
+import { formatCompositionCode } from "@/lib/compositions/signature";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -584,7 +585,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     const ids = Object.fromEntries(c.materials.map((m) => [`c${c.number}-${m.material_id}`, m.material_id]));
     setMatChoice((x) => ({ ...x, ...ids }));
     setMatChecked((x) => ({ ...x, ...Object.fromEntries(Object.keys(ids).map((k) => [k, true])) }));
-    toast.success(`Materiais da composição #${c.number} incluídos. Confira as quantidades.`);
+    toast.success(`Materiais da composição ${formatCompositionCode(c.number)} incluídos. Confira as quantidades.`);
   }
 
   function apply() {
@@ -880,7 +881,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                         <div className="flex flex-col gap-0.5">
                           <p className="font-semibold text-foreground">
                             {comp.preview.status === "reused"
-                              ? `Composição #${comp.preview.number} já cadastrada — será reutilizada`
+                              ? `Composição ${formatCompositionCode(comp.preview.number ?? 0)} já cadastrada — será reutilizada`
                               : comp.preview.status === "variant"
                                 ? "Nova composição — variação de uma já cadastrada"
                                 : "Nova composição — será cadastrada ao salvar a cirurgia"}
@@ -1127,7 +1128,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                           {comp.existing.map((c) => (
                             <li key={c.id} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-medium">Composição #{c.number} · usada em {c.uses} guia(s)</span>
+                                <span className="font-medium">Composição {formatCompositionCode(c.number)} · usada em {c.uses} guia(s)</span>
                                 <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => applyExistingComposition(c)}>
                                   Incluir estes materiais
                                 </Button>
@@ -1309,7 +1310,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                 {comp?.preview && comp.preview.status !== "unavailable" ? (
                   <Chip tone={comp.preview.status === "reused" ? "ok" : comp.preview.status === "variant" ? "info" : "muted"}>
                     {comp.preview.status === "reused"
-                      ? `Composição #${comp.preview.number} existente será reutilizada`
+                      ? `Composição ${formatCompositionCode(comp.preview.number ?? 0)} existente será reutilizada`
                       : comp.preview.status === "variant"
                         ? "Nova composição (variação de uma existente)"
                         : "Nova composição será cadastrada"}

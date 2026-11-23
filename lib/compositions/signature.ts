@@ -43,3 +43,17 @@ export function buildCompositionSignature(
 export function procedureSetKey(procedures: SignatureProcedure[]): string {
   return [...new Set(procedures.map(procedureKey))].sort().join(",");
 }
+
+/** Código interno exibido: CMP-000001 (derivado do número sequencial; não editável). */
+export function formatCompositionCode(n: number): string {
+  return `CMP-${String(n).padStart(6, "0")}`;
+}
+
+/** Nome sugerido: procedimento principal + os demais (limitado a 120 caracteres). */
+export function suggestCompositionName(
+  procedures: { name: string; is_primary: boolean }[]
+): string {
+  const ordered = [...procedures].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
+  const name = ordered.map((p) => p.name.trim()).filter(Boolean).join(" + ");
+  return name.length > 120 ? `${name.slice(0, 117)}...` : name;
+}

@@ -15,6 +15,7 @@ import {
   getOrCreateChecklist,
   listPreoperativeItems,
 } from "@/lib/data/operations";
+import { formatCompositionCode } from "@/lib/compositions/signature";
 import { getSurgeryCompositionBrief } from "@/lib/data/compositions";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
 import { getOrCreateFinancialRecord, listInstallments } from "@/lib/data/financial";
@@ -138,7 +139,7 @@ export default async function SurgeryDetailPage({
             <p className="mt-1 text-xs text-muted-foreground">
               Composição{" "}
               <Link href={`/catalog/compositions#comp-${compositionBrief.number}`} className="font-medium text-foreground hover:underline">
-                #{compositionBrief.number}
+                {formatCompositionCode(compositionBrief.number)}
               </Link>{" "}
               · usada em {compositionBrief.uses} guia(s)
             </p>

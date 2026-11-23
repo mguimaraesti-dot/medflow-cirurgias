@@ -4,6 +4,7 @@ import { addSurgeryMaterialItem } from "@/lib/data/operations";
 import {
   buildCompositionSignature,
   procedureSetKey,
+  suggestCompositionName,
   type SignatureMaterial,
 } from "@/lib/compositions/signature";
 
@@ -16,11 +17,11 @@ export type CompositionInfo = {
   materials: { material_id: string; name: string; quantity: number }[];
 };
 
-type ProcRow = { id: string; tuss_code: string | null };
+type ProcRow = { id: string; tuss_code: string | null; name?: string };
 
 async function loadProcedures(supabase: SupabaseClient, ids: string[]): Promise<ProcRow[]> {
   if (ids.length === 0) return [];
-  const { data, error } = await supabase.from("procedures").select("id,tuss_code").in("id", ids);
+  const { data, error } = await supabase.from("procedures").select("id,tuss_code,name").in("id", ids);
   if (error) throw error;
   return (data ?? []) as ProcRow[];
 }
@@ -139,7 +140,13 @@ export async function resolveComposition(
 
   const { data: created, error: insertError } = await supabase
     .from("procedure_compositions")
-    .insert({ signature, primary_procedure_id: primaryProcedureId })
+    .insert({
+      signature,
+      primary_procedure_id: primaryProcedureId,
+      name: suggestCompositionName(
+        procs.map((p) => ({ name: p.name ?? "", is_primary: p.id === primaryProcedureId }))
+      ),
+    })
     .select("id,number")
     .single();
   if (insertError) {
@@ -209,9 +216,12 @@ export async function syncSurgeryComposition(supabase: SupabaseClient, surgeryId
 export type CompositionListItem = {
   id: string;
   number: number;
+  name: string;
   created_at: string;
+  updated_at: string;
+  primary_procedure_id: string | null;
   procedures: { id: string; name: string; tuss_code: string | null; is_primary: boolean }[];
-  materials: { material_id: string; name: string; quantity: number }[];
+  materials: { material_id: string; name: string; tuss_code: string | null; quantity: number }[];
   /** Códigos das cirurgias/guias que usaram esta composição (sem dados do paciente). */
   surgeries: { id: string; code: string }[];
 };
@@ -221,9 +231,9 @@ export async function listAllCompositions(supabase: SupabaseClient): Promise<Com
   const { data, error } = await supabase
     .from("procedure_compositions")
     .select(
-      "id,number,created_at," +
+      "id,number,name,created_at,updated_at,primary_procedure_id," +
         "procedures:procedure_composition_procedures(is_primary,procedure:procedures(id,name,tuss_code))," +
-        "materials:procedure_composition_materials(material_id,quantity,material:materials_catalog(name))"
+        "materials:procedure_composition_materials(material_id,quantity,material:materials_catalog(name,tuss_code))"
     )
     .order("number", { ascending: false })
     .limit(500);
@@ -245,15 +255,21 @@ export async function listAllCompositions(supabase: SupabaseClient): Promise<Com
   type Row = {
     id: string;
     number: number;
+    name: string | null;
     created_at: string;
+    updated_at: string | null;
+    primary_procedure_id: string | null;
     procedures: { is_primary: boolean; procedure: { id: string; name: string; tuss_code: string | null } | null }[];
-    materials: { material_id: string; quantity: number; material: { name: string } | null }[];
+    materials: { material_id: string; quantity: number; material: { name: string; tuss_code: string | null } | null }[];
   };
   return ((data ?? []) as unknown as Row[])
     .map((c) => ({
       id: c.id,
       number: Number(c.number),
+      name: "",
       created_at: c.created_at,
+      updated_at: c.updated_at ?? c.created_at,
+      primary_procedure_id: c.primary_procedure_id,
       procedures: c.procedures
         .filter((p) => p.procedure)
         .map((p) => ({ ...p.procedure!, is_primary: p.is_primary }))
@@ -261,11 +277,24 @@ export async function listAllCompositions(supabase: SupabaseClient): Promise<Com
       materials: c.materials.map((m) => ({
         material_id: m.material_id,
         name: m.material?.name ?? "—",
+        tuss_code: m.material?.tuss_code ?? null,
         quantity: Number(m.quantity),
       })),
       surgeries: byComposition.get(c.id) ?? [],
     }))
-    .sort((a, b) => b.surgeries.length - a.surgeries.length || b.number - a.number);
+    .map((item, i) => ({
+      ...item,
+      name: ((data ?? []) as unknown as Row[])[i]?.name?.trim() || suggestCompositionName(item.procedures),
+    }))
+    .sort((a, b) => b.number - a.number);
+}
+
+export async function renameComposition(supabase: SupabaseClient, id: string, name: string) {
+  const { error } = await supabase
+    .from("procedure_compositions")
+    .update({ name, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 /** Composição vinculada a uma cirurgia (para a ficha). Null se não houver / migração ausente. */
