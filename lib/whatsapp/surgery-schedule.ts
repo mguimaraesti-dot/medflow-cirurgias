@@ -185,7 +185,7 @@ export function toWhatsappNumber(raw: string): string | null {
 
 
 /** Mensagem de UMA cirurgia (botão na tela da cirurgia), com os mesmos rótulos e emojis da programação. */
-export function buildSingleSurgeryMessage(input: { doctorName: string; code: string; row: ScheduleInputRow }): string {
+export function buildSingleSurgeryMessage(input: { doctorName: string; row: ScheduleInputRow }): string {
   const r = input.row;
   const key = classifyStatus(r);
   const status = key ? `${STATUS_META[key].emoji} ${STATUS_META[key].label}` : "🟣 Realizada";
@@ -204,6 +204,5 @@ export function buildSingleSurgeryMessage(input: { doctorName: string; code: str
     ...procedureLines(r.procedureNames),
     `*Local:* ${r.hospitalName ?? "Não informado"}`,
     `*Atendimento:* ${modalityText(r)}`,
-    `*Código:* ${input.code}`,
   ].join("\n");
 }

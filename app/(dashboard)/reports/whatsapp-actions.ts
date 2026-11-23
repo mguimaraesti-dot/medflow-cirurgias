@@ -112,5 +112,5 @@ export async function getSurgeryWhatsappTextAction(surgeryId: string): Promise<s
     date: s.confirmed_date ?? s.expected_date ?? null,
     confirmed: Boolean(s.confirmed_date),
   };
-  return buildSingleSurgeryMessage({ doctorName: "Dr. Flávio Morita", code: s.code, row });
+  return buildSingleSurgeryMessage({ doctorName: "Dr. Flávio Morita", row });
 }
