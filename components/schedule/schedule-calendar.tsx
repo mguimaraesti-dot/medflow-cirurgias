@@ -28,7 +28,7 @@ function formatTime(value: string | null) {
   return value.slice(0, 5);
 }
 
-function formatDayLabel(iso: string) {
+export function formatDayLabel(iso: string) {
   const label = new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "numeric",
@@ -37,7 +37,7 @@ function formatDayLabel(iso: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function SurgeryChip({ surgery }: { surgery: ScheduleSurgeryItem }) {
+export function SurgeryChip({ surgery }: { surgery: ScheduleSurgeryItem }) {
   const [open, setOpen] = useState(false);
   const scheduleStatus = deriveScheduleStatus(surgery);
   const color = SCHEDULE_STATUS_COLOR[scheduleStatus];
@@ -77,7 +77,7 @@ function SurgeryChip({ surgery }: { surgery: ScheduleSurgeryItem }) {
 /** Versão da cirurgia pro painel "dia selecionado" do mobile — nada
  * truncado (o cartão do calendário em si só tem espaço pra pontinhos de
  * cor, então o nome/procedimento completos aparecem aqui). */
-function DayAgendaItem({ surgery }: { surgery: ScheduleSurgeryItem }) {
+export function DayAgendaItem({ surgery }: { surgery: ScheduleSurgeryItem }) {
   const [open, setOpen] = useState(false);
   const scheduleStatus = deriveScheduleStatus(surgery);
   const color = SCHEDULE_STATUS_COLOR[scheduleStatus];
@@ -112,7 +112,7 @@ function DayAgendaItem({ surgery }: { surgery: ScheduleSurgeryItem }) {
   );
 }
 
-function HolidayBanner({ holidays }: { holidays: Holiday[] }) {
+export function HolidayBanner({ holidays }: { holidays: Holiday[] }) {
   if (holidays.length === 0) return null;
   const names = holidays.map((h) => h.name).join(", ");
   const description = holidays.find((h) => h.description)?.description;
