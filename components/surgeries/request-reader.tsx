@@ -39,6 +39,8 @@ import type {
   RequestAnalysis,
   RequestExtraction,
 } from "@/lib/surgery-request-types";
+import { searchTussCodesAction } from "@/app/(dashboard)/catalog/procedures/actions";
+import type { TussResult } from "@/lib/tuss";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -157,12 +159,13 @@ function fromDraft(d: Draft, guideType: RequestExtraction["guide_type"]): Reques
 // Peças visuais
 // ----------------------------------------------------------------------------
 
-type Tone = "ok" | "warn" | "info" | "muted";
+type Tone = "ok" | "warn" | "info" | "muted" | "alert";
 const TONE: Record<Tone, string> = {
   ok: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   warn: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
   info: "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300",
   muted: "border-border bg-muted/50 text-muted-foreground",
+  alert: "border-amber-500 bg-amber-500/25 font-semibold text-amber-900 dark:text-amber-200",
 };
 
 function Chip({ tone, icon, children }: { tone: Tone; icon?: ReactNode; children: ReactNode }) {
@@ -184,16 +187,46 @@ function ConfChip({ c }: { c: Confidence }) {
   );
 }
 
-function Section({ icon, title, right, children }: { icon: ReactNode; title: string; right?: ReactNode; children: ReactNode }) {
+type Kind = "procedure" | "material" | "neutral";
+const KIND: Record<Kind, { bar: string; icon: string; label: string | null; labelCls: string }> = {
+  procedure: { bar: "border-l-4 border-l-sky-500", icon: "bg-sky-500/15 text-sky-600 dark:text-sky-300", label: "PROCEDIMENTOS", labelCls: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  material: { bar: "border-l-4 border-l-violet-500", icon: "bg-violet-500/15 text-violet-600 dark:text-violet-300", label: "MATERIAIS / OPME", labelCls: "bg-violet-500/15 text-violet-700 dark:text-violet-300" },
+  neutral: { bar: "", icon: "bg-primary/10 text-primary", label: null, labelCls: "" },
+};
+
+function Section({
+  icon,
+  title,
+  right,
+  kind = "neutral",
+  pending,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  right?: ReactNode;
+  kind?: Kind;
+  /** Itens ainda sem cadastro neste bloco (destacado em alerta) */
+  pending?: { count: number; noun: string };
+  children: ReactNode;
+}) {
+  const k = KIND[kind];
   return (
-    <section className="rounded-xl border border-border bg-card p-3 sm:p-4">
+    <section className={cn("rounded-xl border border-border bg-card p-3 sm:p-4", k.bar)}>
       <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <span className="text-primary [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+          <span className={cn("flex h-7 w-7 items-center justify-center rounded-md [&_svg]:h-4 [&_svg]:w-4", k.icon)}>{icon}</span>
           {title}
+          {k.label ? <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide", k.labelCls)}>{k.label}</span> : null}
         </h3>
         {right}
       </div>
+      {pending && pending.count > 0 ? (
+        <p className="mb-2.5 flex items-center gap-1.5 rounded-lg border border-amber-500 bg-amber-500/15 px-2.5 py-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200" role="status">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          {pending.count} {pending.count === 1 ? `${pending.noun} sem cadastro` : `${pending.noun}s sem cadastro`} no catálogo — cadastre para poder incluir.
+        </p>
+      ) : null}
       {children}
     </section>
   );
@@ -285,6 +318,13 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
   const [procForm, setProcForm] = useState<{ key: string; name: string; code: string; specialty: string } | null>(null);
   const [catalog, setCatalog] = useState<{ key: string; query: string; loading: boolean; results: { id: string; name: string }[] | null } | null>(null);
   const [supplierNames, setSupplierNames] = useState<string[]>([]);
+  // Busca na TUSS (procedimentos) dentro do formulário de cadastro
+  const [procTuss, setProcTuss] = useState<{ query: string; loading: boolean; results: TussResult[] | null; error: string | null }>({
+    query: "",
+    loading: false,
+    results: null,
+    error: null,
+  });
 
   function reset() {
     if (preview) URL.revokeObjectURL(preview);
@@ -390,6 +430,12 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     setProcChecked((s) => ({ ...s, [key]: true }));
   }
 
+  async function searchProcTuss(query: string) {
+    setProcTuss({ query, loading: true, results: null, error: null });
+    const res = await searchTussCodesAction(query);
+    setProcTuss((cur) => (cur.query === query ? { ...cur, loading: false, results: res.results ?? [], error: res.error ?? null } : cur));
+  }
+
   function openProcForm(p: ProcedureSuggestion) {
     setProcForm({
       key: p.key,
@@ -397,6 +443,8 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
       code: p.read_code ?? "",
       specialty: "",
     });
+    // Já busca na TUSS pelo que foi lido, para o usuário conferir/escolher o código certo.
+    void searchProcTuss(p.read_description || p.read_code || "");
   }
 
   async function saveProcedure() {
@@ -666,7 +714,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                       />
                     </Section>
 
-                    <Section icon={<ClipboardList />} title="Procedimentos identificados" right={<span className="text-xs text-muted-foreground">código TUSS + descrição</span>}>
+                    <Section kind="procedure" icon={<ClipboardList />} title="Procedimentos identificados" right={<span className="text-xs text-muted-foreground">código TUSS + descrição</span>}>
                       <div className="flex flex-col gap-2">
                         {draft.procedures.map((p) => {
                           const digits = digitsOf(p.code);
@@ -707,7 +755,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                       </div>
                     </Section>
 
-                    <Section icon={<Package />} title="Materiais / OPME citados" right={<span className="text-xs text-muted-foreground">marca e fornecedor são opcionais</span>}>
+                    <Section kind="material" icon={<Package />} title="Materiais / OPME citados" right={<span className="text-xs text-muted-foreground">marca e fornecedor são opcionais</span>}>
                       <datalist id="rd-suppliers">
                         {supplierNames.map((n) => (
                           <option key={n} value={n} />
@@ -852,6 +900,8 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
 
                     {/* Procedimentos */}
                     <Section
+                      kind="procedure"
+                      pending={{ count: analysis.procedures.filter((p) => !p.procedure).length, noun: "procedimento" }}
                       icon={<ClipboardList />}
                       title="Procedimentos"
                       right={<span className="text-xs text-muted-foreground">{selectedProcedures.length} de {analysis.procedures.length} selecionado(s)</span>}
@@ -866,13 +916,24 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                           let status: ReactNode;
                           if (p.procedure && !lowConf) {
                             status = <Chip tone="ok" icon={<CheckCircle2 />}>{userLinked === "created" ? "Cadastrado agora" : userLinked === "chosen" ? "Vinculado por você" : "Encontrado no catálogo"}</Chip>;
-                          } else if (p.procedure || review) {
+                          } else if (p.procedure) {
                             status = <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip>;
                           } else {
-                            status = <Chip tone="info" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>;
+                            status = (
+                              <>
+                                <Chip tone="alert" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>
+                                {review ? <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip> : null}
+                              </>
+                            );
                           }
                           return (
-                            <li key={p.key} className={cn("rounded-xl border p-3", checked ? "border-primary/50 bg-primary/5" : "border-border")}>
+                            <li
+                              key={p.key}
+                              className={cn(
+                                "rounded-xl border p-3",
+                                !p.procedure ? "border-2 border-dashed border-amber-500 bg-amber-500/10" : checked ? "border-sky-500/60 bg-sky-500/5" : "border-border"
+                              )}
+                            >
                               <div className="flex items-start gap-3">
                                 <input
                                   type="checkbox"
@@ -909,6 +970,37 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                   {procForm?.key === p.key ? (
                                     <div className="mt-1 rounded-lg border border-border bg-muted/30 p-2.5">
                                       <p className="mb-2 text-xs font-medium text-foreground">Revise antes de cadastrar</p>
+                                      <div className="mb-2 flex flex-col gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/5 p-2">
+                                        <p className="flex items-center gap-1.5 text-xs font-medium text-foreground"><BookOpen className="h-3.5 w-3.5" /> Buscar na tabela TUSS</p>
+                                        <div className="flex gap-2">
+                                          <input
+                                            className={cn(inputCls, "flex-1")}
+                                            value={procTuss.query}
+                                            placeholder="Nome ou código do procedimento"
+                                            aria-label="Buscar procedimento na TUSS"
+                                            onChange={(e) => setProcTuss((c) => ({ ...c, query: e.target.value }))}
+                                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void searchProcTuss(procTuss.query); } }}
+                                          />
+                                          <Button type="button" variant="outline" size="sm" className="h-9" disabled={procTuss.loading} onClick={() => searchProcTuss(procTuss.query)}>Buscar</Button>
+                                        </div>
+                                        {procTuss.loading ? <p className="flex items-center gap-2 text-xs text-muted-foreground" role="status"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando a TUSS…</p> : null}
+                                        {procTuss.error ? <p className="text-xs text-red-600 dark:text-red-400">{procTuss.error}</p> : null}
+                                        {procTuss.results && procTuss.results.length === 0 && !procTuss.error ? <p className="text-xs text-muted-foreground">Nada encontrado. Tente menos palavras ou preencha manualmente abaixo.</p> : null}
+                                        <ul className="flex max-h-44 flex-col gap-1 overflow-y-auto">
+                                          {(procTuss.results ?? []).map((r) => (
+                                            <li key={r.code}>
+                                              <button
+                                                type="button"
+                                                onClick={() => setProcForm((f) => (f ? { ...f, name: r.name, code: r.code } : f))}
+                                                className={cn("w-full rounded-md border p-2 text-left text-xs hover:bg-muted", procForm.code === r.code ? "border-sky-500 bg-sky-500/10" : "border-border")}
+                                              >
+                                                <span className="font-mono">{r.code}</span> · <span className="text-foreground">{r.name}</span>
+                                                {!r.active ? <span className="text-amber-700 dark:text-amber-400"> · não vigente</span> : null}
+                                              </button>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
                                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_8rem]">
                                         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                                           Nome do procedimento
@@ -944,6 +1036,8 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
 
                     {/* Materiais */}
                     <Section
+                      kind="material"
+                      pending={{ count: analysis.materials.filter((m) => m.source === "guide" && !matChoice[m.key]).length, noun: "material" }}
                       icon={<Package />}
                       title="Materiais / OPME"
                       right={<span className="text-xs text-muted-foreground">{selectedMaterials.length} de {analysis.materials.length} selecionado(s)</span>}
@@ -955,10 +1049,21 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                           const isGuide = m.source === "guide";
                           let status: ReactNode;
                           if (chosen) status = <Chip tone="ok" icon={<CheckCircle2 />}>{isGuide ? "No catálogo" : "Kit padrão"}</Chip>;
-                          else if (m.alternatives.length > 0) status = <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip>;
-                          else status = <Chip tone="info" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>;
+                          else if (m.alternatives.length > 0) status = (
+                            <>
+                              <Chip tone="alert" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>
+                              <Chip tone="warn" icon={<AlertTriangle />}>Necessita revisão</Chip>
+                            </>
+                          );
+                          else status = <Chip tone="alert" icon={<PlusCircle />}>Não cadastrado no catálogo</Chip>;
                           return (
-                            <li key={m.key} className={cn("rounded-xl border p-3", checked ? "border-primary/50 bg-primary/5" : "border-border")}>
+                            <li
+                              key={m.key}
+                              className={cn(
+                                "rounded-xl border p-3",
+                                isGuide && !chosen ? "border-2 border-dashed border-amber-500 bg-amber-500/10" : checked ? "border-violet-500/60 bg-violet-500/5" : "border-border"
+                              )}
+                            >
                               <div className="flex items-start gap-3">
                                 <input
                                   type="checkbox"
