@@ -486,8 +486,8 @@ export async function updateMaterialTussCodeAction(
     return { error: "Você não tem permissão para alterar o cadastro do material." };
   }
   if (!UUID_RE.test(materialId)) return { error: "Material inválido." };
-  const code = tussCode?.replace(/\s+/g, "") ?? "";
-  if (code && !/^\d{6,12}$/.test(code)) return { error: "Código TUSS inválido (use apenas números)." };
+  const code = tussCode?.replace(/\s+/g, " ").trim() ?? "";
+  if (code.length > 30) return { error: "Código muito longo (máximo de 30 caracteres)." };
   const supabase = await createClient();
   const { error } = await supabase
     .from("materials_catalog")

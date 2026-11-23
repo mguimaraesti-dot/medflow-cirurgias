@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Check, CheckCheck, Loader2, Package, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
+import type { TussResult } from "@/lib/tuss";
 import {
   createMaterialFromRequestAction,
   searchCatalogMaterialsAction,
@@ -34,6 +36,84 @@ export type EditorAdapter = {
 
 const inputCls = "h-8 rounded-md border border-input bg-background px-2 text-sm";
 
+
+/** Busca na tabela TUSS (por código ou descrição) ou aceita texto livre como código. */
+function TussPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [term, setTerm] = useState("");
+  const [results, setResults] = useState<TussResult[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, start] = useTransition();
+
+  function search() {
+    const q = term.trim();
+    if (q.length < 2) return;
+    setError(null);
+    start(async () => {
+      const r = await searchTussMaterialsAction(q);
+      if (r.error) {
+        setError(r.error);
+        setResults(null);
+      } else setResults(r.results ?? []);
+    });
+  }
+
+  const free = term.trim();
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Código TUSS atual:</span>
+        <span className="rounded bg-background px-1.5 py-0.5 font-mono text-foreground">{value || "A definir"}</span>
+        {value ? (
+          <button type="button" onClick={() => onChange("")} className="text-muted-foreground underline hover:text-foreground">
+            limpar
+          </button>
+        ) : null}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
+          placeholder="Buscar na tabela TUSS por código ou descrição..."
+          aria-label="Buscar TUSS"
+          autoComplete="off"
+          className={cn(inputCls, "min-w-0 flex-1")}
+        />
+        <Button type="button" variant="outline" size="sm" disabled={busy || term.trim().length < 2} onClick={search}>
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+          Buscar
+        </Button>
+      </div>
+      {error ? <p className="text-xs text-muted-foreground">{error}</p> : null}
+      {results ? (
+        results.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Nenhum item encontrado na tabela TUSS.</p>
+        ) : (
+          <ul className="max-h-48 overflow-y-auto rounded-md border border-border bg-popover">
+            {results.map((r) => (
+              <li key={r.code} className="border-b border-border last:border-0">
+                <button type="button" onClick={() => { onChange(r.code); setResults(null); setTerm(""); }} className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted">
+                  <span className={r.active ? "text-foreground" : "text-muted-foreground line-through"}>{r.name}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">{r.code}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : null}
+      {free ? (
+        <button
+          type="button"
+          onClick={() => { onChange(free.slice(0, 30)); setResults(null); setTerm(""); }}
+          className="text-xs text-primary underline-offset-2 hover:underline"
+        >
+          Usar “{free.slice(0, 30)}” como código (texto livre, fora da tabela TUSS)
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdapter; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
   const [qty, setQty] = useState(String(item.quantity));
@@ -51,24 +131,21 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
 
   function save() {
     const q = Number(qty.replace(",", "."));
-    const code = tuss.replace(/\s+/g, "");
+    const code = tuss.trim();
     const patch: { quantity: number; notes: string; tuss_code?: string | null } = { quantity: q, notes };
     if (code !== (item.tuss_code ?? "")) patch.tuss_code = code || null;
     run(() => adapter.onUpdate(item.key, patch), () => setEditing(false));
   }
 
   return (
+    <>
     <tr className="border-b border-border last:border-0">
       <td className="px-3 py-2">
         <p className="font-medium text-foreground">{item.name}</p>
         {item.supplier_name ? <p className="text-xs text-muted-foreground">Fornecedor: {item.supplier_name}</p> : null}
       </td>
       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-        {editing ? (
-          <input value={tuss} onChange={(e) => setTuss(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" aria-label="Código TUSS" placeholder="Código TUSS" className={cn(inputCls, "w-28 font-mono")} />
-        ) : (
-          (item.tuss_code ?? "A definir")
-        )}
+        {editing ? (tuss || "A definir") : (item.tuss_code ?? "A definir")}
       </td>
       <td className="px-3 py-2">
         {editing ? (
@@ -121,6 +198,14 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
         ) : null}
       </td>
     </tr>
+    {editing ? (
+      <tr className="border-b border-border bg-muted/10 last:border-0">
+        <td colSpan={6} className="px-3 pb-3 pt-1">
+          <TussPicker value={tuss} onChange={setTuss} />
+        </td>
+      </tr>
+    ) : null}
+    </>
   );
 }
 
