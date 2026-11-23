@@ -74,7 +74,15 @@ export function MapListTable({
       key: "patient",
       label: "Paciente",
       accessor: (s) => s.patient?.full_name ?? null,
-      cell: (surgery) => <span className="text-muted-foreground">{surgery.patient?.full_name ?? "—"}</span>,
+      cell: (surgery) => {
+        const concluded =
+          surgery.status === "completed" || stages.find((st) => st.id === surgery.stage_id)?.code === "completed";
+        return (
+          <span className={concluded ? "text-muted-foreground line-through decoration-2" : "text-muted-foreground"}>
+            {surgery.patient?.full_name ?? "—"}
+          </span>
+        );
+      },
     },
     {
       key: "procedure",

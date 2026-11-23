@@ -41,6 +41,7 @@ function daysSinceIndication(value: string): number {
 
 export function KanbanCard({
   surgery,
+  stages,
   openTasksCount = 0,
 }: {
   surgery: SurgeryListItem;
@@ -64,6 +65,8 @@ export function KanbanCard({
 
   const attendanceLabel =
     surgery.attendance_type === "particular" ? "Particular" : surgery.insurance_provider?.name ?? "Convênio";
+  const isConcluded =
+    surgery.status === "completed" || stages.find((st) => st.id === surgery.stage_id)?.code === "completed";
   const waitingDays = daysSinceIndication(surgery.indication_date);
 
   return (
@@ -95,7 +98,9 @@ export function KanbanCard({
           <Badge variant={PRIORITY_VARIANT[surgery.priority]}>{PRIORITY_LABEL[surgery.priority]}</Badge>
         </div>
       </div>
-      <p className="mt-1 truncate text-foreground">{surgery.patient?.full_name ?? "—"}</p>
+      <p className={cn("mt-1 truncate text-foreground", isConcluded && "text-muted-foreground line-through decoration-2")}>
+        {surgery.patient?.full_name ?? "—"}
+      </p>
       <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-medium text-foreground">
         <Stethoscope className="h-3 w-3 shrink-0 text-muted-foreground" />
         {surgery.primary_procedure?.name ?? "—"}
