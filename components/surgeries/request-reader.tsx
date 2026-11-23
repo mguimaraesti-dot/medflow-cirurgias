@@ -43,6 +43,7 @@ import type {
 import { searchTussCodesAction } from "@/app/(dashboard)/catalog/procedures/actions";
 import type { TussResult } from "@/lib/tuss";
 import { formatCompositionCode } from "@/lib/compositions/signature";
+import { looksLikeSameProduct } from "@/lib/text/similar-name";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -565,12 +566,13 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
     };
   }, [compKey, step]);
 
-  function applyExistingComposition(c: NonNullable<NonNullable<typeof comp>["existing"]>[number]) {
+  function applyExistingComposition(c: NonNullable<NonNullable<typeof comp>["existing"]>[number], onlyIds: string[]) {
+    const allowed = new Set(onlyIds);
     setAnalysis((a) => {
       if (!a) return a;
       const have = new Set(a.materials.map((m) => matChoice[m.key] || m.material?.id).filter(Boolean));
       const extra = c.materials
-        .filter((m) => !have.has(m.material_id))
+        .filter((m) => allowed.has(m.material_id) && !have.has(m.material_id))
         .map((m) => ({
           key: `c${c.number}-${m.material_id}`,
           source: "kit" as const,
@@ -585,7 +587,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
         }));
       return { ...a, materials: [...a.materials, ...extra] };
     });
-    const ids = Object.fromEntries(c.materials.map((m) => [`c${c.number}-${m.material_id}`, m.material_id]));
+    const ids = Object.fromEntries(c.materials.filter((m) => allowed.has(m.material_id)).map((m) => [`c${c.number}-${m.material_id}`, m.material_id]));
     setMatChoice((x) => ({ ...x, ...ids }));
     setMatChecked((x) => ({ ...x, ...Object.fromEntries(Object.keys(ids).map((k) => [k, true])) }));
     toast.success(`Materiais da composição ${formatCompositionCode(c.number)} incluídos. Confira as quantidades.`);
@@ -1157,11 +1159,24 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                               guide.set(id, { name, qty: (prev?.qty ?? 0) + m.quantity });
                             }
                             const kit = new Map(c.materials.map((m) => [m.material_id, m]));
-                            const missing = c.materials.filter((m) => !guide.has(m.material_id));
+                            const notInGuide = c.materials.filter((m) => !guide.has(m.material_id));
                             const different = c.materials.filter((m) => guide.has(m.material_id) && guide.get(m.material_id)!.qty !== m.quantity);
                             const same = c.materials.filter((m) => guide.has(m.material_id) && guide.get(m.material_id)!.qty === m.quantity);
-                            const onlyGuide = [...guide.entries()].filter(([id]) => !kit.has(id));
-                            const identical = missing.length === 0 && different.length === 0 && onlyGuide.length === 0;
+                            const guideOnly = [...guide.entries()].filter(([id]) => !kit.has(id));
+                            // Item do kit que "falta" mas parece o mesmo produto de um item só da guia
+                            // (mesmo produto cadastrado duas vezes): não deve ser incluído de novo.
+                            const free = new Set(guideOnly.map(([id]) => id));
+                            const likelyDup: { kit: (typeof notInGuide)[number]; guideName: string }[] = [];
+                            const missing: typeof notInGuide = [];
+                            for (const m of notInGuide) {
+                              const hit = guideOnly.find(([id, g]) => free.has(id) && looksLikeSameProduct(m.name, g.name));
+                              if (hit) {
+                                free.delete(hit[0]);
+                                likelyDup.push({ kit: m, guideName: hit[1].name });
+                              } else missing.push(m);
+                            }
+                            const onlyGuide = guideOnly.filter(([id]) => free.has(id));
+                            const identical = missing.length === 0 && different.length === 0 && onlyGuide.length === 0 && likelyDup.length === 0;
                             return (
                               <li key={c.id} className="flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1171,7 +1186,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                   {identical ? (
                                     <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-300">Igual à guia</span>
                                   ) : missing.length > 0 ? (
-                                    <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => applyExistingComposition(c)}>
+                                    <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => applyExistingComposition(c, missing.map((m) => m.material_id))}>
                                       Incluir {missing.length === 1 ? "o item que falta" : `os ${missing.length} itens que faltam`}
                                     </Button>
                                   ) : null}
@@ -1183,6 +1198,11 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                   {different.map((m) => (
                                     <li key={m.material_id} className="text-amber-700 dark:text-amber-300">
                                       ≠ {m.name} — kit tinha {m.quantity}×, guia tem {guide.get(m.material_id)!.qty}×
+                                    </li>
+                                  ))}
+                                  {likelyDup.map(({ kit: m, guideName }) => (
+                                    <li key={m.material_id} className="text-muted-foreground">
+                                      ≈ {m.quantity}× {m.name} <span className="opacity-80">— parece ser o mesmo produto de “{guideName}” da guia (cadastro duplicado); não será incluído</span>
                                     </li>
                                   ))}
                                   {missing.map((m) => (
