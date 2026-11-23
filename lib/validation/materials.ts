@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeMaterialName } from "@/lib/text/material-name";
 
 const optionalText = z.preprocess(
   (v) => (v === null || (typeof v === "string" && v.trim() === "") ? undefined : v),
@@ -7,7 +8,11 @@ const optionalText = z.preprocess(
 
 export const materialSchema = z.object({
   internal_code: optionalText,
-  name: z.string().trim().min(1, "Informe o nome do material."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Informe o nome do material.")
+    .transform(normalizeMaterialName),
   category: optionalText,
   description: optionalText,
   unit: optionalText,
