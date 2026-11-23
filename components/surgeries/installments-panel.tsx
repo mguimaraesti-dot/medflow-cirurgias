@@ -10,7 +10,7 @@ import {
 } from "@/app/(dashboard)/surgeries/financial-actions";
 import type { Installment } from "@/lib/data/financial";
 import { useActionToast } from "@/lib/hooks/use-action-toast";
-import { todayInSaoPaulo } from "@/lib/utils";
+import { cn, todayInSaoPaulo } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,10 +50,13 @@ function ConfirmSinglePaymentForm({
   surgeryId,
   financialRecordId,
   defaultAmount,
+  compact,
 }: {
   surgeryId: string;
   financialRecordId: string;
   defaultAmount: number | null;
+  /** Layout de uma coluna estreita (painel lateral): campos lado a lado e botão em linha própria. */
+  compact?: boolean;
 }) {
   const action = confirmSinglePaymentAction.bind(null, surgeryId, financialRecordId);
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -62,13 +65,16 @@ function ConfirmSinglePaymentForm({
   return (
     <form
       action={formAction}
-      className="grid grid-cols-1 gap-3 rounded-lg bg-muted p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      className={cn(
+        "grid grid-cols-1 gap-3 rounded-lg bg-muted p-3",
+        compact ? "grid-cols-2" : "sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      )}
     >
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <Label htmlFor="single_amount">Valor recebido</Label>
         <CurrencyInput id="single_amount" name="amount" defaultValue={defaultAmount} />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <Label htmlFor="single_received_at">Data do recebimento</Label>
         <Input
           id="single_received_at"
@@ -78,14 +84,14 @@ function ConfirmSinglePaymentForm({
         />
       </div>
       {state.error ? (
-        <p className="text-sm text-red-600 dark:text-red-400 sm:col-span-3" role="alert">
+        <p className={cn("text-sm text-red-600 dark:text-red-400", compact ? "col-span-2" : "sm:col-span-3")} role="alert">
           {state.error}
         </p>
       ) : null}
       <Button
         type="submit"
         disabled={pending}
-        className="h-10 w-full bg-emerald-600 px-6 text-white hover:bg-emerald-700 sm:w-auto"
+        className={cn("h-10 w-full bg-emerald-600 px-6 text-white hover:bg-emerald-700", compact ? "col-span-2" : "sm:w-auto")}
       >
         {pending ? "Salvando..." : "Confirmar recebimento"}
       </Button>
@@ -97,10 +103,12 @@ function GenerateInstallmentsForm({
   surgeryId,
   financialRecordId,
   defaultAmount,
+  compact,
 }: {
   surgeryId: string;
   financialRecordId: string;
   defaultAmount: number | null;
+  compact?: boolean;
 }) {
   const action = generateInstallmentsAction.bind(null, surgeryId, financialRecordId);
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -109,33 +117,36 @@ function GenerateInstallmentsForm({
   return (
     <form
       action={formAction}
-      className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-3 sm:grid-cols-2 lg:grid-cols-[1fr_8rem_1fr_auto] lg:items-end"
+      className={cn(
+        "grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-3",
+        compact ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-[1fr_8rem_1fr_auto] lg:items-end"
+      )}
     >
-      <div className="flex flex-col gap-1.5">
+      <div className={cn("flex min-w-0 flex-col gap-1.5", compact && "col-span-2")}>
         <Label htmlFor="total_amount">Valor total</Label>
         <CurrencyInput id="total_amount" name="total_amount" defaultValue={defaultAmount} />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <Label htmlFor="count">Nº de parcelas</Label>
         <Input id="count" name="count" type="number" min={2} max={60} defaultValue={2} />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <Label htmlFor="first_due_date">1º vencimento</Label>
         <Input id="first_due_date" name="first_due_date" type="date" />
       </div>
       {state.error ? (
-        <p className="text-sm text-red-600 dark:text-red-400 sm:col-span-2 lg:col-span-4" role="alert">
+        <p className={cn("text-sm text-red-600 dark:text-red-400", compact ? "col-span-2" : "sm:col-span-2 lg:col-span-4")} role="alert">
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} className="h-10 w-full px-6 sm:col-span-2 lg:col-span-1 lg:w-auto">
+      <Button type="submit" disabled={pending} className={cn("h-10 w-full px-6", compact ? "col-span-2" : "sm:col-span-2 lg:col-span-1 lg:w-auto")}>
         {pending ? "Gerando..." : "Dividir em parcelas"}
       </Button>
     </form>
   );
 }
 
-function InstallmentRow({ surgeryId, installment }: { surgeryId: string; installment: Installment }) {
+function InstallmentRow({ surgeryId, installment, compact }: { surgeryId: string; installment: Installment; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const action = recordInstallmentPaymentAction.bind(null, surgeryId, installment.id);
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -165,7 +176,7 @@ function InstallmentRow({ surgeryId, installment }: { surgeryId: string; install
       {open ? (
         <form
           action={formAction}
-          className="grid grid-cols-1 gap-2 rounded-md bg-muted p-2.5 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className={cn("grid grid-cols-1 gap-2 rounded-md bg-muted p-2.5", compact ? "grid-cols-2" : "sm:grid-cols-[1fr_1fr_auto] sm:items-end")}
         >
           <div className="flex flex-col gap-1">
             <Label htmlFor={`amount-${installment.id}`} className="text-xs">
@@ -186,14 +197,14 @@ function InstallmentRow({ surgeryId, installment }: { surgeryId: string; install
             />
           </div>
           {state.error ? (
-            <p className="text-xs text-red-600 dark:text-red-400 sm:col-span-3" role="alert">
+            <p className={cn("text-xs text-red-600 dark:text-red-400", compact ? "col-span-2" : "sm:col-span-3")} role="alert">
               {state.error}
             </p>
           ) : null}
           <Button
             type="submit"
             disabled={pending}
-            className="h-9 w-full bg-emerald-600 px-5 text-white hover:bg-emerald-700 sm:w-auto"
+            className={cn("h-9 w-full bg-emerald-600 px-5 text-white hover:bg-emerald-700", compact ? "col-span-2" : "sm:w-auto")}
           >
             {pending ? "Salvando..." : "Confirmar"}
           </Button>
@@ -208,11 +219,14 @@ export function InstallmentsPanel({
   financialRecordId,
   agreedValue,
   installments,
+  compact,
 }: {
   surgeryId: string;
   financialRecordId: string;
   agreedValue: number | null;
   installments: Installment[];
+  /** Painel estreito (gaveta lateral): formulários em uma coluna. */
+  compact?: boolean;
 }) {
   const [splitOpen, setSplitOpen] = useState(false);
 
@@ -227,12 +241,14 @@ export function InstallmentsPanel({
           surgeryId={surgeryId}
           financialRecordId={financialRecordId}
           defaultAmount={agreedValue}
+          compact={compact}
         />
         {splitOpen ? (
           <GenerateInstallmentsForm
             surgeryId={surgeryId}
             financialRecordId={financialRecordId}
             defaultAmount={agreedValue}
+            compact={compact}
           />
         ) : (
           <button
@@ -266,7 +282,7 @@ export function InstallmentsPanel({
       </div>
       <ul className="divide-y divide-border">
         {installments.map((installment) => (
-          <InstallmentRow key={installment.id} surgeryId={surgeryId} installment={installment} />
+          <InstallmentRow key={installment.id} surgeryId={surgeryId} installment={installment} compact={compact} />
         ))}
       </ul>
       {installments.length === 1 && totalReceived === 0 ? (
@@ -274,6 +290,7 @@ export function InstallmentsPanel({
           surgeryId={surgeryId}
           financialRecordId={financialRecordId}
           defaultAmount={totalAmount}
+          compact={compact}
         />
       ) : null}
     </div>
