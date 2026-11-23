@@ -63,13 +63,51 @@ export async function listPatients(supabase: SupabaseClient, search?: string) {
   return data as unknown as Patient[];
 }
 
-export async function listActivePatientsForSelect(supabase: SupabaseClient) {
-  const { data, error } = await supabase
+export type PatientSelectOption = Pick<Patient, "id" | "full_name" | "cpf"> & {
+  insurance_provider_id: string | null;
+  insurance_card_number: string | null;
+  insurance_card_validity: string | null;
+  insurance_plan: string | null;
+  insurance_accommodation: string | null;
+};
+
+const SELECT_OPTION_COLUMNS =
+  "id,full_name,cpf,insurance_provider_id,insurance_card_number,insurance_card_validity,insurance_plan,insurance_accommodation";
+
+export async function listActivePatientsForSelect(supabase: SupabaseClient): Promise<PatientSelectOption[]> {
+  const primary = await supabase
     .from("patients")
-    .select("id,full_name,cpf")
+    .select(SELECT_OPTION_COLUMNS)
     .order("full_name", { ascending: true });
+  if (!primary.error) return primary.data as unknown as PatientSelectOption[];
+
+  // Migration 0026 ainda não aplicada: segue sem plano/acomodação.
+  const fallback = await supabase
+    .from("patients")
+    .select("id,full_name,cpf,insurance_provider_id,insurance_card_number,insurance_card_validity")
+    .order("full_name", { ascending: true });
+  if (fallback.error) throw fallback.error;
+  return (fallback.data ?? []).map((p) => ({
+    ...p,
+    insurance_plan: null,
+    insurance_accommodation: null,
+  })) as PatientSelectOption[];
+}
+
+/** Atualiza só os dados de convênio do paciente (carteirinha reutilizável em futuras cirurgias). */
+export async function updatePatientInsurance(
+  supabase: SupabaseClient,
+  id: string,
+  input: {
+    insurance_provider_id: string | null;
+    insurance_card_number: string | null;
+    insurance_card_validity: string | null;
+    insurance_plan: string | null;
+    insurance_accommodation: string | null;
+  }
+) {
+  const { error } = await supabase.from("patients").update(input).eq("id", id);
   if (error) throw error;
-  return data as Pick<Patient, "id" | "full_name" | "cpf">[];
 }
 
 export async function getPatient(supabase: SupabaseClient, id: string) {

@@ -20,7 +20,7 @@ const optionalUuid = z.preprocess(
   z.string().uuid().optional()
 );
 
-export const ADMIN_NOTES_MAX = 500;
+export const ADMIN_NOTES_MAX = 2000;
 
 export const surgerySchema = z.object({
   patient_id: z.string().uuid("Selecione um paciente."),

@@ -19,7 +19,8 @@ import {
   getSurgeryAuthorizationRequestData,
   type SurgeryUpdateInput,
 } from "@/lib/data/surgeries";
-import { addSurgeryMaterialItem } from "@/lib/data/operations";
+import { updatePatientInsurance } from "@/lib/data/patients";
+import { hasPermission } from "@/lib/auth/session";
 import { addSurgeryDocument } from "@/lib/data/surgery-documents";
 import { getCurrentUser } from "@/lib/auth/session";
 import { importBestComposition, syncSurgeryComposition } from "@/lib/data/compositions";
@@ -49,6 +50,40 @@ function parseForm(formData: FormData) {
     priority: formData.get("priority") || "normal",
     admin_notes: formData.get("admin_notes"),
   });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function textOrNull(v: FormDataEntryValue | null, max = 120) {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
+}
+
+/**
+ * Convênio: se o usuário marcou "atualizar cadastro do paciente", grava os
+ * dados da carteirinha no paciente (reutilizáveis em futuras cirurgias).
+ * Só roda para quem pode editar pacientes; falha aqui não desfaz a cirurgia.
+ */
+async function savePatientInsurance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  patientId: string
+) {
+  if (formData.get("attendance_type") !== "convenio" || formData.get("patient_insurance_update") !== "1") return;
+  try {
+    const user = await getCurrentUser();
+    if (!user || !(await hasPermission(user, "patients", "edit"))) return;
+    const provider = textOrNull(formData.get("insurance_provider_id"), 40);
+    const validity = textOrNull(formData.get("insurance_card_validity"), 10);
+    await updatePatientInsurance(supabase, patientId, {
+      insurance_provider_id: provider && UUID_RE.test(provider) ? provider : null,
+      insurance_card_number: textOrNull(formData.get("insurance_card_number"), 60),
+      insurance_card_validity: validity && /^\d{4}-\d{2}-\d{2}$/.test(validity) ? validity : null,
+      insurance_plan: textOrNull(formData.get("insurance_plan")),
+      insurance_accommodation: textOrNull(formData.get("insurance_accommodation")),
+    });
+  } catch (e) {
+    console.error("[surgery] dados do convênio não atualizados no paciente:", e);
+  }
 }
 
 function parseProcedures(formData: FormData) {
@@ -103,23 +138,36 @@ export async function createSurgeryAction(
     return { error: "Não foi possível criar a cirurgia. Tente novamente." };
   }
 
-  // Materiais sugeridos pela leitura do pedido (já revisados pelo usuário).
+  // Materiais informados na tela (vindos da leitura do pedido ou digitados).
   // Falha aqui não desfaz a cirurgia: eles podem ser adicionados na ficha.
   const materialIds = formData.getAll("suggested_material_id").map(String);
   const materialQtys = formData.getAll("suggested_material_qty").map(Number);
   const materialSuppliers = formData.getAll("suggested_material_supplier").map(String);
+  const materialNotes = formData.getAll("suggested_material_notes").map(String);
+  const materialAi = formData.getAll("suggested_material_ai").map(String);
+  const materialValidated = formData.getAll("suggested_material_validated").map(String);
   const seen = new Set<string>();
-  for (const [i, materialId] of materialIds.slice(0, 40).entries()) {
-    if (!/^[0-9a-f-]{36}$/i.test(materialId) || seen.has(materialId)) continue;
+  for (const [i, materialId] of materialIds.slice(0, 60).entries()) {
+    if (!UUID_RE.test(materialId) || seen.has(materialId)) continue;
     seen.add(materialId);
     const quantity = Number.isFinite(materialQtys[i]) && materialQtys[i] > 0 ? materialQtys[i] : 1;
     try {
-      const supplierId = /^[0-9a-f-]{36}$/i.test(materialSuppliers[i] ?? "") ? materialSuppliers[i] : undefined;
-      await addSurgeryMaterialItem(supabase, surgeryId, { material_id: materialId, quantity, supplier_id: supplierId });
+      const { error } = await supabase.from("surgery_material_items").insert({
+        surgery_id: surgeryId,
+        material_id: materialId,
+        quantity,
+        supplier_id: UUID_RE.test(materialSuppliers[i] ?? "") ? materialSuppliers[i] : null,
+        notes: materialNotes[i]?.trim() ? materialNotes[i].trim().slice(0, 300) : null,
+        ai_suggested: materialAi[i] === "1",
+        validated: materialValidated[i] === "1",
+      });
+      if (error) throw error;
     } catch (e) {
-      console.error("[surgery] material sugerido não adicionado:", e);
+      console.error("[surgery] material não adicionado:", e);
     }
   }
+
+  await savePatientInsurance(supabase, formData, parsed.data.patient_id);
 
   // Cadastro manual (sem materiais vindos da guia): sugere a composição mais
   // usada para o mesmo conjunto de procedimentos.
@@ -184,6 +232,7 @@ export async function updateSurgeryAction(
   } catch {
     return { error: "Não foi possível salvar a cirurgia. Tente novamente." };
   }
+  await savePatientInsurance(supabase, formData, parsed.data.patient_id);
   await importBestComposition(supabase, id);
   await syncSurgeryComposition(supabase, id);
 

@@ -19,6 +19,8 @@ import {
   setSurgeryMaterialItemStatus,
   removeSurgeryMaterialItem,
   setSurgeryMaterialItemQuantity,
+  updateSurgeryMaterialItem,
+  validateAllSurgeryMaterialItems,
   importProcedureDefaultMaterials,
   listSurgeryMaterialItems,
   type PreoperativeItem,
@@ -384,4 +386,86 @@ export async function updateProcedureDefaultMaterialsAction(
   );
   revalidateSurgery(surgeryId);
   revalidatePath(`/catalog/procedures/${procedureId}`);
+}
+
+// ----------------------------------------------------------------------------
+// Edição estruturada de materiais (tela de edição da cirurgia)
+// ----------------------------------------------------------------------------
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function guardSurgeryEdit() {
+  try {
+    await requireActionPermission("surgeries");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Adiciona um material à cirurgia (informado manualmente => já validado). */
+export async function addSurgeryMaterialStructuredAction(
+  surgeryId: string,
+  input: { material_id: string; quantity: number; notes?: string }
+): Promise<{ error?: string }> {
+  if (!(await guardSurgeryEdit())) return { error: "Você não tem permissão para esta ação." };
+  if (!UUID_RE.test(surgeryId) || !UUID_RE.test(input.material_id)) return { error: "Material inválido." };
+  const quantity = Number(input.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 9999) return { error: "Informe uma quantidade válida." };
+  const supabase = await createClient();
+  try {
+    const { error } = await supabase.from("surgery_material_items").insert({
+      surgery_id: surgeryId,
+      material_id: input.material_id,
+      quantity,
+      notes: input.notes?.trim() ? input.notes.trim().slice(0, 300) : null,
+      validated: true,
+    });
+    if (error) throw error;
+  } catch {
+    return { error: "Não foi possível adicionar o material." };
+  }
+  await syncSurgeryComposition(supabase, surgeryId);
+  revalidateSurgery(surgeryId);
+  return {};
+}
+
+export async function updateSurgeryMaterialStructuredAction(
+  itemId: string,
+  surgeryId: string,
+  patch: { quantity?: number; notes?: string | null; validated?: boolean }
+): Promise<{ error?: string }> {
+  if (!(await guardSurgeryEdit())) return { error: "Você não tem permissão para esta ação." };
+  if (!UUID_RE.test(itemId) || !UUID_RE.test(surgeryId)) return { error: "Item inválido." };
+  const clean: { quantity?: number; notes?: string | null; validated?: boolean } = {};
+  if (patch.quantity !== undefined) {
+    if (!Number.isFinite(patch.quantity) || patch.quantity <= 0 || patch.quantity > 9999) {
+      return { error: "Informe uma quantidade válida." };
+    }
+    clean.quantity = patch.quantity;
+  }
+  if (patch.notes !== undefined) clean.notes = patch.notes?.trim() ? patch.notes.trim().slice(0, 300) : null;
+  if (patch.validated !== undefined) clean.validated = Boolean(patch.validated);
+  const supabase = await createClient();
+  try {
+    await updateSurgeryMaterialItem(supabase, itemId, clean);
+  } catch {
+    return { error: "Não foi possível salvar a alteração." };
+  }
+  if (clean.quantity !== undefined) await syncSurgeryComposition(supabase, surgeryId);
+  revalidateSurgery(surgeryId);
+  return {};
+}
+
+export async function validateAllSurgeryMaterialsAction(surgeryId: string): Promise<{ error?: string }> {
+  if (!(await guardSurgeryEdit())) return { error: "Você não tem permissão para esta ação." };
+  if (!UUID_RE.test(surgeryId)) return { error: "Cirurgia inválida." };
+  const supabase = await createClient();
+  try {
+    await validateAllSurgeryMaterialItems(supabase, surgeryId);
+  } catch {
+    return { error: "Não foi possível validar os materiais." };
+  }
+  revalidateSurgery(surgeryId);
+  return {};
 }

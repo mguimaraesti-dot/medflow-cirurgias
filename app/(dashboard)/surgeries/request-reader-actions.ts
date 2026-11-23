@@ -286,7 +286,7 @@ export async function createSupplierFromRequestAction(input: {
 /** Busca livre no catálogo de materiais (nome, código interno ou TUSS) para trocar a sugestão. */
 export async function searchCatalogMaterialsAction(
   term: string
-): Promise<{ results: { id: string; name: string }[] }> {
+): Promise<{ results: { id: string; name: string; tuss_code?: string | null }[] }> {
   try {
     await requireActionPermission("surgeries", "edit");
     const supabase = await createClient();
@@ -302,7 +302,7 @@ export async function searchCatalogMaterialsAction(
         return words.every((w) => hay.includes(w));
       })
       .slice(0, 20);
-    return { results: found.map((r) => ({ id: r.id, name: r.name })) };
+    return { results: found.map((r) => ({ id: r.id, name: r.name, tuss_code: r.tuss_code })) };
   } catch {
     return { results: [] };
   }

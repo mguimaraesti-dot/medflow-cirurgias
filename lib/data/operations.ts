@@ -306,6 +306,40 @@ export async function listSurgeryMaterialItems(supabase: SupabaseClient, surgery
   return data as unknown as SurgeryMaterialItem[];
 }
 
+export type SurgeryMaterialEditItem = SurgeryMaterialItem & { validated: boolean; ai_suggested: boolean };
+
+/** Itens com os campos da tela de edição (exige a migration 0026). */
+export async function listSurgeryMaterialItemsForEdit(supabase: SupabaseClient, surgeryId: string) {
+  const { data, error } = await supabase
+    .from("surgery_material_items")
+    .select(
+      "id,surgery_id,material_id,supplier_id,quantity,unit,status,notes,validated,ai_suggested,material:materials_catalog(id,name,tuss_code),supplier:suppliers(id,company_name)"
+    )
+    .eq("surgery_id", surgeryId)
+    .neq("status", "removed")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data as unknown as SurgeryMaterialEditItem[];
+}
+
+export async function updateSurgeryMaterialItem(
+  supabase: SupabaseClient,
+  id: string,
+  patch: { quantity?: number; notes?: string | null; validated?: boolean }
+) {
+  const { error } = await supabase.from("surgery_material_items").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function validateAllSurgeryMaterialItems(supabase: SupabaseClient, surgeryId: string) {
+  const { error } = await supabase
+    .from("surgery_material_items")
+    .update({ validated: true })
+    .eq("surgery_id", surgeryId)
+    .neq("status", "removed");
+  if (error) throw error;
+}
+
 export async function addSurgeryMaterialItem(
   supabase: SupabaseClient,
   surgeryId: string,

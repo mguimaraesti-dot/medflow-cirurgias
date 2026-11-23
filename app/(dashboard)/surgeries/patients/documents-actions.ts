@@ -197,3 +197,24 @@ export async function deleteDocumentAction(id: string): Promise<{ error?: string
     return { error: friendly(e) ?? "Não foi possível excluir o documento." };
   }
 }
+
+/** Carteirinhas (categoria "insurance_card") enviadas para o paciente, da mais recente para a mais antiga. */
+export async function listInsuranceCardsAction(
+  patientId: string
+): Promise<{ error: string } | { cards: { id: string; file_name: string; created_at: string; mime_type: string }[] }> {
+  if (!(await guard("view"))) return { error: NO_PERMISSION };
+  if (!UUID.test(patientId)) return { error: "Paciente inválido." };
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("patient_documents")
+      .select("id,file_name,created_at,mime_type")
+      .eq("patient_id", patientId)
+      .eq("category", "insurance_card")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return { cards: (data ?? []) as { id: string; file_name: string; created_at: string; mime_type: string }[] };
+  } catch (e) {
+    return { error: friendly(e) ?? "Não foi possível listar as carteirinhas." };
+  }
+}

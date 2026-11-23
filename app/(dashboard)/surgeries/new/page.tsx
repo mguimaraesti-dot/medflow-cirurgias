@@ -7,6 +7,7 @@ import { listActivePatientsForSelect } from "@/lib/data/patients";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { listActiveInsuranceProvidersForSelect } from "@/lib/data/insurance-providers";
 import { listActiveProceduresForSelect } from "@/lib/data/procedures";
+import { getCurrentUser, hasPermission } from "@/lib/auth/session";
 import { SurgeryForm } from "@/components/surgeries/surgery-form";
 
 // Server actions desta página (leitura de pedido por IA) podem levar até ~30 s.
@@ -15,6 +16,8 @@ export const maxDuration = 60;
 export default async function NewSurgeryPage() {
   await requireModuleEdit("surgeries");
   const supabase = await createClient();
+  const user = await getCurrentUser();
+  const canUploadCards = user ? await hasPermission(user, "patients", "edit") : false;
   const [patients, hospitals, insuranceProviders, procedures] = await Promise.all([
     listActivePatientsForSelect(supabase),
     listActiveHospitalsForSelect(supabase),
@@ -23,7 +26,7 @@ export default async function NewSurgeryPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-7xl">
       <nav aria-label="Navegação" className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/kanban" className="inline-flex items-center gap-1 hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -57,6 +60,7 @@ export default async function NewSurgeryPage() {
             hospitals={hospitals}
             insuranceProviders={insuranceProviders}
             procedures={procedures}
+            canUploadCards={canUploadCards}
           />
         )}
       </div>

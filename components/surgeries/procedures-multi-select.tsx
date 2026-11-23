@@ -155,57 +155,63 @@ export function ProceduresMultiSelect({
       </div>
 
       {selected.length > 0 ? (
-        <ul className="flex flex-col gap-2">
-          {selected.map((s) => {
-            const p = byId.get(s.id);
-            const label = p?.name ?? "Procedimento";
-            return (
-              <li
-                key={s.id}
-                className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => setPrimary(s.id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm"
-                  title={s.is_primary ? "Procedimento principal" : "Marcar como principal"}
-                >
-                  <Star
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      s.is_primary ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
-                    )}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-foreground">{label}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {[
-                        p?.tuss_code ? `TUSS ${p.tuss_code}` : "Sem código TUSS",
-                        p?.specialty,
-                        p?.materials_count ? `Kit padrão: ${p.materials_count} ${p.materials_count === 1 ? "material" : "materiais"}` : null,
-                        s.is_primary ? "principal" : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeProcedure(s.id)}
-                  className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label={`Remover ${label}`}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full min-w-[480px] text-sm">
+            <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th scope="col" className="w-10 px-3 py-2 text-left font-semibold">#</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">Código TUSS</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">Descrição</th>
+                <th scope="col" className="px-3 py-2 text-left font-semibold">Principal</th>
+                <th scope="col" className="w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {selected.map((s, index) => {
+                const p = byId.get(s.id);
+                const label = p?.name ?? "Procedimento";
+                return (
+                  <tr key={s.id} className={cn("border-b border-border last:border-0", s.is_primary && "bg-primary/5")}>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">{String(index + 1).padStart(2, "0")}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p?.tuss_code ?? "s/ TUSS"}</td>
+                    <td className="px-3 py-2 font-medium text-foreground">{label}</td>
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setPrimary(s.id)}
+                        title={s.is_primary ? "Procedimento principal" : "Marcar como principal"}
+                        aria-pressed={s.is_primary}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          s.is_primary
+                            ? "bg-primary/15 text-primary"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <Star className={cn("h-3 w-3", s.is_primary && "fill-current")} />
+                        {s.is_primary ? "Principal" : "Tornar principal"}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => removeProcedure(s.id)}
+                        className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        aria-label={`Remover ${label}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : null}
 
       {selected.length > 1 ? (
-        <p className="text-xs text-muted-foreground">Toque na ⭐ para marcar o procedimento principal.</p>
+        <p className="text-xs text-muted-foreground">Use “Tornar principal” para escolher o procedimento principal.</p>
       ) : null}
 
       {selected.map((s) => (
