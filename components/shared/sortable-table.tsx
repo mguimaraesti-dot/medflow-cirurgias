@@ -39,6 +39,7 @@ export function SortableTable<T>({
   /** Envolve o <tr> já montado — usado pelas telas em que a linha inteira
    * é o gatilho de um diálogo de edição (ex.: catálogos, cadastros). */
   wrapRow,
+  onRowClick,
   /**
    * Quando informado, o card inteiro no mobile vira clicável e leva pra
    * essa URL (com uma setinha ">" indicando isso) — em vez de precisar
@@ -54,6 +55,8 @@ export function SortableTable<T>({
   defaultSort?: { key: string; direction: SortDirection };
   rowClassName?: (row: T) => string | undefined;
   wrapRow?: (row: T, rowNode: ReactNode) => ReactNode;
+  /** Clique na linha (desktop). Nos cartões mobile use `mobileCardHref`. */
+  onRowClick?: (row: T) => void;
   mobileCardHref?: (row: T) => string;
 }) {
   const router = useRouter();
@@ -145,7 +148,7 @@ export function SortableTable<T>({
           ) : (
             sortedRows.map((row) => {
               const tr = (
-                <tr key={rowKey(row)} className={cn("hover:bg-muted", rowClassName?.(row))}>
+                <tr key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={cn("hover:bg-muted", rowClassName?.(row))}>
                   {columns.map((column) => (
                     <td key={column.key} className={cn("px-4 py-3", column.className)}>
                       {column.cell(row)}

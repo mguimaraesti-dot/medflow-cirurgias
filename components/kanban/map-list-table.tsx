@@ -1,10 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import type { SurgeryListItem, WorkflowStage } from "@/lib/data/surgeries";
 import { Badge } from "@/components/ui/badge";
 import { RequirementBadges } from "@/components/kanban/requirement-badges";
 import { getStageColor } from "@/components/kanban/stage-palette";
-import { SurgeryDetailSheet } from "@/components/kanban/surgery-detail-sheet";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 import { todayInSaoPaulo } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ export function MapListTable({
   documentsBySurgery: Record<string, number>;
 }) {
   const today = todayInSaoPaulo();
+  const router = useRouter();
   const stageIndexById = new Map(stages.map((stage, index) => [stage.id, index]));
 
   const columns: SortableColumn<SurgeryListItem>[] = [
@@ -195,9 +197,9 @@ export function MapListTable({
         rowKey={(s) => s.id}
         emptyMessage="Nenhuma cirurgia encontrada para esse filtro."
         rowClassName={() => "cursor-pointer transition-colors hover:bg-muted/60"}
-        wrapRow={(surgery, rowNode) => (
-          <SurgeryDetailSheet key={surgery.id} surgery={surgery} stages={stages} trigger={rowNode} />
-        )}
+        // Clique abre direto a edição da cirurgia.
+        onRowClick={(surgery) => router.push(`/surgeries/${surgery.id}/edit`)}
+        mobileCardHref={(surgery) => `/surgeries/${surgery.id}/edit`}
       />
     </div>
   );
