@@ -42,7 +42,7 @@ export type EditorAdapter = {
   onValidateAll: () => Promise<string | null> | string | null;
 };
 
-const inputCls = "h-8 rounded-md border border-input bg-background px-2 text-sm";
+const inputCls = "h-8 rounded-md border border-input bg-input-background px-2 text-sm";
 
 
 /** Busca na tabela TUSS (por código ou descrição) ou aceita texto livre como código. */

@@ -188,7 +188,7 @@ export default async function CompositionsPage({
                   maxLength={80}
                   placeholder="Buscar por CMP, TUSS, procedimento ou material…"
                   aria-label="Buscar composições"
-                  className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-input-background pl-9 pr-3 text-sm"
                 />
               </div>
               {filter !== "all" ? <input type="hidden" name="filter" value={filter} /> : null}
@@ -198,7 +198,7 @@ export default async function CompositionsPage({
                 name="principal"
                 defaultValue={principal}
                 aria-label="Filtrar por procedimento principal"
-                className="h-10 max-w-full rounded-md border border-input bg-background px-3 text-sm sm:max-w-[280px]"
+                className="h-10 max-w-full rounded-md border border-input bg-input-background px-3 text-sm sm:max-w-[280px]"
               >
                 <option value="">Procedimento principal: todos</option>
                 {principalOptions.map(([id, name]) => (

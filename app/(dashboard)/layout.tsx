@@ -26,7 +26,7 @@ export default async function DashboardLayout({
   const permissions = Array.from(access.permissions);
 
   return (
-    <div className="flex min-h-screen bg-muted md:h-screen md:flex-row md:overflow-hidden print:h-auto print:overflow-visible">
+    <div className="flex min-h-screen bg-muted dark:bg-background md:h-screen md:flex-row md:overflow-hidden print:h-auto print:overflow-visible">
       <div className="shrink-0 print:hidden">
         <Sidebar userEmail={user.email ?? null} roleName={access.roleName} permissions={permissions} />
       </div>

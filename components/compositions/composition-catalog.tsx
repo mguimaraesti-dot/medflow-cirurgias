@@ -178,7 +178,7 @@ function DetailPanel({ row, canEdit }: { row: CatalogRow; canEdit: boolean }) {
           <div className="flex flex-col gap-2">
             <SheetTitle className="sr-only">Renomear composição</SheetTitle>
             <input
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-md border border-input bg-input-background px-3 text-sm"
               value={name}
               maxLength={150}
               aria-label="Nome da composição"

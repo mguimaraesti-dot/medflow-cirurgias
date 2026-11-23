@@ -36,7 +36,7 @@ export function MobileNav({
 
   return (
     <>
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 md:hidden">
+      <header className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 md:hidden">
         <button
           type="button"
           onClick={() => setOpen(true)}

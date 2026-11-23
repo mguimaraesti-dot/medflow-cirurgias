@@ -247,7 +247,7 @@ function Line({ icon, label, children }: { icon: ReactNode; label: string; child
   );
 }
 
-const inputCls = "h-9 min-w-0 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+const inputCls = "h-9 min-w-0 rounded-md border border-input bg-input-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
 const STEPS = [
   { id: "upload", label: "Documento" },
@@ -760,7 +760,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
 
                     <Section icon={<Stethoscope />} title="Indicação clínica" right={<ConfChip c={draft.indicationConf} />}>
                       <textarea
-                        className="min-h-16 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="min-h-16 w-full rounded-md border border-input bg-input-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         value={draft.indication}
                         onChange={(e) => patch("indication", e.target.value)}
                         aria-label="Indicação clínica"
@@ -839,7 +839,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
 
                     <Section icon={<FileText />} title="Observações da guia">
                       <textarea
-                        className="min-h-16 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="min-h-16 w-full rounded-md border border-input bg-input-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                         value={draft.observations}
                         onChange={(e) => patch("observations", e.target.value)}
                         placeholder="Campo Observação / Justificativa, como escrito"
