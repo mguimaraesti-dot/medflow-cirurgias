@@ -410,12 +410,40 @@ export async function updateGlosaStatus(
 // Visão geral (dashboard /financial)
 // ---------------------------------------------------------------------------
 
+function normalizeSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+export type FinancialPaymentStatus = "undefined" | "open" | "partial" | "paid";
+
 export type FinancialOverviewFilters = {
   attendance?: "particular" | "convenio";
   hospitalId?: string;
+  /** Período (AAAA-MM-DD) sobre a data da cirurgia: confirmada, senão prevista, senão solicitação. */
   from?: string;
   to?: string;
+  /** Busca por paciente, código da cirurgia ou procedimento. */
+  q?: string;
+  status?: FinancialPaymentStatus;
 };
+
+/** Valor de referência do registro: acordado, senão previsto (particular). */
+export function financialBaseValue(row: { agreed_value: number | null; expected_value: number | null }): number | null {
+  const v = row.agreed_value ?? row.expected_value;
+  return v == null ? null : Number(v);
+}
+
+export function financialPaymentStatus(row: {
+  agreed_value: number | null;
+  expected_value: number | null;
+  received_value: number;
+}): FinancialPaymentStatus {
+  const base = financialBaseValue(row);
+  const received = Number(row.received_value) || 0;
+  if (base == null || base <= 0) return received > 0 ? "paid" : "undefined";
+  if (received >= base) return "paid";
+  return received > 0 ? "partial" : "open";
+}
 
 export type FinancialOverviewRow = {
   id: string;
@@ -430,11 +458,25 @@ export type FinancialOverviewRow = {
     code: string;
     confirmed_date: string | null;
     expected_date: string | null;
+    indication_date: string | null;
     hospital_id: string;
     patient: { full_name: string } | null;
     hospital: { name: string } | null;
+    surgery_procedures: { is_primary: boolean; procedure: { name: string } | null }[];
   } | null;
 };
+
+/** Procedimento principal (ou o primeiro) e quantos outros a cirurgia tem. */
+export function financialProcedureSummary(row: FinancialOverviewRow): { name: string | null; extra: number } {
+  const links = (row.surgery?.surgery_procedures ?? []).filter((l) => l.procedure);
+  const main = links.find((l) => l.is_primary) ?? links[0];
+  return { name: main?.procedure?.name ?? null, extra: Math.max(0, links.length - 1) };
+}
+
+export function financialRowDate(row: FinancialOverviewRow): string | null {
+  const s = row.surgery;
+  return s?.confirmed_date ?? s?.expected_date ?? null;
+}
 
 export async function listFinancialOverview(
   supabase: SupabaseClient,
@@ -444,13 +486,12 @@ export async function listFinancialOverview(
     .from("financial_records")
     .select(
       "id,surgery_id,attendance_type,expected_value,agreed_value,billed_value,received_value,glossed_value," +
-        "surgery:surgeries(code,confirmed_date,expected_date,hospital_id,patient:patients(full_name),hospital:hospitals(name))"
+        "surgery:surgeries(code,confirmed_date,expected_date,indication_date,hospital_id,patient:patients(full_name),hospital:hospitals(name)," +
+        "surgery_procedures(is_primary,procedure:procedures(name)))"
     )
     .order("created_at", { ascending: false });
 
   if (filters.attendance) query = query.eq("attendance_type", filters.attendance);
-  if (filters.from) query = query.gte("created_at", filters.from);
-  if (filters.to) query = query.lte("created_at", filters.to);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -458,6 +499,27 @@ export async function listFinancialOverview(
   let rows = (data ?? []) as unknown as FinancialOverviewRow[];
   if (filters.hospitalId) {
     rows = rows.filter((r) => r.surgery?.hospital_id === filters.hospitalId);
+  }
+  if (filters.from || filters.to) {
+    rows = rows.filter((r) => {
+      const date = financialRowDate(r) ?? r.surgery?.indication_date ?? null;
+      if (!date) return false;
+      if (filters.from && date < filters.from) return false;
+      if (filters.to && date > filters.to) return false;
+      return true;
+    });
+  }
+  if (filters.status) {
+    rows = rows.filter((r) => financialPaymentStatus(r) === filters.status);
+  }
+  const q = filters.q?.trim();
+  if (q) {
+    const needle = normalizeSearch(q);
+    rows = rows.filter((r) => {
+      const procs = (r.surgery?.surgery_procedures ?? []).map((l) => l.procedure?.name ?? "").join(" ");
+      const hay = normalizeSearch(`${r.surgery?.code ?? ""} ${r.surgery?.patient?.full_name ?? ""} ${procs}`);
+      return hay.includes(needle);
+    });
   }
   return rows;
 }

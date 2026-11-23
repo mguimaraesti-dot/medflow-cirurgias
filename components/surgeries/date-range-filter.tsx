@@ -48,6 +48,15 @@ const FUTURE: Preset[] = [
   { id: "nextmonth", label: "Próximo mês", range: (t) => monthRange(t, 1) },
 ];
 
+const BOTH: Preset[] = [
+  { id: "today", label: "Hoje", range: (t) => ({ from: t, to: t }) },
+  { id: "30d", label: "Últimos 30 dias", range: (t) => ({ from: addDays(t, -29), to: t }) },
+  { id: "n30", label: "Próximos 30 dias", range: (t) => ({ from: t, to: addDays(t, 29) }) },
+  { id: "lastmonth", label: "Mês passado", range: (t) => monthRange(t, -1) },
+  { id: "month", label: "Este mês", range: (t) => monthRange(t, 0) },
+  { id: "nextmonth", label: "Próximo mês", range: (t) => monthRange(t, 1) },
+];
+
 /**
  * Filtro de período em menu suspenso: períodos prontos + "Personalizado"
  * (que mostra os dois campos de data). Grava de/até na URL via `onChange`.
@@ -60,15 +69,15 @@ export function DateRangeFilter({
   onChange,
 }: {
   label: string;
-  /** past = datas já ocorridas (solicitação); future = datas a vir (previsão). */
-  kind: "past" | "future";
+  /** past = datas já ocorridas (solicitação); future = datas a vir (previsão); both = passado e futuro. */
+  kind: "past" | "future" | "both";
   from: string;
   to: string;
   onChange: (range: Range | null) => void;
 }) {
   const [forceCustom, setForceCustom] = useState(false);
   const today = todayInSaoPaulo();
-  const presets = kind === "past" ? PAST : FUTURE;
+  const presets = kind === "past" ? PAST : kind === "future" ? FUTURE : BOTH;
 
   const matched = presets.find((p) => {
     const r = p.range(today);
