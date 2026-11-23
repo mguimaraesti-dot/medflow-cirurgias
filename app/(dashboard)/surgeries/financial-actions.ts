@@ -99,6 +99,7 @@ export async function confirmSinglePaymentAction(
   } catch {
     return genericError;
   }
+  revalidatePath("/financial");
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
 }
@@ -135,6 +136,7 @@ export async function generateInstallmentsAction(
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Não foi possível gerar as parcelas." };
   }
+  revalidatePath("/financial");
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
 }
@@ -164,6 +166,7 @@ export async function recordInstallmentPaymentAction(
   } catch {
     return genericError;
   }
+  revalidatePath("/financial");
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
 }

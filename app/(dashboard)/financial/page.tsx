@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
+import { getCurrentUser, hasPermission } from "@/lib/auth/session";
 import {
   listFinancialOverview,
+  listInstallmentsByRecords,
   financialBaseValue,
   financialPaymentStatus,
   type FinancialOverviewFilters,
@@ -45,10 +47,13 @@ export default async function FinancialPage({
     to: params.to && YMD.test(params.to) ? params.to : undefined,
   };
 
-  const [rows, hospitals] = await Promise.all([
+  const user = await getCurrentUser();
+  const [rows, hospitals, canReceive] = await Promise.all([
     listFinancialOverview(supabase, filters),
     listActiveHospitalsForSelect(supabase),
+    hasPermission(user, "financial", "edit"),
   ]);
+  const installmentsByRecord = canReceive ? await listInstallmentsByRecords(supabase, rows.map((r) => r.id)) : undefined;
 
   // Os totais acompanham os filtros aplicados (o que está na lista é o que soma).
   let expected = 0;
@@ -82,7 +87,7 @@ export default async function FinancialPage({
         <FinancialFilters hospitals={hospitals} />
       </div>
 
-      <FinancialOverviewTable rows={rows} />
+      <FinancialOverviewTable rows={rows} installmentsByRecord={installmentsByRecord} canReceive={canReceive} />
     </div>
   );
 }

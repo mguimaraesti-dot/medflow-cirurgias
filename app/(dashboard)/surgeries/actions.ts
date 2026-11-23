@@ -377,6 +377,7 @@ export async function saveParticularFinancialAction(
     return { error: "Não foi possível salvar os valores." };
   }
 
+  revalidatePath("/financial");
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
 }

@@ -136,6 +136,27 @@ export type Installment = {
 const INSTALLMENT_COLUMNS =
   "id,financial_record_id,installment_number,due_date,amount,received_amount,received_at,status";
 
+/** Parcelas de vários registros financeiros de uma vez (agrupadas por registro). */
+export async function listInstallmentsByRecords(
+  supabase: SupabaseClient,
+  financialRecordIds: string[]
+): Promise<Record<string, Installment[]>> {
+  const out: Record<string, Installment[]> = {};
+  for (let i = 0; i < financialRecordIds.length; i += 100) {
+    const chunk = financialRecordIds.slice(i, i + 100);
+    const { data, error } = await supabase
+      .from("receivable_installments")
+      .select(INSTALLMENT_COLUMNS)
+      .in("financial_record_id", chunk)
+      .order("installment_number", { ascending: true });
+    if (error) throw error;
+    for (const row of (data ?? []) as Installment[]) {
+      (out[row.financial_record_id] ??= []).push(row);
+    }
+  }
+  return out;
+}
+
 export async function listInstallments(
   supabase: SupabaseClient,
   financialRecordId: string
@@ -454,6 +475,7 @@ export type FinancialOverviewRow = {
   billed_value: number | null;
   received_value: number;
   glossed_value: number;
+  notes: string | null;
   surgery: {
     code: string;
     confirmed_date: string | null;
@@ -485,7 +507,7 @@ export async function listFinancialOverview(
   let query = supabase
     .from("financial_records")
     .select(
-      "id,surgery_id,attendance_type,expected_value,agreed_value,billed_value,received_value,glossed_value," +
+      "id,surgery_id,attendance_type,expected_value,agreed_value,billed_value,received_value,glossed_value,notes," +
         "surgery:surgeries(code,confirmed_date,expected_date,indication_date,hospital_id,patient:patients(full_name),hospital:hospitals(name)," +
         "surgery_procedures(is_primary,procedure:procedures(name)))"
     )

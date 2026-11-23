@@ -9,7 +9,9 @@ import {
   financialRowDate,
   type FinancialOverviewRow,
   type FinancialPaymentStatus,
+  type Installment,
 } from "@/lib/data/financial";
+import { ReceiveSheetButton } from "@/components/financial/receive-sheet";
 import { SortableTable, type SortableColumn } from "@/components/shared/sortable-table";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +61,17 @@ function StatusBadge({ row }: { row: FinancialOverviewRow }) {
 
 // Só particular por enquanto (ver financial-panel.tsx) — por isso sem
 // coluna de Atendimento/Glosado, que só fariam sentido com convênio.
-export function FinancialOverviewTable({ rows }: { rows: FinancialOverviewRow[] }) {
+export function FinancialOverviewTable({
+  rows,
+  installmentsByRecord,
+  canReceive = false,
+}: {
+  rows: FinancialOverviewRow[];
+  /** Parcelas por registro financeiro — necessário para o botão "Receber". */
+  installmentsByRecord?: Record<string, Installment[]>;
+  /** Mostra o botão "Receber" (quem tem permissão de editar o financeiro). */
+  canReceive?: boolean;
+}) {
   const columns: SortableColumn<FinancialOverviewRow>[] = [
     {
       key: "patient",
@@ -145,6 +157,15 @@ export function FinancialOverviewTable({ rows }: { rows: FinancialOverviewRow[] 
       cell: (row) => <StatusBadge row={row} />,
     },
   ];
+
+  if (canReceive && installmentsByRecord) {
+    columns.push({
+      key: "actions",
+      label: "",
+      className: "text-right",
+      cell: (row) => <ReceiveSheetButton row={row} installments={installmentsByRecord[row.id] ?? []} />,
+    });
+  }
 
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
