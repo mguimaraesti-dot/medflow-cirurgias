@@ -35,7 +35,7 @@ import {
   addSurgeryMaterialStructuredAction,
   removeSurgeryMaterialItemAction,
   updateSurgeryMaterialStructuredAction,
-  updateMaterialTussCodeAction,
+  updateMaterialCatalogAction,
   validateAllSurgeryMaterialsAction,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import { ADMIN_NOTES_MAX } from "@/lib/validation/surgeries";
@@ -419,13 +419,19 @@ export function SurgeryForm({
       return null;
     },
     onUpdate: async (key, patch) => {
-      const { tuss_code, ...rest } = patch;
-      if (tuss_code !== undefined) {
+      const { tuss_code, catalog, ...rest } = patch;
+      if (tuss_code !== undefined || catalog) {
         const target = staged.find((x) => x.key === key);
         if (!target) return "Material não encontrado.";
-        const res = await updateMaterialTussCodeAction(target.material_id, tuss_code);
+        const res = await updateMaterialCatalogAction(target.material_id, { tuss_code, ...catalog });
         if (res.error) return res.error;
-        setStaged((prev) => prev.map((x) => (x.material_id === target.material_id ? { ...x, tuss_code } : x)));
+        setStaged((prev) =>
+          prev.map((x) =>
+            x.material_id === target.material_id
+              ? { ...x, ...(tuss_code !== undefined ? { tuss_code } : {}), ...(catalog?.name ? { name: catalog.name } : {}) }
+              : x
+          )
+        );
       }
       setStaged((prev) => prev.map((x) => (x.key === key ? { ...x, ...rest } : x)));
       return null;
@@ -447,11 +453,11 @@ export function SurgeryForm({
       return res.error ?? null;
     },
     onUpdate: async (key, patch) => {
-      const { tuss_code, ...rest } = patch;
-      if (tuss_code !== undefined) {
+      const { tuss_code, catalog, ...rest } = patch;
+      if (tuss_code !== undefined || catalog) {
         const target = persistedItems.find((x) => x.key === key);
         if (!target) return "Material não encontrado.";
-        const r = await updateMaterialTussCodeAction(target.material_id, tuss_code);
+        const r = await updateMaterialCatalogAction(target.material_id, { tuss_code, ...catalog });
         if (r.error) return r.error;
       }
       const res = await updateSurgeryMaterialStructuredAction(key, surgery!.id, rest);

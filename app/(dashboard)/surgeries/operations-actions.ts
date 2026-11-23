@@ -2,6 +2,7 @@
 
 import { syncSurgeryComposition } from "@/lib/data/compositions";
 import { revalidatePath } from "next/cache";
+import { normalizeMaterialName } from "@/lib/text/material-name";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireActionPermission } from "@/lib/auth/guard";
@@ -471,13 +472,20 @@ export async function validateAllSurgeryMaterialsAction(surgeryId: string): Prom
 }
 
 /**
- * Atualiza o código TUSS de um material do catálogo (usado pela tabela de
- * Materiais e OPME da cirurgia). Altera o cadastro do material — vale para
+ * Atualiza dados de um material do catálogo (código TUSS e, quando vierem da
+ * tabela TUSS, descrição/fabricante/modelo/ANVISA) a partir da tabela de
+ * Materiais e OPME da cirurgia. Altera o cadastro do material — vale para
  * todas as cirurgias —, por isso exige permissão de edição em Materiais.
  */
-export async function updateMaterialTussCodeAction(
+export async function updateMaterialCatalogAction(
   materialId: string,
-  tussCode: string | null
+  patch: {
+    tuss_code?: string | null;
+    name?: string;
+    manufacturer?: string | null;
+    model?: string | null;
+    anvisa_registration?: string | null;
+  }
 ): Promise<{ error?: string }> {
   try {
     await requireActionPermission("surgeries");
@@ -486,14 +494,25 @@ export async function updateMaterialTussCodeAction(
     return { error: "Você não tem permissão para alterar o cadastro do material." };
   }
   if (!UUID_RE.test(materialId)) return { error: "Material inválido." };
-  const code = tussCode?.replace(/\s+/g, " ").trim() ?? "";
-  if (code.length > 30) return { error: "Código muito longo (máximo de 30 caracteres)." };
+  const update: Record<string, string | null> = {};
+  if (patch.tuss_code !== undefined) {
+    const code = patch.tuss_code?.replace(/\s+/g, " ").trim() ?? "";
+    if (code.length > 30) return { error: "Código muito longo (máximo de 30 caracteres)." };
+    update.tuss_code = code || null;
+  }
+  if (patch.name !== undefined) {
+    const name = normalizeMaterialName(patch.name);
+    if (!name) return { error: "Informe a descrição do material." };
+    update.name = name.slice(0, 300);
+  }
+  const text = (v: string | null | undefined) => (v?.trim() ? v.trim().slice(0, 200) : null);
+  if (patch.manufacturer !== undefined) update.manufacturer = text(patch.manufacturer);
+  if (patch.model !== undefined) update.model = text(patch.model);
+  if (patch.anvisa_registration !== undefined) update.anvisa_registration = text(patch.anvisa_registration);
+  if (Object.keys(update).length === 0) return {};
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("materials_catalog")
-    .update({ tuss_code: code || null })
-    .eq("id", materialId);
-  if (error) return { error: "Não foi possível atualizar o código TUSS." };
+  const { error } = await supabase.from("materials_catalog").update(update).eq("id", materialId);
+  if (error) return { error: "Não foi possível atualizar o material." };
   revalidatePath("/catalog/materials");
   revalidatePath("/catalog/compositions");
   revalidatePath("/surgeries", "layout");

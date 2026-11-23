@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
 import type { TussResult } from "@/lib/tuss";
+import { normalizeMaterialName } from "@/lib/text/material-name";
 import {
   createMaterialFromRequestAction,
   searchCatalogMaterialsAction,
@@ -26,10 +27,17 @@ export type EditorItem = {
   supplier_id?: string | null;
 };
 
+export type CatalogPatch = {
+  name?: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  anvisa_registration?: string | null;
+};
+
 export type EditorAdapter = {
   /** Retorna mensagem de erro ou null. */
   onAdd: (m: { id: string; name: string; tuss_code: string | null }, quantity: number, notes: string) => Promise<string | null> | string | null;
-  onUpdate: (key: string, patch: { quantity?: number; notes?: string; validated?: boolean; tuss_code?: string | null }) => Promise<string | null> | string | null;
+  onUpdate: (key: string, patch: { quantity?: number; notes?: string; validated?: boolean; tuss_code?: string | null; catalog?: CatalogPatch }) => Promise<string | null> | string | null;
   onRemove: (key: string) => Promise<string | null> | string | null;
   onValidateAll: () => Promise<string | null> | string | null;
 };
@@ -38,7 +46,7 @@ const inputCls = "h-8 rounded-md border border-input bg-background px-2 text-sm"
 
 
 /** Busca na tabela TUSS (por código ou descrição) ou aceita texto livre como código. */
-function TussPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function TussPicker({ value, onChange }: { value: string; onChange: (v: string, picked?: TussResult) => void }) {
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<TussResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +100,7 @@ function TussPicker({ value, onChange }: { value: string; onChange: (v: string) 
           <ul className="max-h-48 overflow-y-auto rounded-md border border-border bg-popover">
             {results.map((r) => (
               <li key={r.code} className="border-b border-border last:border-0">
-                <button type="button" onClick={() => { onChange(r.code); setResults(null); setTerm(""); }} className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted">
+                <button type="button" onClick={() => { onChange(r.code, r); setResults(null); setTerm(""); }} className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted">
                   <span className={r.active ? "text-foreground" : "text-muted-foreground line-through"}>{r.name}</span>
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">{r.code}</span>
                 </button>
@@ -119,6 +127,8 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
   const [qty, setQty] = useState(String(item.quantity));
   const [notes, setNotes] = useState(item.notes);
   const [tuss, setTuss] = useState(item.tuss_code ?? "");
+  const [name, setName] = useState(item.name);
+  const [meta, setMeta] = useState<CatalogPatch>({});
   const [pending, start] = useTransition();
 
   function run(fn: () => Promise<string | null> | string | null, ok?: () => void) {
@@ -132,8 +142,12 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
   function save() {
     const q = Number(qty.replace(",", "."));
     const code = tuss.trim();
-    const patch: { quantity: number; notes: string; tuss_code?: string | null } = { quantity: q, notes };
+    const patch: { quantity: number; notes: string; tuss_code?: string | null; catalog?: CatalogPatch } = { quantity: q, notes };
+    const catalog: CatalogPatch = { ...meta };
+    const cleanName = normalizeMaterialName(name);
+    if (cleanName && cleanName !== item.name) catalog.name = cleanName;
     if (code !== (item.tuss_code ?? "")) patch.tuss_code = code || null;
+    if (Object.keys(catalog).length > 0) (patch as { catalog?: CatalogPatch }).catalog = catalog;
     run(() => adapter.onUpdate(item.key, patch), () => setEditing(false));
   }
 
@@ -141,7 +155,11 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
     <>
     <tr className="border-b border-border last:border-0">
       <td className="px-3 py-2">
-        <p className="font-medium text-foreground">{item.name}</p>
+        {editing ? (
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={300} aria-label="Descrição do material" className={cn(inputCls, "w-full min-w-[180px] font-medium")} />
+        ) : (
+          <p className="font-medium text-foreground">{item.name}</p>
+        )}
         {item.supplier_name ? <p className="text-xs text-muted-foreground">Fornecedor: {item.supplier_name}</p> : null}
       </td>
       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
@@ -181,7 +199,7 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
             {editing ? (
               <>
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={save} aria-label="Salvar alterações"><Check className="h-4 w-4" /></Button>
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={() => { setQty(String(item.quantity)); setNotes(item.notes); setTuss(item.tuss_code ?? ""); setEditing(false); }} aria-label="Cancelar edição"><X className="h-4 w-4" /></Button>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={() => { setQty(String(item.quantity)); setNotes(item.notes); setTuss(item.tuss_code ?? ""); setName(item.name); setMeta({}); setEditing(false); }} aria-label="Cancelar edição"><X className="h-4 w-4" /></Button>
               </>
             ) : (
               <>
@@ -201,7 +219,20 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
     {editing ? (
       <tr className="border-b border-border bg-muted/10 last:border-0">
         <td colSpan={6} className="px-3 pb-3 pt-1">
-          <TussPicker value={tuss} onChange={setTuss} />
+          <TussPicker
+            value={tuss}
+            onChange={(code, picked) => {
+              setTuss(code);
+              if (picked) {
+                setName(normalizeMaterialName(picked.name));
+                setMeta({
+                  manufacturer: picked.manufacturer ?? null,
+                  model: picked.model ?? null,
+                  anvisa_registration: picked.anvisaRegistration ?? null,
+                });
+              }
+            }}
+          />
         </td>
       </tr>
     ) : null}
