@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { advanceSurgeryStage } from "@/lib/data/surgery-stage-advance";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireActionPermission } from "@/lib/auth/guard";
@@ -331,6 +332,8 @@ export async function updateRequirementAction(
     return { error: "Não foi possível atualizar o requisito." };
   }
 
+  await advanceSurgeryStage(supabase, surgeryId);
+  revalidatePath("/kanban");
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
 }

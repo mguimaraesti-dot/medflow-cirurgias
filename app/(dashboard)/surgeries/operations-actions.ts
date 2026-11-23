@@ -1,5 +1,6 @@
 "use server";
 
+import { advanceSurgeryStage } from "@/lib/data/surgery-stage-advance";
 import { syncSurgeryComposition } from "@/lib/data/compositions";
 import { revalidatePath } from "next/cache";
 import { normalizeMaterialName } from "@/lib/text/material-name";
@@ -83,6 +84,7 @@ export async function createAuthorizationAction(
   } catch {
     return { error: "Não foi possível registrar a autorização." };
   }
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }
@@ -109,6 +111,7 @@ export async function updateAuthorizationAction(
   } catch {
     return { error: "Não foi possível salvar a autorização." };
   }
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }
@@ -153,6 +156,7 @@ export async function createOrReservationAction(
   } catch {
     return { error: "Não foi possível registrar a reserva." };
   }
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }
@@ -179,6 +183,7 @@ export async function updateOrReservationAction(
   } catch {
     return { error: "Não foi possível salvar a reserva." };
   }
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }
@@ -215,6 +220,7 @@ export async function addPreoperativeItemAction(
   } catch {
     return { error: "Não foi possível adicionar o item." };
   }
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }
@@ -227,6 +233,7 @@ export async function setPreoperativeItemStatusAction(
   await requireActionPermission("surgeries");
   const supabase = await createClient();
   await setPreoperativeItemStatus(supabase, itemId, status);
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
 }
 
@@ -234,6 +241,7 @@ export async function removePreoperativeItemAction(itemId: string, surgeryId: st
   await requireActionPermission("surgeries");
   const supabase = await createClient();
   await removePreoperativeItem(supabase, itemId);
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
 }
 
@@ -268,6 +276,7 @@ export async function savePreanestheticEvaluationAction(
   } catch {
     return { error: "Não foi possível salvar a avaliação pré-anestésica." };
   }
+  await advanceSurgeryStage(supabase, surgeryId);
   revalidateSurgery(surgeryId);
   return {};
 }

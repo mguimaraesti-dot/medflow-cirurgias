@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { advanceSurgeryStage } from "@/lib/data/surgery-stage-advance";
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -48,6 +49,8 @@ export async function uploadSurgeryDocumentAction(
     return { error: "Não foi possível enviar o documento. Tente novamente." };
   }
 
+  await advanceSurgeryStage(supabase, surgeryId);
+  revalidatePath("/kanban");
   revalidatePath(`/surgeries/${surgeryId}`);
   return {};
 }
