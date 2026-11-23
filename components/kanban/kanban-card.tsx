@@ -41,7 +41,6 @@ function daysSinceIndication(value: string): number {
 
 export function KanbanCard({
   surgery,
-  stages: _stages,
   openTasksCount = 0,
 }: {
   surgery: SurgeryListItem;
