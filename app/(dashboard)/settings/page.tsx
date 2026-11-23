@@ -2,8 +2,6 @@ import Link from "next/link";
 import { Building2, HeartHandshake, CalendarHeart, Users, DatabaseZap } from "lucide-react";
 
 import { requireModuleView } from "@/lib/auth/guard";
-import { getCurrentUser, hasPermission } from "@/lib/auth/session";
-import { AiCreditCard } from "@/components/settings/ai-credit-card";
 import { Card, CardContent } from "@/components/ui/card";
 
 const SECTIONS = [
@@ -41,7 +39,6 @@ const SECTIONS = [
 
 export default async function SettingsPage() {
   await requireModuleView("settings");
-  const canEdit = await hasPermission(await getCurrentUser(), "settings", "edit");
   return (
     <div>
       <h1 className="text-lg font-medium text-foreground">Configurações</h1>
@@ -49,11 +46,7 @@ export default async function SettingsPage() {
         Cadastros administrativos usados em todo o sistema.
       </p>
 
-      <div className="mt-6">
-        <AiCreditCard canEdit={canEdit} />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           return (
