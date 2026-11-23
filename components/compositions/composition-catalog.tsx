@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ChevronRight, FileText, Loader2, Package, Pencil, Stethoscope, X } from "lucide-react";
+import { ChevronRight, FileText, Loader2, Package, Pencil, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 
 import { renameCompositionAction } from "@/app/(dashboard)/catalog/compositions/actions";
 import { formatCompositionCode } from "@/lib/compositions/signature";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export type CatalogRow = {
   id: string;
@@ -19,7 +20,7 @@ export type CatalogRow = {
   updated_at: string;
   procedures: { id: string; name: string; tuss_code: string | null; is_primary: boolean }[];
   materials: { material_id: string; name: string; tuss_code: string | null; quantity: number }[];
-  surgeries: { id: string; code: string }[];
+  surgeries: { id: string; code: string; indication_date: string | null; status: string; hospital_name: string | null }[];
 };
 
 export type SortKey = "code" | "date" | "uses";
@@ -69,7 +70,7 @@ export function CompositionCatalog({
   const selected = rows.find((r) => r.id === selectedId) ?? null;
 
   return (
-    <div className={cn("mt-4 grid gap-4", selected ? "xl:grid-cols-[minmax(0,1fr)_400px]" : "")}>
+    <div className="mt-4">
       <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
@@ -126,14 +127,28 @@ export function CompositionCatalog({
         </div>
       </div>
 
-      {selected ? <DetailPanel key={selected.id} row={selected} canEdit={canEdit} onClose={() => setSelectedId(null)} /> : null}
+      <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+          {selected ? <DetailPanel key={selected.id} row={selected} canEdit={canEdit} /> : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
 
-function DetailPanel({ row, canEdit, onClose }: { row: CatalogRow; canEdit: boolean; onClose: () => void }) {
+const STATUS_LABEL: Record<string, string> = {
+  active: "Ativa",
+  rescheduled: "Reagendada",
+  cancelled: "Cancelada",
+  completed: "Realizada",
+};
+
+type Tab = "procedures" | "materials" | "guides";
+
+function DetailPanel({ row, canEdit }: { row: CatalogRow; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(row.name);
+  const [tab, setTab] = useState<Tab>("procedures");
   const [pending, startTransition] = useTransition();
 
   function save() {
@@ -147,78 +162,153 @@ function DetailPanel({ row, canEdit, onClose }: { row: CatalogRow; canEdit: bool
     });
   }
 
+  const tabs: { key: Tab; label: string; icon: typeof Stethoscope; count: number; tone: string }[] = [
+    { key: "procedures", label: "Procedimentos", icon: Stethoscope, count: row.procedures.length, tone: "text-sky-500" },
+    { key: "materials", label: "Materiais", icon: Package, count: row.materials.length, tone: "text-violet-500" },
+    { key: "guides", label: "Guias", icon: FileText, count: row.surgeries.length, tone: "text-emerald-500" },
+  ];
+
   return (
-    <aside aria-label={`Detalhes de ${formatCompositionCode(row.number)}`} className="h-fit rounded-xl border border-border bg-card p-4 xl:sticky xl:top-4">
-      <div className="flex items-start justify-between gap-2">
-        <span className="rounded-md bg-primary/15 px-2 py-1 font-mono text-sm font-semibold text-primary">{formatCompositionCode(row.number)}</span>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Fechar detalhes" onClick={onClose}><X className="h-4 w-4" /></Button>
-      </div>
-
-      {editing ? (
-        <div className="mt-3 flex flex-col gap-2">
-          <input
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={name}
-            maxLength={150}
-            aria-label="Nome da composição"
-            onChange={(e) => setName(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button type="button" size="sm" disabled={pending} onClick={save}>{pending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}Salvar nome</Button>
-            <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => { setName(row.name); setEditing(false); }}>Cancelar</Button>
+    <div className="flex flex-col gap-5">
+      <SheetHeader className="gap-2 pr-8 text-left">
+        <span className="w-fit rounded-md bg-primary/15 px-2 py-1 font-mono text-sm font-semibold text-primary">
+          {formatCompositionCode(row.number)}
+        </span>
+        {editing ? (
+          <div className="flex flex-col gap-2">
+            <SheetTitle className="sr-only">Renomear composição</SheetTitle>
+            <input
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={name}
+              maxLength={150}
+              aria-label="Nome da composição"
+              onChange={(e) => setName(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button type="button" size="sm" disabled={pending} onClick={save}>
+                {pending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}Salvar nome
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => { setName(row.name); setEditing(false); }}>
+                Cancelar
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="mt-3 flex items-start justify-between gap-2">
-          <h2 className="text-lg font-semibold leading-snug text-foreground">{row.name}</h2>
-          {canEdit ? (
-            <Button type="button" variant="outline" size="sm" className="h-8 shrink-0" onClick={() => setEditing(true)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Renomear</Button>
-          ) : null}
-        </div>
-      )}
-      <p className="mt-1 text-xs text-muted-foreground">Criada em {fmt(row.created_at)} · atualizada em {fmt(row.updated_at)}</p>
+        ) : (
+          <>
+            <SheetTitle className="text-lg leading-snug">{row.name}</SheetTitle>
+            {canEdit ? (
+              <Button type="button" variant="outline" size="sm" className="h-8 w-fit" onClick={() => setEditing(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />Renomear
+              </Button>
+            ) : null}
+          </>
+        )}
+        <SheetDescription>
+          Criada em {fmt(row.created_at)} · atualizada em {fmt(row.updated_at)}
+        </SheetDescription>
+      </SheetHeader>
 
-      <div className="mt-4 grid grid-cols-3 divide-x divide-border rounded-lg border border-border text-center">
-        {[
-          ["Procedimentos", row.procedures.length],
-          ["Materiais", row.materials.length],
-          ["Guias", row.surgeries.length],
-        ].map(([label, value]) => (
-          <div key={label} className="py-2"><p className="text-lg font-semibold text-foreground">{value}</p><p className="text-[11px] text-muted-foreground">{label}</p></div>
-        ))}
+      {/* Os três indicadores funcionam como abas */}
+      <div role="tablist" aria-label="Detalhes da composição" className="grid grid-cols-3 gap-2">
+        {tabs.map((t) => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "flex flex-col items-center gap-0.5 rounded-lg border px-2 py-2.5 text-center transition-colors",
+                active ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50"
+              )}
+            >
+              <t.icon className={cn("h-4 w-4", t.tone)} />
+              <span className="text-xl font-semibold leading-none text-foreground">{t.count}</span>
+              <span className="text-[11px] text-muted-foreground">{t.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400">Procedimentos TUSS</h3>
-      <ul className="mt-1.5 flex flex-col gap-1.5 text-sm">
-        {row.procedures.map((p) => (
-          <li key={p.id} className="flex gap-2">
-            <span className="shrink-0 font-mono text-xs text-muted-foreground">{p.tuss_code ?? "s/ TUSS"}</span>
-            <span>{p.name}{p.is_primary ? <span className="ml-1.5 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-medium text-sky-600 dark:text-sky-400">principal</span> : null}</span>
-          </li>
-        ))}
-      </ul>
+      <div role="tabpanel">
+        {tab === "procedures" ? (
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="py-2 pr-3 text-left font-semibold">TUSS</th>
+                <th className="py-2 text-left font-semibold">Descrição</th>
+              </tr>
+            </thead>
+            <tbody>
+              {row.procedures.map((p) => (
+                <tr key={p.id} className="border-t border-border align-top">
+                  <td className="whitespace-nowrap py-2.5 pr-3 font-mono text-xs text-muted-foreground">{p.tuss_code ?? "s/ TUSS"}</td>
+                  <td className="py-2.5 text-foreground">
+                    {p.name}
+                    {p.is_primary ? (
+                      <span className="ml-2 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-medium text-sky-600 dark:text-sky-400">principal</span>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
 
-      <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">Materiais / OPME</h3>
-      <ul className="mt-1.5 flex flex-col gap-1.5 text-sm">
-        {row.materials.map((m) => (
-          <li key={m.material_id} className="flex items-baseline justify-between gap-2">
-            <span>{m.name}{m.tuss_code ? <span className="ml-1.5 font-mono text-xs text-muted-foreground">TUSS {m.tuss_code}</span> : null}</span>
-            <span className="shrink-0 font-medium">{m.quantity}</span>
-          </li>
-        ))}
-      </ul>
+        {tab === "materials" ? (
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="py-2 pr-3 text-left font-semibold">Material</th>
+                <th className="py-2 pr-3 text-left font-semibold">TUSS</th>
+                <th className="py-2 text-right font-semibold">Qtd.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {row.materials.map((m) => (
+                <tr key={m.material_id} className="border-t border-border align-top">
+                  <td className="py-2.5 pr-3 text-foreground">{m.name}</td>
+                  <td className="whitespace-nowrap py-2.5 pr-3 font-mono text-xs text-muted-foreground">{m.tuss_code ?? "—"}</td>
+                  <td className="py-2.5 text-right font-medium">{m.quantity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
 
-      {row.surgeries.length > 0 ? (
-        <>
-          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Guias vinculadas</h3>
-          <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-xs">
-            {row.surgeries.slice(0, 20).map((s) => (
-              <Link key={s.id} href={`/surgeries/${s.id}`} className="font-medium text-foreground hover:underline">{s.code}</Link>
-            ))}
-            {row.surgeries.length > 20 ? <span className="text-muted-foreground">e mais {row.surgeries.length - 20}</span> : null}
-          </p>
-        </>
-      ) : null}
-    </aside>
+        {tab === "guides" ? (
+          row.surgeries.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+              Nenhuma guia usa esta composição ainda.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {row.surgeries.map((g) => (
+                <li key={g.id}>
+                  <Link
+                    href={`/surgeries/${g.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-muted/50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium text-foreground">{g.code}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {g.hospital_name ?? "Hospital não informado"}
+                        {g.indication_date ? ` · solicitação ${new Date(g.indication_date + "T00:00:00").toLocaleDateString("pt-BR")}` : ""}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{STATUS_LABEL[g.status] ?? g.status}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+      </div>
+    </div>
   );
 }

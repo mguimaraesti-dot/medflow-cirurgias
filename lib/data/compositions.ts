@@ -222,8 +222,14 @@ export type CompositionListItem = {
   primary_procedure_id: string | null;
   procedures: { id: string; name: string; tuss_code: string | null; is_primary: boolean }[];
   materials: { material_id: string; name: string; tuss_code: string | null; quantity: number }[];
-  /** Códigos das cirurgias/guias que usaram esta composição (sem dados do paciente). */
-  surgeries: { id: string; code: string }[];
+  /** Guias que usaram esta composição (sem dados do paciente), da mais recente para a mais antiga. */
+  surgeries: {
+    id: string;
+    code: string;
+    indication_date: string | null;
+    status: string;
+    hospital_name: string | null;
+  }[];
 };
 
 /** Todas as composições, da mais usada para a menos usada. */
@@ -241,14 +247,28 @@ export async function listAllCompositions(supabase: SupabaseClient): Promise<Com
 
   const { data: used, error: usedError } = await supabase
     .from("surgeries")
-    .select("id,code,composition_id")
+    .select("id,code,composition_id,indication_date,status,hospital:hospitals(name)")
     .not("composition_id", "is", null)
+    .order("indication_date", { ascending: false })
     .limit(5000);
   if (usedError) throw usedError;
-  const byComposition = new Map<string, { id: string; code: string }[]>();
-  for (const s of used ?? []) {
-    const list = byComposition.get(s.composition_id as string) ?? [];
-    list.push({ id: s.id as string, code: s.code as string });
+  const byComposition = new Map<string, CompositionListItem["surgeries"]>();
+  for (const s of (used ?? []) as unknown as {
+    id: string;
+    code: string;
+    composition_id: string;
+    indication_date: string | null;
+    status: string;
+    hospital: { name: string } | null;
+  }[]) {
+    const list = byComposition.get(s.composition_id) ?? [];
+    list.push({
+      id: s.id,
+      code: s.code,
+      indication_date: s.indication_date,
+      status: s.status,
+      hospital_name: s.hospital?.name ?? null,
+    });
     byComposition.set(s.composition_id as string, list);
   }
 
