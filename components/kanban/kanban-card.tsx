@@ -74,8 +74,8 @@ export function KanbanCard({
         {...listeners}
         {...attributes}
         onClick={() => {
-          // Clique abre direto a edição da cirurgia (arrastar continua movendo o card).
-          if (!isDragging) router.push(`/surgeries/${surgery.id}/edit`);
+          // Clique abre a tela de detalhe da cirurgia (arrastar continua movendo o card).
+          if (!isDragging) router.push(`/surgeries/${surgery.id}`);
         }}
         className={cn(
           "cursor-grab rounded-lg border border-border bg-card p-3 text-sm shadow-sm hover:border-ring active:cursor-grabbing",

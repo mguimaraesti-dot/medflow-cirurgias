@@ -197,9 +197,9 @@ export function MapListTable({
         rowKey={(s) => s.id}
         emptyMessage="Nenhuma cirurgia encontrada para esse filtro."
         rowClassName={() => "cursor-pointer transition-colors hover:bg-muted/60"}
-        // Clique abre direto a edição da cirurgia.
-        onRowClick={(surgery) => router.push(`/surgeries/${surgery.id}/edit`)}
-        mobileCardHref={(surgery) => `/surgeries/${surgery.id}/edit`}
+        // Clique abre a tela de detalhe da cirurgia.
+        onRowClick={(surgery) => router.push(`/surgeries/${surgery.id}`)}
+        mobileCardHref={(surgery) => `/surgeries/${surgery.id}`}
       />
     </div>
   );
