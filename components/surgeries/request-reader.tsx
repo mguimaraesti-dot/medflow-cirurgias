@@ -858,6 +858,39 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                       <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Você conferiu os dados na etapa anterior</span>
                     </div>
 
+                    {/* Situação da composição (procedimentos + materiais) */}
+                    {comp?.preview && comp.preview.status !== "unavailable" ? (
+                      <div
+                        role="status"
+                        className={cn(
+                          "flex items-start gap-3 rounded-xl border-2 p-3 text-sm",
+                          comp.preview.status === "reused"
+                            ? "border-emerald-500/60 bg-emerald-500/10"
+                            : comp.preview.status === "variant"
+                              ? "border-sky-500/60 bg-sky-500/10"
+                              : "border-primary/50 bg-primary/10"
+                        )}
+                      >
+                        <ClipboardList className="mt-0.5 h-5 w-5 shrink-0" />
+                        <div className="flex flex-col gap-0.5">
+                          <p className="font-semibold text-foreground">
+                            {comp.preview.status === "reused"
+                              ? `Composição #${comp.preview.number} já cadastrada — será reutilizada`
+                              : comp.preview.status === "variant"
+                                ? "Nova composição — variação de uma já cadastrada"
+                                : "Nova composição — será cadastrada ao salvar a cirurgia"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {comp.preview.status === "reused"
+                              ? `Mesmos procedimentos, materiais e quantidades${comp.preview.uses ? ` (usada em ${comp.preview.uses} guia(s))` : ""}. Nenhum cadastro duplicado será criado.`
+                              : comp.preview.status === "variant"
+                                ? `Os mesmos procedimentos já têm ${comp.preview.variants} composição(ões), mas com materiais ou quantidades diferentes. Esta será registrada como nova e ficará disponível para reutilização.`
+                                : "Esta combinação de procedimentos e materiais ainda não existe. Ela será registrada e poderá ser reutilizada nas próximas guias."}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+
                     {/* Paciente */}
                     <Section
                       icon={<User />}
