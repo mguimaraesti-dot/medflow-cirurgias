@@ -133,17 +133,17 @@ export default async function CompositionsPage({
 
   return (
     <div className="mx-auto w-full max-w-[1920px]">
-      <nav aria-label="Navegação" className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+      <nav aria-label="Navegação" className="mb-2 hidden sm:mb-3 sm:flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/kanban" className="hover:text-foreground">Mapa Cirúrgico</Link>
         <ChevronRight className="h-3.5 w-3.5" />
         <span className="font-medium text-foreground">Composições</span>
       </nav>
 
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><Layers className="h-5 w-5" /></span>
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Composições Cirúrgicas</h1>
-          <p className="text-sm text-muted-foreground">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary sm:h-11 sm:w-11"><Layers className="h-5 w-5" /></span>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-foreground sm:text-xl">Composições Cirúrgicas</h1>
+          <p className="hidden text-sm text-muted-foreground sm:block">
             Catálogo de combinações de procedimentos e materiais/OPME. Guias idênticas reutilizam a mesma composição; qualquer diferença gera uma nova.
           </p>
         </div>
@@ -155,38 +155,38 @@ export default async function CompositionsPage({
         </p>
       ) : (
         <>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary"><Layers className="h-5 w-5" /></span>
-              <div><p className="text-2xl font-semibold leading-none text-foreground">{all.length}</p><p className="mt-1 text-xs text-muted-foreground">Composições cadastradas</p></div>
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-3">
+            <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border bg-card p-2.5 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
+              <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary sm:flex"><Layers className="h-5 w-5" /></span>
+              <div className="min-w-0"><p className="text-xl font-semibold leading-none text-foreground sm:text-2xl">{all.length}</p><p className="mt-1 truncate text-[11px] text-muted-foreground sm:text-xs">Composições</p></div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/15 text-sky-500"><FileText className="h-5 w-5" /></span>
-              <div><p className="text-2xl font-semibold leading-none text-foreground">{totalGuides}</p><p className="mt-1 text-xs text-muted-foreground">Guias vinculadas</p></div>
+            <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border bg-card p-2.5 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
+              <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-500 sm:flex"><FileText className="h-5 w-5" /></span>
+              <div className="min-w-0"><p className="text-xl font-semibold leading-none text-foreground sm:text-2xl">{totalGuides}</p><p className="mt-1 truncate text-[11px] text-muted-foreground sm:text-xs">Guias vinculadas</p></div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500"><Star className="h-5 w-5" /></span>
+            <div className="flex min-w-0 flex-col justify-center rounded-xl border border-border bg-card p-2.5 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
+              <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500 sm:flex"><Star className="h-5 w-5" /></span>
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Mais utilizada</p>
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {mostUsed && mostUsed.surgeries.length > 0
-                    ? `${formatCompositionCode(mostUsed.number)} · ${mostUsed.surgeries.length} guia(s)`
-                    : "—"}
+                <p className="truncate text-sm font-semibold leading-none text-foreground sm:text-sm">
+                  {mostUsed && mostUsed.surgeries.length > 0 ? formatCompositionCode(mostUsed.number) : "—"}
                 </p>
-                {mostUsed && mostUsed.surgeries.length > 0 ? <p className="truncate text-xs text-muted-foreground">{mostUsed.name}</p> : null}
+                <p className="mt-1 truncate text-[11px] text-muted-foreground sm:text-xs">
+                  Mais utilizada{mostUsed && mostUsed.surgeries.length > 0 ? ` · ${mostUsed.surgeries.length}` : ""}
+                </p>
+                {mostUsed && mostUsed.surgeries.length > 0 ? <p className="hidden truncate text-xs text-muted-foreground sm:block">{mostUsed.name}</p> : null}
               </div>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3">
-            <form method="get" action="/catalog/compositions" className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative flex-1">
+          <div className="mt-3 flex flex-col gap-2.5 sm:mt-4 sm:gap-3">
+            <form method="get" action="/catalog/compositions" className="flex flex-wrap gap-2 sm:flex-nowrap">
+              <div className="relative min-w-0 flex-1 basis-0">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   name="q"
                   defaultValue={q}
                   maxLength={80}
-                  placeholder="Buscar por CMP, TUSS, procedimento ou material…"
+                  placeholder="Buscar CMP, TUSS, material…"
                   aria-label="Buscar composições"
                   className="h-10 w-full rounded-md border border-input bg-input-background pl-9 pr-3 text-sm"
                 />
@@ -198,7 +198,7 @@ export default async function CompositionsPage({
                 name="principal"
                 defaultValue={principal}
                 aria-label="Filtrar por procedimento principal"
-                className="h-10 max-w-full rounded-md border border-input bg-input-background px-3 text-sm sm:max-w-[280px]"
+                className="order-last h-10 w-full min-w-0 rounded-md border border-input bg-input-background px-3 text-sm sm:order-none sm:w-auto sm:max-w-[280px]"
               >
                 <option value="">Procedimento principal: todos</option>
                 {principalOptions.map(([id, name]) => (

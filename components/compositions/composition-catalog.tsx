@@ -71,7 +71,37 @@ export function CompositionCatalog({
 
   return (
     <div className="mt-4">
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      {/* Mobile: cards compactos (sem tabela com rolagem lateral) */}
+      <ul className="space-y-2 md:hidden">
+        {rows.map((r) => (
+          <li key={r.id}>
+            <button
+              type="button"
+              onClick={() => setSelectedId(r.id)}
+              className="block w-full rounded-xl border border-border bg-card px-3 py-2.5 text-left active:bg-muted/50"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="rounded-md bg-primary/15 px-2 py-0.5 font-mono text-xs font-semibold text-primary">{formatCompositionCode(r.number)}</span>
+                <span className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Stethoscope className="h-3.5 w-3.5 text-sky-500" />{r.procedures.length}</span>
+                  <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5 text-violet-500" />{r.materials.length}</span>
+                  <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" />{r.surgeries.length}</span>
+                  <ChevronRight className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-1.5 line-clamp-2 text-sm font-medium text-foreground">{r.name}</p>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {r.primary_name ? `Principal: ${r.primary_name}` : "Sem procedimento principal"} · {fmt(r.created_at)}
+              </p>
+            </button>
+          </li>
+        ))}
+        {rows.length === 0 ? (
+          <li className="rounded-xl border border-dashed border-border bg-card px-3 py-8 text-center text-sm text-muted-foreground">Nenhuma composição encontrada.</li>
+        ) : null}
+      </ul>
+
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
