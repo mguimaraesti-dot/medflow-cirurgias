@@ -182,3 +182,28 @@ export function toWhatsappNumber(raw: string): string | null {
   const withCountry = digits.startsWith("55") && digits.length >= 12 ? digits : `55${digits}`;
   return withCountry.length >= 12 && withCountry.length <= 13 ? withCountry : null;
 }
+
+
+/** Mensagem de UMA cirurgia (botão na tela da cirurgia), com os mesmos rótulos e emojis da programação. */
+export function buildSingleSurgeryMessage(input: { doctorName: string; code: string; row: ScheduleInputRow }): string {
+  const r = input.row;
+  const key = classifyStatus(r);
+  const status = key ? `${STATUS_META[key].emoji} ${STATUS_META[key].label}` : "🟣 Realizada";
+  const when = r.date ? weekdayAndDate(r.date) : "DATA A DEFINIR";
+  return [
+    "*📋 CIRURGIA*",
+    "",
+    `Olá, ${input.doctorName}!`,
+    "",
+    "Segue a situação da cirurgia:",
+    "",
+    `*${when}*`,
+    "",
+    `*Status:* ${status}`,
+    `*Paciente:* ${r.patientName ?? "Não informado"}`,
+    ...procedureLines(r.procedureNames),
+    `*Local:* ${r.hospitalName ?? "Não informado"}`,
+    `*Atendimento:* ${modalityText(r)}`,
+    `*Código:* ${input.code}`,
+  ].join("\n");
+}

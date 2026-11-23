@@ -3,7 +3,8 @@
 import { requireActionPermission } from "@/lib/auth/guard";
 import { createClient } from "@/lib/supabase/server";
 import { listSurgeriesForReport, listSurgeriesWithoutDate, listWorkflowStages } from "@/lib/data/surgeries";
-import type { ScheduleInputRow } from "@/lib/whatsapp/surgery-schedule";
+import { buildSingleSurgeryMessage, type ScheduleInputRow } from "@/lib/whatsapp/surgery-schedule";
+import { getSurgery } from "@/lib/data/surgeries";
 import { todayInSaoPaulo } from "@/lib/utils";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -86,4 +87,30 @@ export async function loadWhatsappScheduleAction(input: {
     console.error("[whatsapp] falha ao carregar programação:", e);
     return { error: "Não foi possível carregar as cirurgias." };
   }
+}
+
+/** Texto do WhatsApp com os dados de uma única cirurgia (botão na tela da cirurgia). */
+export async function getSurgeryWhatsappTextAction(surgeryId: string): Promise<string> {
+  await requireActionPermission("surgeries", "view");
+  const supabase = await createClient();
+  const [surgery, stages] = await Promise.all([getSurgery(supabase, surgeryId), listWorkflowStages(supabase)]);
+  const s = surgery as unknown as Awaited<ReturnType<typeof getSurgery>> & {
+    procedures: { name: string; is_primary: boolean }[];
+    hospital: { name: string } | null;
+    insurance_provider: { name: string } | null;
+    patient: { full_name: string } | null;
+  };
+  const row: ScheduleInputRow = {
+    id: s.id,
+    patientName: s.patient?.full_name ?? null,
+    procedureNames: [...(s.procedures ?? [])].sort((a, b) => Number(b.is_primary) - Number(a.is_primary)).map((p) => p.name),
+    hospitalName: s.hospital?.name ?? null,
+    attendanceType: s.attendance_type ?? null,
+    insuranceName: s.insurance_provider?.name ?? null,
+    status: s.status,
+    stageCode: stages.find((st) => st.id === s.stage_id)?.code ?? null,
+    date: s.confirmed_date ?? s.expected_date ?? null,
+    confirmed: Boolean(s.confirmed_date),
+  };
+  return buildSingleSurgeryMessage({ doctorName: "Dr. Flávio Morita", code: s.code, row });
 }

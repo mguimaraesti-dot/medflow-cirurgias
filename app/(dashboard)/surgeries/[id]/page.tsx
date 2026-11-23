@@ -32,6 +32,7 @@ import { SurgeryRequirementsPanel } from "@/components/surgeries/surgery-require
 import { FinancialPanel } from "@/components/surgeries/financial-panel";
 import { MaterialsSection } from "@/components/surgeries/materials-section";
 import { HistoryPanel } from "@/components/surgeries/history-panel";
+import { CopySurgeryWhatsappButton } from "@/components/surgeries/copy-surgery-whatsapp-button";
 import { CopyAuthorizationRequestButton } from "@/components/surgeries/copy-authorization-request-button";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
 
@@ -192,6 +193,7 @@ export default async function SurgeryDetailPage({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <CopyAuthorizationRequestButton surgeryId={surgery.id} />
+            <CopySurgeryWhatsappButton surgeryId={surgery.id} />
             {surgery.status === "active" ? <CancelSurgeryButton surgeryId={surgery.id} /> : null}
             <Link href={`/surgeries/${surgery.id}/edit`}>
               <Button variant="outline" size="sm">
