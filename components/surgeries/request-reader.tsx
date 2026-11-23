@@ -883,14 +883,14 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                             {comp.preview.status === "reused"
                               ? `Composição ${formatCompositionCode(comp.preview.number ?? 0)} já cadastrada — será reutilizada`
                               : comp.preview.status === "variant"
-                                ? "Nova composição — variação de uma já cadastrada"
+                                ? "Kit diferente dos anteriores — será salvo como nova composição"
                                 : "Nova composição — será cadastrada ao salvar a cirurgia"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {comp.preview.status === "reused"
                               ? `Mesmos procedimentos, materiais e quantidades${comp.preview.uses ? ` (usada em ${comp.preview.uses} guia(s))` : ""}. Nenhum cadastro duplicado será criado.`
                               : comp.preview.status === "variant"
-                                ? `Os mesmos procedimentos já têm ${comp.preview.variants} composição(ões), mas com materiais ou quantidades diferentes. Esta será registrada como nova e ficará disponível para reutilização.`
+                                ? `Estes procedimentos já têm ${comp.preview.variants} kit(s) salvo(s), mas com materiais ou quantidades diferentes dos desta guia (compare abaixo). Ao salvar, este kit fica registrado para reutilização futura.`
                                 : "Esta combinação de procedimentos e materiais ainda não existe. Ela será registrada e poderá ser reutilizada nas próximas guias."}
                           </p>
                         </div>
@@ -1120,22 +1120,65 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                       </ul>
                     </Section>
 
-                    {/* Composições já cadastradas */}
+                    {/* Composições já cadastradas: comparação com os materiais lidos da guia */}
                     {comp?.existing && comp.existing.length > 0 ? (
                       <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-3 text-xs dark:border-amber-500/30 dark:bg-amber-500/10">
-                        <p className="font-semibold text-foreground">Composições já cadastradas para este conjunto de procedimentos</p>
+                        <p className="font-semibold text-foreground">Esta combinação de procedimentos já foi usada antes</p>
+                        <p className="mt-0.5 text-muted-foreground">
+                          Veja abaixo o kit de materiais de cada vez e compare com o que foi lido nesta guia. Nada muda até você clicar em incluir.
+                        </p>
                         <ul className="mt-2 flex flex-col gap-2">
-                          {comp.existing.map((c) => (
-                            <li key={c.id} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-medium">Composição {formatCompositionCode(c.number)} · usada em {c.uses} guia(s)</span>
-                                <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => applyExistingComposition(c)}>
-                                  Incluir estes materiais
-                                </Button>
-                              </div>
-                              <p className="text-muted-foreground">{c.materials.map((m) => `${m.quantity}× ${m.name}`).join(" · ")}</p>
-                            </li>
-                          ))}
+                          {comp.existing.map((c) => {
+                            const guide = new Map<string, { name: string; qty: number }>();
+                            for (const m of selectedMaterials) {
+                              const id = matChoice[m.key];
+                              const name = m.material?.id === id ? m.material.name : (m.alternatives.find((a) => a.id === id)?.name ?? m.read_name);
+                              const prev = guide.get(id);
+                              guide.set(id, { name, qty: (prev?.qty ?? 0) + m.quantity });
+                            }
+                            const kit = new Map(c.materials.map((m) => [m.material_id, m]));
+                            const missing = c.materials.filter((m) => !guide.has(m.material_id));
+                            const different = c.materials.filter((m) => guide.has(m.material_id) && guide.get(m.material_id)!.qty !== m.quantity);
+                            const same = c.materials.filter((m) => guide.has(m.material_id) && guide.get(m.material_id)!.qty === m.quantity);
+                            const onlyGuide = [...guide.entries()].filter(([id]) => !kit.has(id));
+                            const identical = missing.length === 0 && different.length === 0 && onlyGuide.length === 0;
+                            return (
+                              <li key={c.id} className="flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="font-medium">
+                                    {formatCompositionCode(c.number)} · usada em {c.uses} guia(s)
+                                  </span>
+                                  {identical ? (
+                                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-300">Igual à guia</span>
+                                  ) : missing.length > 0 ? (
+                                    <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => applyExistingComposition(c)}>
+                                      Incluir {missing.length === 1 ? "o item que falta" : `os ${missing.length} itens que faltam`}
+                                    </Button>
+                                  ) : null}
+                                </div>
+                                <ul className="flex flex-col gap-0.5 text-muted-foreground">
+                                  {same.map((m) => (
+                                    <li key={m.material_id}>✓ {m.quantity}× {m.name} <span className="opacity-70">— já está na guia</span></li>
+                                  ))}
+                                  {different.map((m) => (
+                                    <li key={m.material_id} className="text-amber-700 dark:text-amber-300">
+                                      ≠ {m.name} — kit tinha {m.quantity}×, guia tem {guide.get(m.material_id)!.qty}×
+                                    </li>
+                                  ))}
+                                  {missing.map((m) => (
+                                    <li key={m.material_id} className="text-sky-700 dark:text-sky-300">
+                                      + {m.quantity}× {m.name} <span className="opacity-80">— estava no kit, não está na guia</span>
+                                    </li>
+                                  ))}
+                                  {onlyGuide.map(([id, g]) => (
+                                    <li key={id}>
+                                      • {g.qty}× {g.name} <span className="opacity-70">— só na guia, não estava no kit</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     ) : null}
@@ -1312,7 +1355,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                     {comp.preview.status === "reused"
                       ? `Composição ${formatCompositionCode(comp.preview.number ?? 0)} existente será reutilizada`
                       : comp.preview.status === "variant"
-                        ? "Nova composição (variação de uma existente)"
+                        ? "Kit novo (difere dos anteriores)"
                         : "Nova composição será cadastrada"}
                   </Chip>
                 ) : null}
