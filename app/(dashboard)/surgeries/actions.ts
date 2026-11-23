@@ -22,7 +22,7 @@ import {
 import { addSurgeryMaterialItem } from "@/lib/data/operations";
 import { addSurgeryDocument } from "@/lib/data/surgery-documents";
 import { getCurrentUser } from "@/lib/auth/session";
-import { syncSurgeryComposition } from "@/lib/data/compositions";
+import { importBestComposition, syncSurgeryComposition } from "@/lib/data/compositions";
 import { buildAuthorizationRequestText } from "@/lib/authorization-request";
 import {
   surgerySchema,
@@ -121,6 +121,9 @@ export async function createSurgeryAction(
     }
   }
 
+  // Cadastro manual (sem materiais vindos da guia): sugere a composição mais
+  // usada para o mesmo conjunto de procedimentos.
+  if (seen.size === 0) await importBestComposition(supabase, surgeryId);
   await syncSurgeryComposition(supabase, surgeryId);
 
   // Foto da guia lida pela IA: fica anexada à cirurgia para consulta.
@@ -181,6 +184,7 @@ export async function updateSurgeryAction(
   } catch {
     return { error: "Não foi possível salvar a cirurgia. Tente novamente." };
   }
+  await importBestComposition(supabase, id);
   await syncSurgeryComposition(supabase, id);
 
   revalidatePath("/kanban");

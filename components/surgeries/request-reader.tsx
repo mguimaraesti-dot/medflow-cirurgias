@@ -1189,7 +1189,7 @@ export function RequestReader({ onApply }: { onApply: (result: ReaderApplyResult
                                       {matEdited[m.key] ? <Chip tone="muted" icon={<PencilLine />}>Corrigido</Chip> : <ConfChip c={m.confidence} />}
                                     </Line>
                                   ) : (
-                                    <Line icon={<BookOpen />} label="Origem">kit padrão dos procedimentos (sugestão extra)</Line>
+                                    <Line icon={<BookOpen />} label="Origem">composição já cadastrada (não citado na guia)</Line>
                                   )}
                                   {isGuide && (m.material || m.alternatives.length > 0) ? (
                                     <select

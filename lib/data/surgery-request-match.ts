@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeText, fetchAll } from "@/lib/data/fetch-all";
-import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
 import type {
   MaterialSuggestion,
   PatientSuggestion,
@@ -158,26 +157,6 @@ export async function analyzeExtraction(
       supplier: findSupplier(m.supplier),
       material: strong ? { id: strong.id, name: strong.name } : null,
       alternatives: candidates.filter((c) => c.id !== strong?.id).slice(0, 4),
-    });
-  }
-
-  // Kit padrão dos procedimentos reconhecidos (sugestão adicional).
-  const procedureIds = procSuggestions.map((p) => p.procedure?.id).filter((id): id is string => Boolean(id));
-  const kit = await listDefaultMaterialsForProcedures(supabase, procedureIds);
-  for (const k of kit) {
-    if (!k.material || usedIds.has(k.material_id)) continue;
-    usedIds.add(k.material_id);
-    materialSuggestions.push({
-      key: `k${k.id}`,
-      source: "kit",
-      read_name: k.material.name,
-      confidence: "high",
-      quantity: k.quantity,
-      details: null,
-      supplier_text: null,
-      supplier: null,
-      material: { id: k.material.id, name: k.material.name },
-      alternatives: [],
     });
   }
 

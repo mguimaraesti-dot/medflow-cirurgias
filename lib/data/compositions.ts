@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { addSurgeryMaterialItem } from "@/lib/data/operations";
 import {
   buildCompositionSignature,
   procedureSetKey,
@@ -284,5 +285,34 @@ export async function getSurgeryCompositionBrief(
     return { number: Number(comp.number), uses: count ?? 1 };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Cirurgia cadastrada à mão e ainda sem materiais: carrega os materiais da
+ * composição MAIS USADA para exatamente o mesmo conjunto de procedimentos
+ * (substitui o antigo kit padrão). Não faz nada se não houver composição.
+ */
+export async function importBestComposition(supabase: SupabaseClient, surgeryId: string) {
+  try {
+    const { count } = await supabase
+      .from("surgery_material_items")
+      .select("id", { count: "exact", head: true })
+      .eq("surgery_id", surgeryId)
+      .neq("status", "removed");
+    if (count) return;
+    const { data: links } = await supabase
+      .from("surgery_procedures")
+      .select("procedure_id")
+      .eq("surgery_id", surgeryId);
+    const ids = (links ?? []).map((l) => l.procedure_id as string);
+    const compositions = await listCompositionsForProcedures(supabase, ids);
+    const best = [...compositions].sort((a, b) => b.uses - a.uses || b.number - a.number)[0];
+    if (!best) return;
+    for (const m of best.materials) {
+      await addSurgeryMaterialItem(supabase, surgeryId, { material_id: m.material_id, quantity: m.quantity });
+    }
+  } catch (e) {
+    console.error("[composition] não foi possível carregar a composição:", e);
   }
 }
