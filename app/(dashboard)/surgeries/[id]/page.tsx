@@ -23,6 +23,7 @@ import {
 import { formatCompositionCode } from "@/lib/compositions/signature";
 import { getSurgeryCompositionBrief } from "@/lib/data/compositions";
 import { listSurgeryDocuments } from "@/lib/data/surgery-documents";
+import { listPatientDocuments, type PatientDocument } from "@/lib/data/patient-documents";
 import { getOrCreateFinancialRecord, listInstallments } from "@/lib/data/financial";
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +102,18 @@ export default async function SurgeryDetailPage({
     listSurgeryDocuments(supabase, id),
     getOrCreateFinancialRecord(supabase, id, surgery.attendance_type),
   ]);
+
+  // Documentos do cadastro do paciente: aparecem junto dos anexos da cirurgia
+  // (por referência, sem copiar o arquivo). Só para quem pode ver o módulo
+  // Pacientes — o acesso a cada arquivo é checado de novo no servidor.
+  let patientDocuments: PatientDocument[] = [];
+  if (surgery.patient_id && user && (await hasPermission(user, "patients", "view"))) {
+    try {
+      patientDocuments = await listPatientDocuments(surgery.patient_id);
+    } catch (e) {
+      console.error("[surgery] documentos do paciente:", e); // ex.: migração 0023 pendente
+    }
+  }
 
   // Convênio (faturamento/glosas) está fora de escopo por ora — só
   // particular busca parcelas de verdade.
@@ -303,6 +316,8 @@ export default async function SurgeryDetailPage({
               orReservation={orReservation}
               preoperativeItems={preoperativeItems}
               documents={documents}
+              patientDocuments={patientDocuments}
+              patientId={surgery.patient_id}
             />
           </section>
 

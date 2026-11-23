@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { AuthorizationRequest, OrReservation, PreoperativeItem } from "@/lib/data/operations";
 import type { SurgeryRequirement } from "@/lib/data/surgeries";
 import type { SurgeryDocument } from "@/lib/data/surgery-documents";
+import type { PatientDocument } from "@/lib/data/patient-documents";
 import { AuthorizationRequirementCard } from "@/components/surgeries/authorization-requirement-card";
 import { OrReservationRequirementCard } from "@/components/surgeries/or-reservation-requirement-card";
 import { PreoperativeRequirementCard } from "@/components/surgeries/preoperative-requirement-card";
@@ -31,6 +32,8 @@ export function SurgeryRequirementsPanel({
   orReservation,
   preoperativeItems,
   documents,
+  patientDocuments = [],
+  patientId = null,
 }: {
   defaultOpenKey?: RequirementKey | null;
   surgeryId: string;
@@ -43,6 +46,9 @@ export function SurgeryRequirementsPanel({
   orReservation: OrReservation | null;
   preoperativeItems: PreoperativeItem[];
   documents: SurgeryDocument[];
+  /** Documentos do cadastro do paciente (somente leitura, vinculados por referência). */
+  patientDocuments?: PatientDocument[];
+  patientId?: string | null;
 }) {
   const [openKey, setOpenKey] = useState<RequirementKey | null>(defaultOpenKey);
 
@@ -61,6 +67,8 @@ export function SurgeryRequirementsPanel({
       <HospitalRequestCard
         surgeryId={surgeryId}
         documents={documents}
+        patientDocuments={patientDocuments}
+        patientId={patientId}
         open={openKey === "hospital_request"}
         onToggle={() => toggle("hospital_request")}
       />
