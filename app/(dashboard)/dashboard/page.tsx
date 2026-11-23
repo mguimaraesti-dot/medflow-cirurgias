@@ -15,7 +15,7 @@ import { getAttentionItems } from "@/lib/data/dashboard-attention";
 import { getFinancePanel, getPerformance, type FinanceMode } from "@/lib/data/dashboard-performance";
 import { AttentionList } from "@/components/dashboard/attention-list";
 import { DashboardFiltersBar } from "@/components/dashboard/dashboard-filters-bar";
-import { AgendaPanel, FinancePanel, FlowPanel, KpiGrid, PanelError, PanelSkeleton } from "@/components/dashboard/dashboard-panels";
+import { AgendaPanel, FinancePanel, KpiGrid, PanelError, PanelSkeleton } from "@/components/dashboard/dashboard-panels";
 import { PerformanceChart } from "@/components/dashboard/performance-chart";
 
 type SearchParams = { p?: string; from?: string; to?: string; hospital?: string; att?: string; perf?: string; fin?: string };
@@ -52,17 +52,6 @@ async function OverviewSection({ filters, includeTasks }: { filters: DashboardFi
     return <PanelError title="indicadores" />;
   }
   return <KpiGrid overview={overview} filters={filters} />;
-}
-
-async function FlowSection({ filters, includeTasks }: { filters: DashboardFilters; includeTasks: boolean }) {
-  let overview;
-  try {
-    overview = await loadOverview(filters.from, filters.to, filters.hospitalId, filters.attendance, includeTasks);
-  } catch (e) {
-    console.error("[dashboard] fluxo:", e);
-    return <PanelError title="visão do fluxo" />;
-  }
-  return <FlowPanel overview={overview} filters={filters} />;
 }
 
 async function AttentionSection({ filters, includeTasks }: { filters: DashboardFilters; includeTasks: boolean }) {
@@ -131,8 +120,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const key = JSON.stringify([filters, months, financeMode]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-3rem)]">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -144,11 +133,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <Suspense key={`k-${key}`} fallback={<PanelSkeleton className="h-28" />}>
-        <OverviewSection filters={filters} includeTasks={canTasks} />
-      </Suspense>
+      <div className="shrink-0">
+        <Suspense key={`k-${key}`} fallback={<PanelSkeleton className="h-28" />}>
+          <OverviewSection filters={filters} includeTasks={canTasks} />
+        </Suspense>
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-2 [&>*]:min-h-0">
         <Suspense key={`a-${key}`} fallback={<PanelSkeleton className="h-72" />}>
           <AttentionSection filters={filters} includeTasks={canTasks} />
         </Suspense>
@@ -157,11 +148,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </Suspense>
       </div>
 
-      <Suspense key={`f-${key}`} fallback={<PanelSkeleton className="h-40" />}>
-        <FlowSection filters={filters} includeTasks={canTasks} />
-      </Suspense>
-
-      <div className={canFinance ? "grid gap-4 lg:grid-cols-2" : ""}>
+      <div className={canFinance ? "grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-2 [&>*]:min-h-0" : "lg:min-h-0 lg:flex-1"}>
         <Suspense key={`p-${key}`} fallback={<PanelSkeleton className="h-80" />}>
           <PerformanceSection filters={filters} months={months} params={params} />
         </Suspense>

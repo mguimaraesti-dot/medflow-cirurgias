@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 
 function Rate({ label, value, tone }: { label: string; value: number | null; tone: string }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+    <div className="rounded-lg border border-border bg-muted/30 px-3 py-1.5">
       <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className={cn("text-lg font-semibold", tone)}>{value === null ? "—" : `${value}%`}</p>
+      <p className={cn("text-base font-semibold", tone)}>{value === null ? "—" : `${value}%`}</p>
     </div>
   );
 }
@@ -19,8 +19,8 @@ function Rate({ label, value, tone }: { label: string; value: number | null; ton
 export function PerformanceChart({ data, monthsBack, hrefs }: { data: PerformanceData; monthsBack: 6 | 12; hrefs: Record<6 | 12, string> }) {
   const empty = data.totals.previstas === 0;
   return (
-    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm lg:h-full">
+      <header className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <BarChart3 className="h-5 w-5 text-primary" /> Desempenho cirúrgico
         </h2>
@@ -33,10 +33,10 @@ export function PerformanceChart({ data, monthsBack, hrefs }: { data: Performanc
         </div>
       </header>
       {empty ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">Sem cirurgias com data no período.</p>
+        <p className="py-10 text-center text-sm text-muted-foreground lg:my-auto">Sem cirurgias com data no período.</p>
       ) : (
         <>
-          <div className="h-56 w-full">
+          <div className="h-56 w-full lg:h-auto lg:min-h-[120px] lg:flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.months} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
@@ -50,7 +50,7 @@ export function PerformanceChart({ data, monthsBack, hrefs }: { data: Performanc
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid shrink-0 grid-cols-3 gap-2">
             <Rate label="Taxa de realização" value={data.completionRate} tone="text-emerald-400" />
             <Rate label="Taxa de cancelamento" value={data.cancellationRate} tone="text-red-400" />
             <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
@@ -60,7 +60,7 @@ export function PerformanceChart({ data, monthsBack, hrefs }: { data: Performanc
               </p>
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 shrink-0 text-[11px] text-muted-foreground lg:hidden">
             Cada cirurgia conta uma vez, no mês da data confirmada (ou prevista). Previstas = programadas no mês; realizadas e canceladas são parte delas.
           </p>
         </>

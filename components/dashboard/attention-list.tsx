@@ -34,7 +34,7 @@ export function AttentionList({ items, initial = 5 }: { items: AttentionItem[]; 
   for (const i of items) counts[i.level]++;
 
   return (
-    <section id="central-de-atencao" className="scroll-mt-4 rounded-xl border border-border bg-card shadow-sm">
+    <section id="central-de-atencao" className="flex scroll-mt-4 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:h-full">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -57,7 +57,7 @@ export function AttentionList({ items, initial = 5 }: { items: AttentionItem[]; 
           <ClipboardX className="h-4 w-4" /> Nenhuma pendência identificada pelas regras atuais.
         </p>
       ) : (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
           {shown.map((it) => {
             const Icon = ICON[it.kind];
             return (

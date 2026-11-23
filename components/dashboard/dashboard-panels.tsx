@@ -139,8 +139,8 @@ function fmtDate(v: string | null) {
 
 export function AgendaPanel({ surgeries }: { surgeries: ScheduleSurgeryItem[] }) {
   return (
-    <section className="rounded-xl border border-border bg-card shadow-sm">
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+    <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:h-full">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <CalendarCheck className="h-5 w-5 text-primary" /> Agenda dos próximos 7 dias
         </h2>
@@ -149,7 +149,7 @@ export function AgendaPanel({ surgeries }: { surgeries: ScheduleSurgeryItem[] })
       {surgeries.length === 0 ? (
         <p className="px-4 py-6 text-sm text-muted-foreground">Nenhuma cirurgia nos próximos 7 dias.</p>
       ) : (
-        <>
+        <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
           {/* Desktop: tabela */}
           <table className="hidden w-full text-sm md:table">
             <thead className="text-xs text-muted-foreground">
@@ -205,7 +205,7 @@ export function AgendaPanel({ surgeries }: { surgeries: ScheduleSurgeryItem[] })
               );
             })}
           </ul>
-        </>
+        </div>
       )}
     </section>
   );
@@ -219,8 +219,8 @@ export function FinancePanel({ data, hrefs }: { data: FinancePanelDataShape; hre
     { label: "Vencido", value: data.overdue, tone: "text-red-400" },
   ];
   return (
-    <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm lg:h-full">
+      <header className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           {data.mode === "particular" ? <Wallet className="h-5 w-5 text-emerald-400" /> : <Landmark className="h-5 w-5 text-emerald-400" />}
           Financeiro {data.mode === "particular" ? "particular" : "de convênios"}
@@ -234,7 +234,7 @@ export function FinancePanel({ data, hrefs }: { data: FinancePanelDataShape; hre
         </div>
       </header>
       {data.records === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
+        <p className="py-6 text-center text-sm text-muted-foreground lg:my-auto">
           Nenhum registro financeiro {data.mode === "particular" ? "particular" : "de convênio"} nas cirurgias do período.
         </p>
       ) : (
@@ -256,7 +256,7 @@ export function FinancePanel({ data, hrefs }: { data: FinancePanelDataShape; hre
               <div className="h-full rounded-full bg-primary" style={{ width: `${data.percentReceived ?? 0}%` }} />
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 text-[11px] text-muted-foreground lg:mt-auto lg:pt-2">
             {data.records} registro(s). Valores previstos nunca entram como recebidos; recebimentos parciais e baixas vêm dos registros financeiros.
           </p>
         </>
