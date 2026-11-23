@@ -10,6 +10,8 @@ import {
   type SurgeryMapFilters,
 } from "@/lib/data/surgeries";
 import { countOpenTasksBySurgery } from "@/lib/data/tasks";
+import { listMaterialNamesBySurgery } from "@/lib/data/operations";
+import { MobileSurgeryMap } from "@/components/kanban/mobile-surgery-map";
 import { countSurgeryDocumentsBySurgery } from "@/lib/data/surgery-documents";
 import { listActiveHospitalsForSelect } from "@/lib/data/hospitals";
 import { listActiveProceduresForSelect } from "@/lib/data/procedures";
@@ -79,6 +81,11 @@ export default async function KanbanPage({
     listActiveInsuranceProvidersForSelect(supabase),
   ]);
 
+  const materialsBySurgery = await listMaterialNamesBySurgery(
+    supabase,
+    surgeries.map((s) => s.id)
+  );
+
   // O board só mostra cirurgias ativas (abaixo) — qualquer filtro de
   // situação diferente de "ativa" (ex: clicar no indicador "Realizadas")
   // não faria sentido nele, então cai automaticamente pra lista.
@@ -86,7 +93,20 @@ export default async function KanbanPage({
   const activeSurgeries = surgeries.filter((s) => s.status === "active");
 
   return (
-    <div>
+    <>
+      <div className="md:hidden">
+        <MobileSurgeryMap
+          stats={stats}
+          stages={stages}
+          surgeries={surgeries}
+          materialsBySurgery={materialsBySurgery}
+          openTasksBySurgery={openTasksBySurgery}
+          procedures={procedures}
+          hospitals={hospitals}
+          insuranceProviders={insuranceProviders}
+        />
+      </div>
+      <div className="hidden md:block">
       {/*
         No mobile o botão fica ACIMA dos indicadores (flex-col-reverse: a
         1ª div no DOM é a dos indicadores, mas visualmente ele some pra
@@ -136,6 +156,7 @@ export default async function KanbanPage({
           <KanbanBoard stages={stages} surgeries={activeSurgeries} openTasksBySurgery={openTasksBySurgery} />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

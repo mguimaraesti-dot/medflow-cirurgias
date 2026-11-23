@@ -16,15 +16,26 @@ import { cn } from "@/lib/utils";
  * sempre foram. Usado em toda tela com mais de um filtro: Mapa
  * Cirúrgico, Pendências, Financeiro, Relatórios, Agenda.
  */
-export function FilterDisclosure({ activeCount, children }: { activeCount: number; children: ReactNode }) {
-  const [expanded, setExpanded] = useState(false);
+export function FilterDisclosure({
+  activeCount,
+  children,
+  forceExpanded,
+}: {
+  activeCount: number;
+  children: ReactNode;
+  /** Quando definido, o controle de abrir/fechar é externo (some o botão "Filtros" interno). */
+  forceExpanded?: boolean;
+}) {
+  const [internalExpanded, setExpanded] = useState(false);
+  const external = forceExpanded !== undefined;
+  const expanded = external ? forceExpanded : internalExpanded;
 
   return (
     <div className="w-full md:w-auto">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground md:hidden"
+        className={cn("flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground md:hidden", external && "hidden")}
       >
         <span className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />

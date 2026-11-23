@@ -173,10 +173,15 @@ export function MapFilters({
   procedures,
   hospitals,
   insuranceProviders,
+  hideSearch,
+  forceExpanded,
 }: {
   procedures: { id: string; name: string }[];
   hospitals: { id: string; name: string }[];
   insuranceProviders: { id: string; name: string }[];
+  /** Mobile: a busca fica fora do painel de filtros. */
+  hideSearch?: boolean;
+  forceExpanded?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -200,11 +205,13 @@ export function MapFilters({
   ).length;
 
   return (
-    <FilterDisclosure activeCount={activeCount}>
-      <SearchInput
-        placeholder="Buscar por código ou paciente..."
-        className="w-full max-w-none md:min-w-[170px] md:max-w-[220px]"
-      />
+    <FilterDisclosure activeCount={activeCount} forceExpanded={forceExpanded}>
+      {hideSearch ? null : (
+        <SearchInput
+          placeholder="Buscar por código ou paciente..."
+          className="w-full max-w-none md:min-w-[170px] md:max-w-[220px]"
+        />
+      )}
 
       <Select value={searchParams.get("procedure") ?? "all"} onValueChange={(v) => setParam("procedure", v)}>
         <SelectTrigger className="w-full shrink-0 md:w-[165px]">

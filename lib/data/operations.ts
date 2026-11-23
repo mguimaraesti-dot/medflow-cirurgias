@@ -420,3 +420,28 @@ export async function importProcedureDefaultMaterials(
   if (insertError) throw insertError;
   return rows.length;
 }
+
+
+/** Nomes dos materiais (não removidos) por cirurgia — usado no card compacto do Mapa Cirúrgico mobile. */
+export async function listMaterialNamesBySurgery(
+  supabase: SupabaseClient,
+  surgeryIds: string[]
+): Promise<Record<string, string[]>> {
+  const result: Record<string, string[]> = {};
+  const CHUNK = 80;
+  for (let i = 0; i < surgeryIds.length; i += CHUNK) {
+    const ids = surgeryIds.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("surgery_material_items")
+      .select("surgery_id,material:materials_catalog(name)")
+      .in("surgery_id", ids)
+      .neq("status", "removed")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    for (const row of (data ?? []) as unknown as { surgery_id: string; material: { name: string } | null }[]) {
+      if (!row.material?.name) continue;
+      (result[row.surgery_id] ??= []).push(row.material.name);
+    }
+  }
+  return result;
+}
