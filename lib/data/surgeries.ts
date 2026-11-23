@@ -4,7 +4,8 @@ import type { SurgeryInput } from "@/lib/validation/surgeries";
 import {
   listAuthorizationHistoryForSurgery,
 } from "@/lib/data/operations";
-import { listDefaultMaterialsForProcedures } from "@/lib/data/procedure-materials";
+import { listSurgeryMaterialItems } from "@/lib/data/operations";
+import { parseSurgeryNotes } from "@/lib/surgery-notes";
 import { todayInSaoPaulo } from "@/lib/utils";
 
 export type WorkflowStage = {
@@ -617,6 +618,7 @@ export type SurgeryAuthorizationRequestData = {
   priority: SurgeryListItem["priority"];
   procedures: { name: string; tuss_code: string | null; is_primary: boolean }[];
   materials: { name: string; code: string | null; quantity: number }[];
+  clinical_indication: string | null;
 };
 
 /**
@@ -634,7 +636,7 @@ export async function getSurgeryAuthorizationRequestData(
   const { data, error } = await supabase
     .from("surgeries")
     .select(
-      "code,attendance_type,priority," +
+      "code,attendance_type,priority,admin_notes," +
         "patient:patients(full_name,insurance_card_number)," +
         "hospital:hospitals(name)," +
         "insurance_provider:insurance_providers(name)," +
@@ -648,6 +650,7 @@ export async function getSurgeryAuthorizationRequestData(
     code: string;
     attendance_type: "particular" | "convenio";
     priority: SurgeryListItem["priority"];
+    admin_notes: string | null;
     patient: { full_name: string; insurance_card_number: string | null } | null;
     hospital: { name: string } | null;
     insurance_provider: { name: string } | null;
@@ -667,9 +670,8 @@ export async function getSurgeryAuthorizationRequestData(
       is_primary: link.is_primary,
     }));
 
-  const procedureIds = (row.surgery_procedures ?? []).map((link) => link.procedure_id);
-  const defaultMaterials = await listDefaultMaterialsForProcedures(supabase, procedureIds);
-  const materials = defaultMaterials
+  const items = await listSurgeryMaterialItems(supabase, surgeryId);
+  const materials = items
     .filter((item) => item.material)
     .map((item) => ({
       name: item.material!.name,
@@ -687,6 +689,7 @@ export async function getSurgeryAuthorizationRequestData(
     priority: row.priority,
     procedures,
     materials,
+    clinical_indication: parseSurgeryNotes(row.admin_notes).indication?.trim() || null,
   };
 }
 

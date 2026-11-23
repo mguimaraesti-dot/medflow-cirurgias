@@ -16,9 +16,8 @@ const REQUESTING_DOCTOR_CRM = "CRM SP: 146.989";
  * Monta o texto pronto pra copiar e enviar à central de autorizações do
  * convênio/hospital, com as informações que o sistema já tem preenchidas:
  * paciente, convênio, procedimento(s) com código TUSS e os materiais/OPME
- * do kit padrão de cada procedimento (tela de Procedimentos). Só a
- * justificativa clínica da criticidade fica como placeholder entre
- * colchetes, já que não existe um campo correspondente no cadastro.
+ * da cirurgia (tela de edição) e a indicação clínica como justificativa.
+ * Sem indicação clínica, a justificativa fica como placeholder entre colchetes.
  */
 export function buildAuthorizationRequestText(data: SurgeryAuthorizationRequestData): string {
   const isParticular = data.attendance_type === "particular";
@@ -73,7 +72,7 @@ ${materialRows}
 4. CRITICIDADE DO PACIENTE
 
 - Classificação: ${CLASSIFICATION_BY_PRIORITY[data.priority]}
-- Justificativa clínica: [Descrição da criticidade e necessidade de realização do procedimento, quando aplicável]
+- Justificativa clínica: ${data.clinical_indication ?? "[Descrição da criticidade e necessidade de realização do procedimento, quando aplicável]"}
 
 5. DOCUMENTAÇÃO
 

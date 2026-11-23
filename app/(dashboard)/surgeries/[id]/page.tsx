@@ -32,6 +32,7 @@ import { SurgeryRequirementsPanel } from "@/components/surgeries/surgery-require
 import { FinancialPanel } from "@/components/surgeries/financial-panel";
 import { MaterialsSection } from "@/components/surgeries/materials-section";
 import { HistoryPanel } from "@/components/surgeries/history-panel";
+import { CopyAuthorizationRequestButton } from "@/components/surgeries/copy-authorization-request-button";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
 
 // O upload de documentos (Solicitação hospitalar) pode levar mais que o
@@ -189,7 +190,8 @@ export default async function SurgeryDetailPage({
               </p>
             ) : null}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CopyAuthorizationRequestButton surgeryId={surgery.id} />
             {surgery.status === "active" ? <CancelSurgeryButton surgeryId={surgery.id} /> : null}
             <Link href={`/surgeries/${surgery.id}/edit`}>
               <Button variant="outline" size="sm">
