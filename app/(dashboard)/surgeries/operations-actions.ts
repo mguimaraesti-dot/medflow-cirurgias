@@ -469,3 +469,33 @@ export async function validateAllSurgeryMaterialsAction(surgeryId: string): Prom
   revalidateSurgery(surgeryId);
   return {};
 }
+
+/**
+ * Atualiza o código TUSS de um material do catálogo (usado pela tabela de
+ * Materiais e OPME da cirurgia). Altera o cadastro do material — vale para
+ * todas as cirurgias —, por isso exige permissão de edição em Materiais.
+ */
+export async function updateMaterialTussCodeAction(
+  materialId: string,
+  tussCode: string | null
+): Promise<{ error?: string }> {
+  try {
+    await requireActionPermission("surgeries");
+    await requireActionPermission("materials");
+  } catch {
+    return { error: "Você não tem permissão para alterar o cadastro do material." };
+  }
+  if (!UUID_RE.test(materialId)) return { error: "Material inválido." };
+  const code = tussCode?.replace(/\s+/g, "") ?? "";
+  if (code && !/^\d{6,12}$/.test(code)) return { error: "Código TUSS inválido (use apenas números)." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("materials_catalog")
+    .update({ tuss_code: code || null })
+    .eq("id", materialId);
+  if (error) return { error: "Não foi possível atualizar o código TUSS." };
+  revalidatePath("/catalog/materials");
+  revalidatePath("/catalog/compositions");
+  revalidatePath("/surgeries", "layout");
+  return {};
+}

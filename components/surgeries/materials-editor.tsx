@@ -27,7 +27,7 @@ export type EditorItem = {
 export type EditorAdapter = {
   /** Retorna mensagem de erro ou null. */
   onAdd: (m: { id: string; name: string; tuss_code: string | null }, quantity: number, notes: string) => Promise<string | null> | string | null;
-  onUpdate: (key: string, patch: { quantity?: number; notes?: string; validated?: boolean }) => Promise<string | null> | string | null;
+  onUpdate: (key: string, patch: { quantity?: number; notes?: string; validated?: boolean; tuss_code?: string | null }) => Promise<string | null> | string | null;
   onRemove: (key: string) => Promise<string | null> | string | null;
   onValidateAll: () => Promise<string | null> | string | null;
 };
@@ -38,6 +38,7 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
   const [editing, setEditing] = useState(false);
   const [qty, setQty] = useState(String(item.quantity));
   const [notes, setNotes] = useState(item.notes);
+  const [tuss, setTuss] = useState(item.tuss_code ?? "");
   const [pending, start] = useTransition();
 
   function run(fn: () => Promise<string | null> | string | null, ok?: () => void) {
@@ -50,7 +51,10 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
 
   function save() {
     const q = Number(qty.replace(",", "."));
-    run(() => adapter.onUpdate(item.key, { quantity: q, notes }), () => setEditing(false));
+    const code = tuss.replace(/\s+/g, "");
+    const patch: { quantity: number; notes: string; tuss_code?: string | null } = { quantity: q, notes };
+    if (code !== (item.tuss_code ?? "")) patch.tuss_code = code || null;
+    run(() => adapter.onUpdate(item.key, patch), () => setEditing(false));
   }
 
   return (
@@ -59,7 +63,13 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
         <p className="font-medium text-foreground">{item.name}</p>
         {item.supplier_name ? <p className="text-xs text-muted-foreground">Fornecedor: {item.supplier_name}</p> : null}
       </td>
-      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{item.tuss_code ?? "A definir"}</td>
+      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+        {editing ? (
+          <input value={tuss} onChange={(e) => setTuss(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" aria-label="Código TUSS" placeholder="Código TUSS" className={cn(inputCls, "w-28 font-mono")} />
+        ) : (
+          (item.tuss_code ?? "A definir")
+        )}
+      </td>
       <td className="px-3 py-2">
         {editing ? (
           <input value={qty} onChange={(e) => setQty(e.target.value)} inputMode="decimal" aria-label="Quantidade" className={cn(inputCls, "w-16")} />
@@ -94,7 +104,7 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
             {editing ? (
               <>
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={save} aria-label="Salvar alterações"><Check className="h-4 w-4" /></Button>
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={() => { setQty(String(item.quantity)); setNotes(item.notes); setEditing(false); }} aria-label="Cancelar edição"><X className="h-4 w-4" /></Button>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={() => { setQty(String(item.quantity)); setNotes(item.notes); setTuss(item.tuss_code ?? ""); setEditing(false); }} aria-label="Cancelar edição"><X className="h-4 w-4" /></Button>
               </>
             ) : (
               <>

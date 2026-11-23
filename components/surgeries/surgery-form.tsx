@@ -35,6 +35,7 @@ import {
   addSurgeryMaterialStructuredAction,
   removeSurgeryMaterialItemAction,
   updateSurgeryMaterialStructuredAction,
+  updateMaterialTussCodeAction,
   validateAllSurgeryMaterialsAction,
 } from "@/app/(dashboard)/surgeries/operations-actions";
 import { ADMIN_NOTES_MAX } from "@/lib/validation/surgeries";
@@ -417,8 +418,16 @@ export function SurgeryForm({
       setStaged((prev) => [...prev, { key: `s-${m.id}`, material_id: m.id, name: m.name, tuss_code: m.tuss_code, quantity, notes, validated: true, ai: false }]);
       return null;
     },
-    onUpdate: (key, patch) => {
-      setStaged((prev) => prev.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+    onUpdate: async (key, patch) => {
+      const { tuss_code, ...rest } = patch;
+      if (tuss_code !== undefined) {
+        const target = staged.find((x) => x.key === key);
+        if (!target) return "Material não encontrado.";
+        const res = await updateMaterialTussCodeAction(target.material_id, tuss_code);
+        if (res.error) return res.error;
+        setStaged((prev) => prev.map((x) => (x.material_id === target.material_id ? { ...x, tuss_code } : x)));
+      }
+      setStaged((prev) => prev.map((x) => (x.key === key ? { ...x, ...rest } : x)));
       return null;
     },
     onRemove: (key) => {
@@ -438,7 +447,14 @@ export function SurgeryForm({
       return res.error ?? null;
     },
     onUpdate: async (key, patch) => {
-      const res = await updateSurgeryMaterialStructuredAction(key, surgery!.id, patch);
+      const { tuss_code, ...rest } = patch;
+      if (tuss_code !== undefined) {
+        const target = persistedItems.find((x) => x.key === key);
+        if (!target) return "Material não encontrado.";
+        const r = await updateMaterialTussCodeAction(target.material_id, tuss_code);
+        if (r.error) return r.error;
+      }
+      const res = await updateSurgeryMaterialStructuredAction(key, surgery!.id, rest);
       router.refresh();
       return res.error ?? null;
     },
