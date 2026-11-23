@@ -18,6 +18,7 @@ import {
   addSurgeryMaterialItem,
   setSurgeryMaterialItemStatus,
   removeSurgeryMaterialItem,
+  setSurgeryMaterialItemQuantity,
   importProcedureDefaultMaterials,
   listSurgeryMaterialItems,
   type PreoperativeItem,
@@ -315,6 +316,30 @@ export async function setSurgeryMaterialItemStatusAction(
   const supabase = await createClient();
   await setSurgeryMaterialItemStatus(supabase, itemId, status);
   revalidateSurgery(surgeryId);
+}
+
+export async function updateSurgeryMaterialQuantityAction(
+  itemId: string,
+  surgeryId: string,
+  quantity: number
+): Promise<{ error?: string }> {
+  if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 9999) {
+    return { error: "Informe uma quantidade válida." };
+  }
+  try {
+    await requireActionPermission("surgeries");
+  } catch {
+    return { error: "Você não tem permissão para esta ação." };
+  }
+  const supabase = await createClient();
+  try {
+    await setSurgeryMaterialItemQuantity(supabase, itemId, quantity);
+  } catch {
+    return { error: "Não foi possível atualizar a quantidade." };
+  }
+  await syncSurgeryComposition(supabase, surgeryId);
+  revalidateSurgery(surgeryId);
+  return {};
 }
 
 export async function removeSurgeryMaterialItemAction(itemId: string, surgeryId: string) {

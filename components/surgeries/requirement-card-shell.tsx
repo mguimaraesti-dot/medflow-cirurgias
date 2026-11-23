@@ -62,50 +62,32 @@ export function RequirementCardShell({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "flex h-full flex-col rounded-xl border bg-card shadow-sm transition-colors",
-        TONE_BORDER[tone]
-      )}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-start justify-between gap-3 p-4 text-left"
-      >
-        <div className="flex min-w-0 items-start gap-3">
-          <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", TONE_ICON[tone])}>
-            <Icon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-medium text-foreground">{title}</p>
-              <Badge variant={TONE_BADGE_VARIANT[tone]} className={TONE_BADGE_CLASS[tone]}>
-                {statusLabel}
-              </Badge>
-            </div>
-            {summary ? (
-              <div className="mt-1 text-sm text-muted-foreground">{summary}</div>
-            ) : null}
-          </div>
+    <div className={cn("rounded-xl border bg-card transition-colors", TONE_BORDER[tone])}>
+      <div className="flex items-center gap-3 p-3">
+        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", TONE_ICON[tone])}>
+          <Icon className="h-4 w-4" />
         </div>
-        <ChevronDown
-          className={cn(
-            "mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180"
-          )}
-        />
-      </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="min-w-0 flex-1 text-left"
+        >
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="text-sm font-medium text-foreground">{title}</span>
+            <Badge variant={TONE_BADGE_VARIANT[tone]} className={cn("px-1.5 py-0 text-[10px]", TONE_BADGE_CLASS[tone])}>
+              {statusLabel}
+            </Badge>
+          </span>
+          {summary ? <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{summary}</span> : null}
+        </button>
+        <Button type="button" variant="outline" size="sm" className="h-8 shrink-0 gap-1 px-2.5 text-xs" onClick={onToggle}>
+          {open ? "Fechar" : actionLabel}
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+        </Button>
+      </div>
 
-      {!open ? (
-        <div className="mt-auto px-4 pb-4">
-          <Button type="button" variant="outline" size="sm" onClick={onToggle}>
-            {actionLabel}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4 border-t border-border p-4">{children}</div>
-      )}
+      {open ? <div className="flex flex-col gap-4 border-t border-border p-4">{children}</div> : null}
     </div>
   );
 }

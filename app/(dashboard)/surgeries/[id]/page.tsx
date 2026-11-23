@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, Pencil, User, Building2, Star } from "lucide-react";
+import { ArrowLeft, Building2, ClipboardList, FileText, Pencil, Stethoscope, User } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireModuleView } from "@/lib/auth/guard";
+import { getCurrentUser, hasPermission } from "@/lib/auth/session";
+import { listActiveMaterialsForSelect } from "@/lib/data/materials";
+import { listActiveSuppliersForSelect } from "@/lib/data/suppliers";
+import { parseSurgeryNotes } from "@/lib/surgery-notes";
 import {
   getSurgery,
   listRequirements,
@@ -11,6 +15,7 @@ import {
 } from "@/lib/data/surgeries";
 import {
   getAuthorizationRequest,
+  listSurgeryMaterialItems,
   getOrReservation,
   getOrCreateChecklist,
   listPreoperativeItems,
@@ -22,10 +27,11 @@ import { getOrCreateFinancialRecord, listInstallments } from "@/lib/data/financi
 import { computeSurgeryProgressSteps } from "@/lib/surgery-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SurgeryProgressBar } from "@/components/surgeries/surgery-progress-bar";
 import { SurgeryRequirementsPanel } from "@/components/surgeries/surgery-requirements-panel";
 import { FinancialPanel } from "@/components/surgeries/financial-panel";
+import { MaterialsSection } from "@/components/surgeries/materials-section";
+import { HistoryPanel } from "@/components/surgeries/history-panel";
 import { CancelSurgeryButton } from "@/components/surgeries/cancel-surgery-button";
 
 // O upload de documentos (Solicitação hospitalar) pode levar mais que o
@@ -49,13 +55,6 @@ const STATUS_LABEL: Record<string, string> = {
 function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value + "T00:00:00").toLocaleDateString("pt-BR");
-}
-
-function formatDateTime(value: string) {
-  // Essa formatação roda no servidor (fuso UTC na Vercel) — sem fixar o
-  // fuso explicitamente, toLocaleString usaria o horário do servidor em
-  // vez do horário de Brasília.
-  return new Date(value).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 export default async function SurgeryDetailPage({
@@ -86,7 +85,14 @@ export default async function SurgeryDetailPage({
     getOrCreateChecklist(supabase, id),
   ]);
 
-  const compositionBrief = await getSurgeryCompositionBrief(supabase, id);
+  const user = await getCurrentUser();
+  const [compositionBrief, materialItems, materialOptions, supplierOptions, canEdit] = await Promise.all([
+    getSurgeryCompositionBrief(supabase, id),
+    listSurgeryMaterialItems(supabase, id),
+    listActiveMaterialsForSelect(supabase),
+    listActiveSuppliersForSelect(supabase),
+    user ? hasPermission(user, "surgeries", "edit") : Promise.resolve(false),
+  ]);
 
   const [preoperativeItems, documents, financialRecord] = await Promise.all([
     listPreoperativeItems(supabase, checklistId),
@@ -101,8 +107,18 @@ export default async function SurgeryDetailPage({
 
   const progressSteps = computeSurgeryProgressSteps(stages, surgery);
 
+  const notes = parseSurgeryNotes(surgery.admin_notes);
+  const currentStage = stages.find((st) => st.id === surgery.stage_id);
+
+  // Pendências para liberação: documentação + requisitos ainda não atendidos.
+  const pendingCount =
+    (documents.length === 0 ? 1 : 0) +
+    requirements.filter(
+      (r) => ["authorization", "or_reservation", "preoperative"].includes(r.requirement_key) && !r.waived && !r.is_satisfied
+    ).length;
+
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-7xl">
       <Link
         href="/kanban"
         className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -111,170 +127,192 @@ export default async function SurgeryDetailPage({
         Mapa Cirúrgico
       </Link>
 
-      {/* Cabeçalho compacto */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-medium text-foreground">{surgery.code}</h1>
-            <Badge variant={surgery.status === "cancelled" ? "destructive" : "secondary"}>
-              {STATUS_LABEL[surgery.status] ?? surgery.status}
-            </Badge>
-            <Badge variant="outline">{PRIORITY_LABEL[surgery.priority]}</Badge>
-          </div>
-          <p className="mt-2 flex items-center gap-1.5 text-base font-medium text-foreground">
-            <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-            {surgery.patient ? (
-              <Link href={`/surgeries/patients/${surgery.patient.id}`} className="hover:underline">
-                {surgery.patient.full_name}
-              </Link>
-            ) : (
-              "—"
-            )}
-          </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Building2 className="h-3.5 w-3.5 shrink-0" />
-            {surgery.hospital?.name ?? "—"}
-          </p>
-          {compositionBrief ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Composição{" "}
-              <Link href={`/catalog/compositions#comp-${compositionBrief.number}`} className="font-medium text-foreground hover:underline">
-                {formatCompositionCode(compositionBrief.number)}
-              </Link>{" "}
-              · usada em {compositionBrief.uses} guia(s)
-            </p>
-          ) : null}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {surgery.procedures.map((p) => (
-              <Badge
-                key={p.id}
-                variant="outline"
-                className={
-                  p.is_primary
-                    ? "gap-1 border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-400"
-                    : "gap-1"
-                }
-              >
-                {p.is_primary ? <Star className="h-3 w-3 fill-current" /> : null}
-                {p.name}
+      {/* Cabeçalho + andamento */}
+      <header className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold text-foreground">{surgery.code}</h1>
+              <Badge variant={surgery.status === "cancelled" ? "destructive" : "secondary"}>
+                {STATUS_LABEL[surgery.status] ?? surgery.status}
               </Badge>
-            ))}
+              <Badge variant="outline">{PRIORITY_LABEL[surgery.priority]}</Badge>
+              {currentStage ? (
+                <span className="text-xs text-muted-foreground">
+                  Etapa atual: <strong className="font-medium text-foreground">{currentStage.name}</strong>
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 flex items-center gap-1.5 text-lg font-medium text-foreground">
+              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+              {surgery.patient ? (
+                <Link href={`/surgeries/patients/${surgery.patient.id}`} className="hover:underline">
+                  {surgery.patient.full_name}
+                </Link>
+              ) : (
+                "—"
+              )}
+            </p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground">
+              <span>
+                Atendimento {surgery.attendance_type === "particular" ? "particular" : "convênio"}
+                {surgery.insurance_provider ? ` — ${surgery.insurance_provider.name}` : ""}
+              </span>
+              <span>Solicitação {formatDate(surgery.indication_date)}</span>
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="h-3.5 w-3.5" />
+                {surgery.hospital?.name ?? "—"}
+              </span>
+            </p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>Prevista: {formatDate(surgery.expected_date)}</span>
+              <span>
+                Confirmada: {formatDate(surgery.confirmed_date)}
+                {surgery.confirmed_time ? ` às ${surgery.confirmed_time.slice(0, 5)}` : ""}
+              </span>
+              {compositionBrief ? (
+                <span>
+                  Composição{" "}
+                  <Link
+                    href={`/catalog/compositions#comp-${compositionBrief.number}`}
+                    className="font-medium text-foreground hover:underline"
+                  >
+                    {formatCompositionCode(compositionBrief.number)}
+                  </Link>{" "}
+                  · {compositionBrief.uses} guia(s)
+                </span>
+              ) : null}
+            </p>
+            {surgery.status === "cancelled" && surgery.cancelled_reason ? (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                Motivo do cancelamento: {surgery.cancelled_reason}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            {surgery.status === "active" ? <CancelSurgeryButton surgeryId={surgery.id} /> : null}
+            <Link href={`/surgeries/${surgery.id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Pencil className="h-3.5 w-3.5" />
+                Editar
+              </Button>
+            </Link>
           </div>
         </div>
-        <Link href={`/surgeries/${surgery.id}/edit`}>
-          <Button variant="outline" size="sm">
-            <Pencil className="h-3.5 w-3.5" />
-            Editar
-          </Button>
-        </Link>
-      </div>
+        <div className="mt-4 border-t border-border pt-4">
+          <SurgeryProgressBar steps={progressSteps} />
+        </div>
+      </header>
 
-      {/* Indicador visual de andamento */}
-      <div className="mt-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <SurgeryProgressBar steps={progressSteps} />
-      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        {/* Coluna clínica */}
+        <div className="flex flex-col gap-4">
+          <section className="rounded-xl border border-border bg-card p-4">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-500">
+                <Stethoscope className="h-4 w-4" />
+              </span>
+              Indicação cirúrgica
+            </h2>
 
-      {/* Resumo da cirurgia */}
-      <Card className="mt-4">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Dados da cirurgia</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4">
-            <div>
-              <dt className="text-muted-foreground">Atendimento</dt>
-              <dd className="text-foreground">
-                {surgery.attendance_type === "particular" ? "Particular" : "Convênio"}
-                {surgery.insurance_provider ? ` — ${surgery.insurance_provider.name}` : ""}
-              </dd>
+            <div className="mt-3 border-l-2 border-primary pl-3">
+              <p className="text-xs text-muted-foreground">Indicação clínica</p>
+              <p className="text-sm font-medium text-foreground">
+                {notes.indication ?? <span className="font-normal text-muted-foreground">Não informada.</span>}
+              </p>
             </div>
-            <div>
-              <dt className="text-muted-foreground">Data da solicitação</dt>
-              <dd className="text-foreground">{formatDate(surgery.indication_date)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Data prevista</dt>
-              <dd className="text-foreground">{formatDate(surgery.expected_date)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Data confirmada</dt>
-              <dd className="text-foreground">
-                {formatDate(surgery.confirmed_date)}
-                {surgery.confirmed_time ? ` às ${surgery.confirmed_time.slice(0, 5)}` : ""}
-              </dd>
-            </div>
-            {surgery.admin_notes ? (
-              <div className="col-span-2 md:col-span-4">
-                <dt className="text-muted-foreground">Observações</dt>
-                <dd className="whitespace-pre-wrap text-foreground">{surgery.admin_notes}</dd>
-              </div>
-            ) : null}
-            {surgery.status === "cancelled" && surgery.cancelled_reason ? (
-              <div className="col-span-2 md:col-span-4">
-                <dt className="text-muted-foreground">Motivo do cancelamento</dt>
-                <dd className="text-foreground">{surgery.cancelled_reason}</dd>
-              </div>
-            ) : null}
-          </dl>
-          {surgery.status === "active" ? (
-            <div className="mt-3 border-t border-border pt-3">
-              <CancelSurgeryButton surgeryId={surgery.id} />
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
 
-      {/* Cards de requisitos para liberação — expansíveis, um por vez */}
-      <div id="requisitos" className="mt-6 scroll-mt-4">
-        <h2 className="mb-3 text-sm font-medium text-foreground">Requisitos para liberação</h2>
-        <SurgeryRequirementsPanel
-          defaultOpenKey={defaultOpenKey}
-          surgeryId={surgery.id}
-          procedureLabel={surgery.procedures.map((p) => p.name).join(", ")}
-          hospitalId={surgery.hospital_id}
-          insuranceProviderId={surgery.insurance_provider_id}
-          requirements={requirements}
-          authorization={authorization}
-          orReservation={orReservation}
-          preoperativeItems={preoperativeItems}
-          documents={documents}
-        />
-      </div>
-
-      <FinancialPanel
-        surgeryId={surgery.id}
-        attendanceType={surgery.attendance_type}
-        financialRecord={financialRecord}
-        installments={installments}
-      />
-
-      {/* Histórico compacto */}
-      <Card className="mt-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Histórico da cirurgia</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sem histórico ainda.</p>
-          ) : (
-            <ol className="flex flex-col gap-2.5 border-l border-border pl-4">
-              {history.map((entry) => (
-                <li key={entry.id} className="text-sm">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="text-foreground">{entry.description}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(entry.changedAt)}
-                    </span>
-                  </div>
-                  {entry.changedByName ? (
-                    <p className="text-xs text-muted-foreground">Por {entry.changedByName}</p>
-                  ) : null}
+            <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400">
+              Procedimentos ({surgery.procedures.length})
+            </h3>
+            <ul className="mt-1.5 flex flex-col gap-1.5">
+              {surgery.procedures.map((p, index) => (
+                <li key={p.id} className="flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-500/15 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm text-foreground">
+                    {p.name}
+                    {p.is_primary ? (
+                      <span className="ml-2 rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-medium text-sky-600 dark:text-sky-400">
+                        principal
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                    {p.tuss_code ? `TUSS ${p.tuss_code}` : "s/ TUSS"}
+                  </span>
                 </li>
               ))}
-            </ol>
-          )}
-        </CardContent>
-      </Card>
+            </ul>
+
+            <div className="mt-4 border-t border-border pt-3">
+              <h3 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Observações da guia
+              </h3>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                {notes.guideObservations ?? <span className="text-muted-foreground">Nenhuma observação da guia.</span>}
+              </p>
+            </div>
+
+            {notes.other ? (
+              <div className="mt-3 border-t border-border pt-3">
+                <h3 className="text-sm font-medium text-foreground">Observações internas</h3>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{notes.other}</p>
+              </div>
+            ) : null}
+          </section>
+
+          <MaterialsSection
+            surgeryId={surgery.id}
+            items={materialItems}
+            materials={materialOptions}
+            suppliers={supplierOptions}
+            canEdit={canEdit}
+          />
+        </div>
+
+        {/* Coluna operacional */}
+        <div className="flex flex-col gap-4">
+          <section id="requisitos" className="scroll-mt-4 rounded-xl border border-border bg-card p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <ClipboardList className="h-4 w-4" />
+                </span>
+                Acompanhamento da liberação
+              </h2>
+              <Badge variant={pendingCount > 0 ? "warning" : "success"}>
+                {pendingCount > 0 ? `${pendingCount} pendência${pendingCount === 1 ? "" : "s"}` : "Sem pendências"}
+              </Badge>
+            </div>
+            <SurgeryRequirementsPanel
+              defaultOpenKey={defaultOpenKey}
+              surgeryId={surgery.id}
+              procedureLabel={surgery.procedures.map((p) => p.name).join(", ")}
+              hospitalId={surgery.hospital_id}
+              insuranceProviderId={surgery.insurance_provider_id}
+              requirements={requirements}
+              authorization={authorization}
+              orReservation={orReservation}
+              preoperativeItems={preoperativeItems}
+              documents={documents}
+            />
+          </section>
+
+          <FinancialPanel
+            surgeryId={surgery.id}
+            attendanceType={surgery.attendance_type}
+            financialRecord={financialRecord}
+            installments={installments}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <HistoryPanel history={history} />
+      </div>
     </div>
   );
 }

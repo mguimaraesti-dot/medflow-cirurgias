@@ -18,7 +18,7 @@ export type WorkflowStage = {
 export type SurgeryProcedureLink = {
   id: string;
   is_primary: boolean;
-  procedure: { id: string; name: string } | null;
+  procedure: { id: string; name: string; tuss_code?: string | null } | null;
 };
 
 export type SurgeryListItem = {
@@ -39,7 +39,7 @@ export type SurgeryListItem = {
    * Kanban e na lista. */
   primary_procedure: { id: string; name: string } | null;
   /** Todos os procedimentos da cirurgia (principal + adicionais). */
-  procedures: { id: string; name: string; is_primary: boolean }[];
+  procedures: { id: string; name: string; is_primary: boolean; tuss_code?: string | null }[];
   insurance_provider: { id: string; name: string } | null;
   requirements: { id: string; requirement_key: string; is_satisfied: boolean; waived: boolean }[];
 };
@@ -48,12 +48,17 @@ function withDerivedProcedures<T extends { surgery_procedures: SurgeryProcedureL
   row: T
 ): Omit<T, "surgery_procedures"> & {
   primary_procedure: { id: string; name: string } | null;
-  procedures: { id: string; name: string; is_primary: boolean }[];
+  procedures: { id: string; name: string; is_primary: boolean; tuss_code: string | null }[];
 } {
   const { surgery_procedures, ...rest } = row;
   const procedures = (surgery_procedures ?? [])
     .filter((link) => link.procedure)
-    .map((link) => ({ id: link.procedure!.id, name: link.procedure!.name, is_primary: link.is_primary }));
+    .map((link) => ({
+      id: link.procedure!.id,
+      name: link.procedure!.name,
+      is_primary: link.is_primary,
+      tuss_code: link.procedure!.tuss_code ?? null,
+    }));
   const primary = procedures.find((p) => p.is_primary) ?? procedures[0] ?? null;
   return {
     ...rest,
@@ -148,7 +153,7 @@ const AUTHORIZATION_STATUS_LABEL: Record<string, string> = {
 const LIST_COLUMNS =
   "id,code,stage_id,board_position,attendance_type,priority,indication_date,expected_date,confirmed_date,status," +
   "patient:patients(id,full_name),hospital:hospitals(id,name)," +
-  "surgery_procedures(id,is_primary,procedure:procedures(id,name))," +
+  "surgery_procedures(id,is_primary,procedure:procedures(id,name,tuss_code))," +
   "insurance_provider:insurance_providers(id,name)," +
   "requirements:surgery_requirements(id,requirement_key,is_satisfied,waived)";
 

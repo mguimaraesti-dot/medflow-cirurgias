@@ -66,9 +66,9 @@ export function OrReservationRequirementCard({
       tone={tone}
       statusLabel={statusLabel}
       summary={
-        summaryParts.length > 0 ? summaryParts.join(" · ") : "Nenhuma reserva registrada."
+        summaryParts.length > 0 ? summaryParts.join(" · ") : "Reserva não registrada."
       }
-      actionLabel={reservation ? "Visualizar / Editar" : "Registrar dados"}
+      actionLabel={reservation ? "Atualizar agendamento" : "Registrar agendamento"}
       open={open}
       onToggle={onToggle}
     >

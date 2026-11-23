@@ -71,9 +71,9 @@ export function AuthorizationRequirementCard({
       tone={tone}
       statusLabel={statusLabel}
       summary={
-        summaryParts.length > 0 ? summaryParts.join(" · ") : "Nenhuma solicitação registrada."
+        summaryParts.length > 0 ? summaryParts.join(" · ") : "Solicitação não registrada."
       }
-      actionLabel={authorization ? "Visualizar / Editar" : "Registrar dados"}
+      actionLabel={authorization ? "Atualizar autorização" : "Solicitar autorização"}
       open={open}
       onToggle={onToggle}
     >

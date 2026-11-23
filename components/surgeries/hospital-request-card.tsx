@@ -55,10 +55,10 @@ export function HospitalRequestCard({
       statusLabel={statusLabel}
       summary={
         documents.length > 0
-          ? "Documentos do paciente anexados para a solicitação ao hospital."
-          : "Anexe os documentos do paciente para enviar ao hospital (pedido médico, RG, carteirinha, laudos...)."
+          ? "Documentos anexados para a solicitação ao hospital."
+          : "Nenhum documento anexado."
       }
-      actionLabel={documents.length > 0 ? "Visualizar / Editar" : "Anexar documentos"}
+      actionLabel={documents.length > 0 ? "Ver documentos" : "Anexar documentos"}
       open={open}
       onToggle={onToggle}
     >

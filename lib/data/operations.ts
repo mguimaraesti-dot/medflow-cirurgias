@@ -289,7 +289,7 @@ export type SurgeryMaterialItem = {
   unit: string | null;
   status: string;
   notes: string | null;
-  material: { id: string; name: string } | null;
+  material: { id: string; name: string; tuss_code: string | null } | null;
   supplier: { id: string; company_name: string } | null;
 };
 
@@ -297,7 +297,7 @@ export async function listSurgeryMaterialItems(supabase: SupabaseClient, surgery
   const { data, error } = await supabase
     .from("surgery_material_items")
     .select(
-      "id,surgery_id,material_id,supplier_id,quantity,unit,status,notes,material:materials_catalog(id,name),supplier:suppliers(id,company_name)"
+      "id,surgery_id,material_id,supplier_id,quantity,unit,status,notes,material:materials_catalog(id,name,tuss_code),supplier:suppliers(id,company_name)"
     )
     .eq("surgery_id", surgeryId)
     .neq("status", "removed")
@@ -314,6 +314,15 @@ export async function addSurgeryMaterialItem(
   const { error } = await supabase
     .from("surgery_material_items")
     .insert({ surgery_id: surgeryId, ...input });
+  if (error) throw error;
+}
+
+export async function setSurgeryMaterialItemQuantity(
+  supabase: SupabaseClient,
+  id: string,
+  quantity: number
+) {
+  const { error } = await supabase.from("surgery_material_items").update({ quantity }).eq("id", id);
   if (error) throw error;
 }
 

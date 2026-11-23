@@ -33,7 +33,7 @@ export function PreoperativeRequirementCard({
 
   let tone: RequirementTone = "neutral";
   let statusLabel = "Não avaliado";
-  let summary = "Ainda não foi avaliado se a cirurgia precisa de consulta pré-anestésica.";
+  let summary = "Avaliação pré-anestésica pendente.";
 
   if (requirement.waived) {
     tone = "neutral";
@@ -72,7 +72,7 @@ export function PreoperativeRequirementCard({
       tone={tone}
       statusLabel={statusLabel}
       summary={summary}
-      actionLabel={item ? "Visualizar / Editar" : "Registrar dados"}
+      actionLabel={item ? "Atualizar avaliação" : "Avaliar pré-operatório"}
       open={open}
       onToggle={onToggle}
     >
