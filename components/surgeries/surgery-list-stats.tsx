@@ -21,7 +21,7 @@ const CARDS: { key: SurgerySituation | "total"; label: string; icon: LucideIcon;
  */
 export function SurgeryListStatsCards({ stats, params }: { stats: SurgeryListStats; params: SurgeryListParams }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
       {CARDS.map(({ key, label, icon: Icon, tone }) => {
         const active = key === "total" ? !params.status : params.status === key;
         const href = `/surgeries${surgeryListQuery(params, { status: key === "total" ? undefined : key, page: 1 })}`;
@@ -31,15 +31,15 @@ export function SurgeryListStatsCards({ stats, params }: { stats: SurgeryListSta
             href={href}
             aria-current={active ? "true" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm transition-colors hover:border-ring",
+              "flex items-center gap-2.5 rounded-xl border bg-card px-2.5 py-2 shadow-sm transition-colors hover:border-ring",
               active ? "border-primary ring-1 ring-primary" : "border-border"
             )}
           >
-            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", tone)}>
-              <Icon className="h-5 w-5" />
+            <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tone)}>
+              <Icon className="h-4 w-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-xl font-semibold leading-tight text-foreground">{stats[key]}</span>
+              <span className="block text-lg font-semibold leading-tight text-foreground">{stats[key]}</span>
               <span className="block truncate text-xs text-muted-foreground" title={label}>
                 {label}
               </span>

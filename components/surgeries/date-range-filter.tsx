@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { todayInSaoPaulo } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -67,7 +68,10 @@ export function DateRangeFilter({
   from,
   to,
   onChange,
+  inline = false,
 }: {
+  /** Compacto: o rótulo vai dentro do botão e os campos de data ficam na mesma linha. */
+  inline?: boolean;
   label: string;
   /** past = datas já ocorridas (solicitação); future = datas a vir (previsão); both = passado e futuro. */
   kind: "past" | "future" | "both";
@@ -103,12 +107,15 @@ export function DateRangeFilter({
   const id = `f-${kind}-${label.replace(/\W/g, "")}`;
 
   return (
-    <div className="flex min-w-[10rem] flex-1 flex-col gap-1 md:flex-none">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
+    <div className={cn("flex min-w-[10rem] flex-1 md:flex-none", inline ? "flex-row flex-wrap items-center gap-1.5" : "flex-col gap-1")}>
+      {inline ? null : (
+        <Label htmlFor={id} className="text-xs text-muted-foreground">
+          {label}
+        </Label>
+      )}
       <Select value={value} onValueChange={select}>
-        <SelectTrigger id={id} className="h-10 md:w-48">
+        <SelectTrigger id={id} className={cn(inline ? "h-9 w-full gap-1.5 md:w-auto" : "h-10 md:w-48")} aria-label={label}>
+          {inline ? <span className="shrink-0 text-muted-foreground">{label}:</span> : null}
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -126,7 +133,7 @@ export function DateRangeFilter({
           <Input
             type="date"
             aria-label={`${label} — de`}
-            className="h-10 min-w-0 flex-1"
+            className={cn("min-w-0 flex-1", inline ? "h-9 md:w-36 md:flex-none" : "h-10")}
             value={from}
             max={to || undefined}
             onChange={(e) => onChange({ from: e.target.value, to })}
@@ -135,7 +142,7 @@ export function DateRangeFilter({
           <Input
             type="date"
             aria-label={`${label} — até`}
-            className="h-10 min-w-0 flex-1"
+            className={cn("min-w-0 flex-1", inline ? "h-9 md:w-36 md:flex-none" : "h-10")}
             value={to}
             min={from || undefined}
             onChange={(e) => onChange({ from, to: e.target.value })}

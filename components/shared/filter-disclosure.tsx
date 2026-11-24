@@ -20,9 +20,11 @@ export function FilterDisclosure({
   activeCount,
   children,
   forceExpanded,
+  className,
 }: {
   activeCount: number;
   children: ReactNode;
+  className?: string;
   /** Quando definido, o controle de abrir/fechar é externo (some o botão "Filtros" interno). */
   forceExpanded?: boolean;
 }) {
@@ -31,7 +33,7 @@ export function FilterDisclosure({
   const expanded = external ? forceExpanded : internalExpanded;
 
   return (
-    <div className="w-full md:w-auto">
+    <div className={cn("w-full md:w-auto", className)}>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}

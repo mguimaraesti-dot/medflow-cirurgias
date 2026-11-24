@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw, Search } from "lucide-react";
+import { ChevronDown, RefreshCw, Search } from "lucide-react";
 
 import { SITUATIONS, SITUATION_LABEL } from "@/lib/surgery-situation";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRangeFilter } from "@/components/surgeries/date-range-filter";
 import { FilterDisclosure } from "@/components/shared/filter-disclosure";
@@ -76,6 +76,11 @@ export function SurgeryListFilters({
 
   const get = (k: string) => searchParams.get(k) ?? "";
 
+  // Filtros secundários ficam recolhidos (abrem sozinhos se algum estiver ativo).
+  const secondaryActive = ["attendance", "priority", "rf", "rt"].filter((k) => get(k)).length;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const showMore = moreOpen || secondaryActive > 0;
+
   const selectFilter = (
     id: string,
     label: string,
@@ -83,12 +88,10 @@ export function SurgeryListFilters({
     options: { value: string; label: string }[],
     allLabel: string
   ) => (
-    <div className="flex min-w-[10rem] flex-1 flex-col gap-1 md:flex-none">
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
+    <div className="flex min-w-[10rem] flex-1 md:flex-none">
       <Select value={get(param) || ALL} onValueChange={(v) => update({ [param]: v === ALL ? undefined : v })}>
-        <SelectTrigger id={id} className="h-10 md:w-44">
+        <SelectTrigger id={id} aria-label={label} className="h-9 w-full gap-1.5 md:w-auto">
+          <span className="shrink-0 text-muted-foreground">{label}:</span>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -105,6 +108,7 @@ export function SurgeryListFilters({
 
   const dateRange = (label: string, kind: "past" | "future", fromKey: string, toKey: string) => (
     <DateRangeFilter
+      inline
       label={label}
       kind={kind}
       from={get(fromKey)}
@@ -114,37 +118,67 @@ export function SurgeryListFilters({
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          placeholder="Buscar por código, paciente, hospital, procedimento ou código TUSS..."
-          aria-label="Buscar cirurgias"
-          className="h-10 pl-9"
-        />
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        <div className="relative md:min-w-[18rem] md:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder="Buscar por código, paciente, hospital, procedimento ou TUSS..."
+            aria-label="Buscar cirurgias"
+            className="h-9 pl-9"
+          />
+        </div>
+
+        <FilterDisclosure activeCount={activeCount} className="md:flex-none">
+          <div className="flex w-full flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+            {selectFilter(
+              "f-status",
+              "Status",
+              "status",
+              SITUATIONS.map((s) => ({ value: s, label: SITUATION_LABEL[s] })),
+              "Todos"
+            )}
+            {selectFilter(
+              "f-hospital",
+              "Hospital",
+              "hospital",
+              hospitals.map((h) => ({ value: h.id, label: h.name })),
+              "Todos"
+            )}
+            {dateRange("Data prevista", "future", "ef", "et")}
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-expanded={showMore}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm text-foreground hover:bg-muted"
+            >
+              Mais filtros
+              {secondaryActive > 0 ? (
+                <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{secondaryActive}</span>
+              ) : null}
+              <ChevronDown className={cn("h-4 w-4 transition-transform", showMore && "rotate-180")} />
+            </button>
+            {activeCount > 0 ? (
+              <button
+                type="button"
+                onClick={clearAll}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-primary hover:underline"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Limpar
+              </button>
+            ) : null}
+          </div>
+        </FilterDisclosure>
       </div>
 
-      <FilterDisclosure activeCount={activeCount}>
-        <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-start">
-          {selectFilter(
-            "f-status",
-            "Status",
-            "status",
-            SITUATIONS.map((s) => ({ value: s, label: SITUATION_LABEL[s] })),
-            "Todos"
-          )}
-          {selectFilter(
-            "f-hospital",
-            "Hospital",
-            "hospital",
-            hospitals.map((h) => ({ value: h.id, label: h.name })),
-            "Todos"
-          )}
+      {showMore ? (
+        <div className="flex flex-col gap-2 border-t border-border pt-2 md:flex-row md:flex-wrap md:items-center">
           {selectFilter(
             "f-attendance",
-            "Tipo de atendimento",
+            "Atendimento",
             "attendance",
             [
               { value: "particular", label: "Particular" },
@@ -165,19 +199,8 @@ export function SurgeryListFilters({
             "Todas"
           )}
           {dateRange("Solicitação", "past", "rf", "rt")}
-          {dateRange("Data prevista", "future", "ef", "et")}
-          {activeCount > 0 ? (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="inline-flex h-10 items-center gap-1.5 self-start rounded-md px-2 text-sm font-medium text-primary hover:underline md:mt-6"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Limpar filtros
-            </button>
-          ) : null}
         </div>
-      </FilterDisclosure>
+      ) : null}
     </div>
   );
 }

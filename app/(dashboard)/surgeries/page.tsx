@@ -33,7 +33,7 @@ export default async function SurgeriesPage({
 
   return (
     <div className="mx-auto w-full max-w-[1920px]">
-      <nav aria-label="Navegação" className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+      <nav aria-label="Navegação" className="mb-2 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/kanban" className="hover:text-foreground">
           Mapa Cirúrgico
         </Link>
@@ -43,26 +43,26 @@ export default async function SurgeriesPage({
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <CalendarPlus className="h-5 w-5" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <CalendarPlus className="h-4 w-4" />
           </span>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Cirurgias</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-lg font-semibold leading-tight text-foreground">Cirurgias</h1>
+            <p className="hidden text-sm text-muted-foreground sm:block">
               Todas as cirurgias cadastradas, incluindo realizadas e canceladas.
             </p>
           </div>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
           <Link href="/kanban" className="flex-1 sm:flex-none">
-            <Button variant="outline" className="h-10 w-full">
+            <Button variant="outline" className="h-9 w-full">
               <LayoutGrid className="h-4 w-4" />
               Mapa Cirúrgico
             </Button>
           </Link>
           {canEdit ? (
             <Link href="/surgeries/new" className="flex-1 sm:flex-none">
-              <Button className="h-10 w-full">
+              <Button className="h-9 w-full">
                 <Plus className="h-4 w-4" />
                 Nova Cirurgia
               </Button>
@@ -71,15 +71,15 @@ export default async function SurgeriesPage({
         </div>
       </div>
 
-      <div className="mt-5">
+      <div className="mt-3">
         <SurgeryListStatsCards stats={stats} params={params} />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-2">
         <SurgeryListFilters hospitals={hospitals} activeCount={activeFilterCount(params)} />
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <SurgeryListTable
           rows={rows}
           params={params}
