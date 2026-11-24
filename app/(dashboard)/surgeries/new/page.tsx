@@ -48,21 +48,21 @@ export default async function NewSurgeryPage() {
 
       <div className="mt-6">
         {procedures.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-6">
+          <div className="mb-4 rounded-xl border border-border bg-card p-4">
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              Cadastre ao menos um procedimento ativo antes de criar uma cirurgia. Paciente e
-              hospital podem ser cadastrados direto neste formulário.
+              Nenhum procedimento cadastrado ainda. Use a leitura da guia por IA para cadastrar os
+              procedimentos a partir do pedido médico, ou cadastre em Catálogo → Procedimentos.
+              Paciente e hospital também podem ser cadastrados direto neste formulário.
             </p>
           </div>
-        ) : (
-          <SurgeryForm
-            patients={patients}
-            hospitals={hospitals}
-            insuranceProviders={insuranceProviders}
-            procedures={procedures}
-            canUploadCards={canUploadCards}
-          />
-        )}
+        ) : null}
+        <SurgeryForm
+          patients={patients}
+          hospitals={hospitals}
+          insuranceProviders={insuranceProviders}
+          procedures={procedures}
+          canUploadCards={canUploadCards}
+        />
       </div>
     </div>
   );
