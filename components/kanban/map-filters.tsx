@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SearchInput } from "@/components/shared/search-input";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { FilterDisclosure } from "@/components/shared/filter-disclosure";
 
 function pad(n: number) {
@@ -122,7 +124,7 @@ function DateRangeFilter() {
     // em dashboard-period-filter.tsx).
     <div className="flex w-full flex-wrap items-center gap-1.5 md:w-auto">
       <Select value={selected} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-full shrink-0 md:w-[135px]">
+        <SelectTrigger className="h-9 w-full shrink-0 md:w-auto md:min-w-[8rem]">
           <SelectValue placeholder="Período" />
         </SelectTrigger>
         <SelectContent>
@@ -138,14 +140,14 @@ function DateRangeFilter() {
         <>
           <Input
             type="date"
-            className="w-[calc(50%-12px)] shrink-0 md:w-[150px]"
+            className="h-9 w-[calc(50%-12px)] shrink-0 md:w-[140px]"
             value={from}
             onChange={(e) => applyRange({ from: e.target.value, to })}
           />
           <span className="shrink-0 text-xs text-muted-foreground">até</span>
           <Input
             type="date"
-            className="w-[calc(50%-12px)] shrink-0 md:w-[150px]"
+            className="h-9 w-[calc(50%-12px)] shrink-0 md:w-[140px]"
             value={to}
             onChange={(e) => applyRange({ from, to: e.target.value })}
           />
@@ -204,17 +206,24 @@ export function MapFilters({
     (key) => searchParams.get(key)
   ).length;
 
+  // Desktop: convênio, prioridade e situação ficam recolhidos em "Mais filtros"
+  // (abrem sozinhos se algum estiver ativo). No celular (forceExpanded) aparecem todos.
+  const secondaryActive = ["attendance", "priority", "status"].filter((k) => searchParams.get(k)).length;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const showSecondary = forceExpanded === true || moreOpen || secondaryActive > 0;
+
   return (
     <FilterDisclosure activeCount={activeCount} forceExpanded={forceExpanded}>
       {hideSearch ? null : (
         <SearchInput
+          compact
           placeholder="Buscar por código ou paciente..."
-          className="w-full max-w-none md:min-w-[170px] md:max-w-[220px]"
+          className="w-full max-w-none md:min-w-[200px] md:max-w-[260px]"
         />
       )}
 
       <Select value={searchParams.get("procedure") ?? "all"} onValueChange={(v) => setParam("procedure", v)}>
-        <SelectTrigger className="w-full shrink-0 md:w-[165px]">
+        <SelectTrigger className="h-9 w-full shrink-0 md:w-auto md:min-w-[9rem] md:max-w-[15rem]">
           <SelectValue placeholder="Procedimento" />
         </SelectTrigger>
         <SelectContent>
@@ -228,7 +237,7 @@ export function MapFilters({
       </Select>
 
       <Select value={searchParams.get("hospital") ?? "all"} onValueChange={(v) => setParam("hospital", v)}>
-        <SelectTrigger className="w-full shrink-0 md:w-[150px]">
+        <SelectTrigger className="h-9 w-full shrink-0 md:w-auto md:min-w-[8rem] md:max-w-[14rem]">
           <SelectValue placeholder="Hospital" />
         </SelectTrigger>
         <SelectContent>
@@ -241,8 +250,27 @@ export function MapFilters({
         </SelectContent>
       </Select>
 
+      <DateRangeFilter />
+
+      {forceExpanded === true ? null : (
+        <button
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-expanded={showSecondary}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm text-foreground hover:bg-muted"
+        >
+          Mais filtros
+          {secondaryActive > 0 ? (
+            <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{secondaryActive}</span>
+          ) : null}
+          <ChevronDown className={cn("h-4 w-4 transition-transform", showSecondary && "rotate-180")} />
+        </button>
+      )}
+
+      {showSecondary ? (
+        <>
       <Select value={searchParams.get("attendance") ?? "all"} onValueChange={(v) => setParam("attendance", v)}>
-        <SelectTrigger className="w-full shrink-0 md:w-[150px]">
+        <SelectTrigger className="h-9 w-full shrink-0 md:w-auto md:min-w-[8rem] md:max-w-[14rem]">
           <SelectValue placeholder="Convênio" />
         </SelectTrigger>
         <SelectContent>
@@ -257,7 +285,7 @@ export function MapFilters({
       </Select>
 
       <Select value={searchParams.get("priority") ?? "all"} onValueChange={(v) => setParam("priority", v)}>
-        <SelectTrigger className="w-full shrink-0 md:w-[130px]">
+        <SelectTrigger className="h-9 w-full shrink-0 md:w-auto md:min-w-[8rem]">
           <SelectValue placeholder="Prioridade" />
         </SelectTrigger>
         <SelectContent>
@@ -271,7 +299,7 @@ export function MapFilters({
       </Select>
 
       <Select value={searchParams.get("status") ?? "all"} onValueChange={(v) => setParam("status", v)}>
-        <SelectTrigger className="w-full shrink-0 md:w-[130px]">
+        <SelectTrigger className="h-9 w-full shrink-0 md:w-auto md:min-w-[8rem]">
           <SelectValue placeholder="Situação" />
         </SelectTrigger>
         <SelectContent>
@@ -284,7 +312,8 @@ export function MapFilters({
         </SelectContent>
       </Select>
 
-      <DateRangeFilter />
+        </>
+      ) : null}
     </FilterDisclosure>
   );
 }

@@ -10,9 +10,12 @@ import { cn } from "@/lib/utils";
 export function SearchInput({
   placeholder,
   className,
+  compact = false,
 }: {
   placeholder: string;
   className?: string;
+  /** Altura de 36px (alinha com os selects compactos). */
+  compact?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -40,7 +43,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
-        className="pl-8"
+        className={compact ? "h-9 pl-8" : "pl-8"}
       />
     </div>
   );

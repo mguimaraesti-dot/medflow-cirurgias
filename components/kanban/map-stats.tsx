@@ -53,21 +53,21 @@ const CARDS: {
 
 export function MapStatsRow({ stats }: { stats: MapStats }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
       {CARDS.map(({ key, label, icon: Icon, iconClass, href }) => {
         const content = (
           <>
-            <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", iconClass)}>
+            <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", iconClass)}>
               <Icon className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <p className="line-clamp-2 text-xs font-medium leading-tight text-muted-foreground">{label}</p>
-              <p className="text-xl font-semibold text-foreground">{stats[key]}</p>
+              <p className="truncate text-xs font-medium leading-tight text-muted-foreground" title={label}>{label}</p>
+              <p className="text-lg font-semibold leading-tight text-foreground">{stats[key]}</p>
             </div>
           </>
         );
         const className = cn(
-          "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm",
+          "flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2 shadow-sm",
           stats[key] > 0 && "transition-shadow hover:shadow-md"
         );
 

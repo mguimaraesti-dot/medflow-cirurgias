@@ -119,14 +119,14 @@ export default async function KanbanPage({
           <MapStatsRow stats={stats} />
         </div>
         <Link href="/surgeries/new" className="shrink-0">
-          <Button className="w-full sm:w-auto">
+          <Button className="h-9 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Nova cirurgia
           </Button>
         </Link>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <MapFilters
           procedures={procedures}
           hospitals={hospitals}
@@ -141,7 +141,7 @@ export default async function KanbanPage({
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3">
         {isListView ? (
           <MapListTable
             surgeries={surgeries}
