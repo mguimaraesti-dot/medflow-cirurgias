@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import {
   addSurgeryMaterialItemAction,
   removeSurgeryMaterialItemAction,
-  setSurgeryMaterialItemStatusAction,
   updateSurgeryMaterialQuantityAction,
   type SurgeryMaterialFormState,
 } from "@/app/(dashboard)/surgeries/operations-actions";
@@ -18,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const STATUS_LABEL: Record<string, string> = { requested: "Solicitado", delivered: "Entregue" };
 const initialState: SurgeryMaterialFormState = {};
 
 function Row({ item, surgeryId, canEdit }: { item: SurgeryMaterialItem; surgeryId: string; canEdit: boolean }) {
@@ -67,29 +65,6 @@ function Row({ item, surgeryId, canEdit }: { item: SurgeryMaterialItem; surgeryI
               </button>
             ) : null}
           </span>
-        )}
-      </td>
-      <td className="px-3 py-2">
-        {canEdit ? (
-          <Select
-            value={item.status}
-            disabled={pending}
-            onValueChange={(status) =>
-              startTransition(async () => {
-                await setSurgeryMaterialItemStatusAction(item.id, surgeryId, status);
-                toast.success("Status atualizado.");
-              })
-            }
-          >
-            <SelectTrigger className="h-8 w-[130px] text-xs">
-              <SelectValue><Badge variant="outline">{STATUS_LABEL[item.status] ?? item.status}</Badge></SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Badge variant="outline">{STATUS_LABEL[item.status] ?? item.status}</Badge>
         )}
       </td>
       <td className="px-2 py-2 text-right">
@@ -156,13 +131,12 @@ export function MaterialsSection({
         <p className="mt-3 text-sm text-muted-foreground">Nenhum material previsto para esta cirurgia.</p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[520px] text-sm">
+          <table className="w-full min-w-[420px] text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">Material</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">TUSS</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">Qtd.</th>
-                <th scope="col" className="px-3 py-2 text-left font-semibold">Situação</th>
                 <th scope="col" className="w-10" />
               </tr>
             </thead>
