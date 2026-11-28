@@ -88,11 +88,18 @@ export default async function KanbanPage({
     listActiveInsuranceProvidersForSelect(supabase),
   ]);
 
-  // O board só mostra cirurgias ativas (abaixo) — qualquer filtro de
+  // O board mostra cirurgias ativas e as realizadas recentes (abaixo) — qualquer filtro de
   // situação diferente de "ativa" (ex: clicar no indicador "Realizadas")
   // não faria sentido nele, então cai automaticamente pra lista.
   const isListView = params.view === "lista" || (!!params.status && params.status !== "active");
-  const activeSurgeries = surgeries.filter((s) => s.status === "active");
+  // Realizadas ficam na última coluna por 30 dias (depois saem do board e
+  // continuam na lista); canceladas nunca aparecem no board.
+  const completedSince = new Date(new Date().getTime() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const activeSurgeries = surgeries.filter(
+    (s) =>
+      s.status === "active" ||
+      (s.status === "completed" && (s.confirmed_date ?? s.expected_date ?? completedSince) >= completedSince)
+  );
 
   return (
     <>
