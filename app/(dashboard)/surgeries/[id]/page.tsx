@@ -132,7 +132,11 @@ export default async function SurgeryDetailPage({
   const pendingCount =
     (documents.length === 0 ? 1 : 0) +
     requirements.filter(
-      (r) => ["authorization", "or_reservation", "preoperative"].includes(r.requirement_key) && !r.waived && !r.is_satisfied
+      (r) =>
+        ["authorization", "or_reservation", "preoperative"].includes(r.requirement_key) &&
+        !(r.requirement_key === "authorization" && surgery.attendance_type === "particular") &&
+        !r.waived &&
+        !r.is_satisfied
     ).length;
 
   return (
