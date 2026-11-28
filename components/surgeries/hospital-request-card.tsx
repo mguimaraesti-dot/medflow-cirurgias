@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileText, Download, Eye, Loader2, Paperclip, UserRound } from "lucide-react";
+import { FileText, Download, Eye, Loader2, Paperclip, UploadCloud, UserRound, X } from "lucide-react";
 
 import {
   uploadSurgeryDocumentAction,
@@ -95,6 +95,9 @@ export function HospitalRequestCard({
   const action = uploadSurgeryDocumentAction.bind(null, surgeryId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [picked, setPicked] = useState<{ name: string; size: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   useActionToast(state, "Documento anexado.");
 
   const total = documents.length + patientDocuments.length;
@@ -191,19 +194,75 @@ export function HospitalRequestCard({
         action={async (formData) => {
           await formAction(formData);
           formRef.current?.reset();
+          setPicked(null);
         }}
         className="flex flex-col gap-2 border-t border-border pt-4"
       >
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="file">Arquivo</Label>
-          <Input id="file" name="file" type="file" required />
+          <label
+            htmlFor="file"
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const dropped = e.dataTransfer.files?.[0];
+              if (dropped && fileRef.current) {
+                const dt = new DataTransfer();
+                dt.items.add(dropped);
+                fileRef.current.files = dt.files;
+                setPicked({ name: dropped.name, size: dropped.size });
+              }
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors ${
+              dragging ? "border-primary bg-primary/10" : picked ? "border-emerald-500/60 bg-emerald-500/5" : "border-border bg-muted/20 hover:border-primary/60 hover:bg-muted/40"
+            }`}
+          >
+            {picked ? (
+              <>
+                <FileText className="h-6 w-6 text-emerald-500" />
+                <span className="max-w-full truncate text-sm font-medium text-foreground">{picked.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {(picked.size / 1024 / 1024 >= 1 ? `${(picked.size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(picked.size / 1024))} KB`)} · clique para trocar o arquivo
+                </span>
+              </>
+            ) : (
+              <>
+                <UploadCloud className="h-7 w-7 text-primary" />
+                <span className="text-sm font-medium text-foreground">Clique para escolher o arquivo</span>
+                <span className="text-xs text-muted-foreground">ou arraste e solte aqui · até 15 MB</span>
+              </>
+            )}
+            <input
+              ref={fileRef}
+              id="file"
+              name="file"
+              type="file"
+              required
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                setPicked(f ? { name: f.name, size: f.size } : null);
+              }}
+            />
+          </label>
+          {picked ? (
+            <button
+              type="button"
+              onClick={() => { if (fileRef.current) fileRef.current.value = ""; setPicked(null); }}
+              className="inline-flex items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />Remover seleção
+            </button>
+          ) : null}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="description">Descrição (opcional)</Label>
           <Input id="description" name="description" placeholder="Ex: RG, carteirinha, pedido médico..." />
         </div>
         <Button type="submit" variant="outline" size="sm" disabled={pending} className="self-start">
-          {pending ? "Enviando..." : "Anexar"}
+          {pending ? "Enviando..." : (<><Paperclip className="h-3.5 w-3.5" />Anexar documento</>)}
         </Button>
       </form>
       {state.error ? (
