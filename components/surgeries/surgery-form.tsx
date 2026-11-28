@@ -488,7 +488,6 @@ export function SurgeryForm({
     supplier_name: m.supplier?.company_name ?? null,
   }));
   const editorItems = surgery ? persistedItems : staged;
-  const materialsToValidate = editorItems.filter((i) => !i.validated).length;
 
   const cancelHref = surgery ? `/surgeries/${surgery.id}` : "/kanban";
   const patient = patientOptions.find((p) => p.id === values.patientId);
@@ -788,7 +787,6 @@ export function SurgeryForm({
               </SummaryRow>
               <SummaryRow icon={<Package />} label="Materiais / OPME">
                 {editorItems.length}
-                {materialsToValidate > 0 ? <span className="mt-0.5 block text-xs font-normal text-amber-500">{materialsToValidate} a validar</span> : null}
               </SummaryRow>
               <SummaryRow icon={<Flag />} label="Prioridade">
                 <span className="flex items-center gap-2"><span className={cn("h-2 w-2 rounded-full", priority.dot)} />{priority.label}</span>

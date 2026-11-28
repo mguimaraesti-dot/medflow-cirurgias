@@ -49,7 +49,6 @@ export async function getAttentionItems(
   const authRows: { surgery_id: string; status: string; sent_at: string | null; responsible: string | null }[] = [];
   const docCount = new Map<string, number>();
   const matTotal = new Map<string, number>();
-  const matPending = new Map<string, number>();
   for (const part of chunks(ids)) {
     const [auth, docs, mats] = await Promise.all([
       supabase.from("authorization_requests").select("surgery_id,status,sent_at,responsible").in("surgery_id", part).in("status", ["sent", "in_review", "pending_docs"]),
@@ -63,7 +62,6 @@ export async function getAttentionItems(
     for (const d of docs.data ?? []) docCount.set(d.surgery_id, (docCount.get(d.surgery_id) ?? 0) + 1);
     for (const m of (mats.data ?? []) as { surgery_id: string; validated: boolean }[]) {
       matTotal.set(m.surgery_id, (matTotal.get(m.surgery_id) ?? 0) + 1);
-      if (!m.validated) matPending.set(m.surgery_id, (matPending.get(m.surgery_id) ?? 0) + 1);
     }
   }
 
@@ -113,13 +111,12 @@ export async function getAttentionItems(
     // 2) Sem materiais/OPME confirmados.
     if (isNear) {
       const total = matTotal.get(s.id) ?? 0;
-      const pending = matPending.get(s.id) ?? 0;
-      if (total === 0 || pending > 0) {
+      if (total === 0) {
         items.push({
           id: `mat-${s.id}`,
           kind: "materials",
-          level: to! <= 3 ? "critical" : total === 0 || to! <= 7 ? "high" : "medium",
-          title: total === 0 ? "Cirurgia sem OPME/materiais" : `${pending} material(is) sem validação`,
+          level: to! <= 3 ? "critical" : "high",
+          title: "Cirurgia sem OPME/materiais",
           detail: to! < 0 ? "Data prevista já passou" : `Cirurgia ${to === 0 ? "hoje" : `em ${to} dia(s)`} — confirmar materiais`,
           responsible: null,
           ageDays: age,

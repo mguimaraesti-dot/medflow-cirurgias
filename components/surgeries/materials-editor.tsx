@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, CheckCheck, Loader2, Package, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Loader2, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { searchTussMaterialsAction } from "@/app/(dashboard)/catalog/materials/actions";
@@ -181,18 +181,6 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
           <span className="text-muted-foreground">—</span>
         )}
       </td>
-      <td className="px-3 py-2">
-        <span className="flex flex-wrap items-center gap-1">
-          {item.ai ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-600 dark:text-violet-400">
-              <Sparkles className="h-3 w-3" />IA
-            </span>
-          ) : null}
-          <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", item.validated ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/15 text-amber-600 dark:text-amber-400")}>
-            {item.validated ? "Validado" : "Pendente"}
-          </span>
-        </span>
-      </td>
       <td className="px-2 py-2">
         {canEdit ? (
           <span className="flex items-center justify-end gap-0.5">
@@ -203,11 +191,6 @@ function Row({ item, adapter, canEdit }: { item: EditorItem; adapter: EditorAdap
               </>
             ) : (
               <>
-                {!item.validated ? (
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" disabled={pending} onClick={() => run(() => adapter.onUpdate(item.key, { validated: true }))} aria-label={`Validar ${item.name}`}>
-                    {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  </Button>
-                ) : null}
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(true)} aria-label={`Editar ${item.name}`}><Pencil className="h-3.5 w-3.5" /></Button>
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={pending} onClick={() => run(() => adapter.onRemove(item.key))} aria-label={`Remover ${item.name}`}><Trash2 className="h-3.5 w-3.5" /></Button>
               </>
@@ -359,8 +342,6 @@ export function MaterialsEditor({
   canEdit: boolean;
 }) {
   const [adding, setAdding] = useState(false);
-  const [pending, start] = useTransition();
-  const toValidate = items.filter((i) => !i.validated).length;
 
   return (
     <section data-no-enter-submit className="rounded-xl border border-border bg-card p-4" aria-label="Materiais e OPME">
@@ -369,26 +350,9 @@ export function MaterialsEditor({
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-500"><Package className="h-4 w-4" /></span>
           Materiais e OPME
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{items.length} {items.length === 1 ? "item" : "itens"}</span>
-          {toValidate > 0 ? (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">{toValidate} a validar</span>
-          ) : items.length > 0 ? (
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">todos validados</span>
-          ) : null}
         </h2>
         {canEdit ? (
           <div className="flex items-center gap-2">
-            {toValidate > 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8"
-                disabled={pending}
-                onClick={() => start(async () => { const err = await adapter.onValidateAll(); if (err) toast.error(err); else toast.success("Materiais validados."); })}
-              >
-                <CheckCheck className="mr-1 h-3.5 w-3.5" />Validar todos
-              </Button>
-            ) : null}
             <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => setAdding((v) => !v)}>
               <Plus className="mr-1 h-3.5 w-3.5" />{adding ? "Fechar" : "Adicionar"}
             </Button>
@@ -407,7 +371,6 @@ export function MaterialsEditor({
                 <th scope="col" className="px-3 py-2 text-left font-semibold">Código TUSS</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">Qtd.</th>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">Justificativa</th>
-                <th scope="col" className="px-3 py-2 text-left font-semibold">Situação</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Ações</th>
               </tr>
             </thead>
