@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ChevronRight, ClipboardX, FileWarning, FlaskConical, ListChecks, Building2, CalendarClock, User, Clock } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronRight, ClipboardX, FileWarning, FlaskConical, ListChecks, Building2, CalendarClock, Clock } from "lucide-react";
 
 import type { AttentionItem, AttentionKind, AttentionLevel } from "@/lib/data/dashboard-attention";
 import { cn } from "@/lib/utils";
@@ -75,7 +75,6 @@ export function AttentionList({ items, initial = 5 }: { items: AttentionItem[]; 
                       {[it.patient, it.procedure].filter(Boolean).join(" · ") || "—"}
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1"><User className="h-3 w-3" />{it.responsible ?? "Sem responsável"}</span>
                       <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{ageLabel(it.ageDays)}</span>
                     </p>
                   </div>
