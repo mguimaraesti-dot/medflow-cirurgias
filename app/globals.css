@@ -134,3 +134,13 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }
+
+
+/* Campos de data: ícone do calendário sempre visível e clicável (inclusive no tema escuro). */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

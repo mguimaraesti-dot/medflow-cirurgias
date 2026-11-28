@@ -104,7 +104,7 @@ export function AuthorizationCard({
       {/* 2. Datas — só as que fazem sentido para o status atual */}
       <section className={cn("flex flex-col gap-3 border-t border-border pt-4", !started && "hidden")}>
         <h4 className={sectionTitle}>Datas</h4>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="sent_at">Enviada em</Label>
             <Input id="sent_at" name="sent_at" type="date" className="h-10" defaultValue={authorization?.sent_at ?? ""} />

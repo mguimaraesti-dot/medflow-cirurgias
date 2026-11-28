@@ -120,7 +120,10 @@ export default async function SurgeryDetailPage({
   const installments =
     surgery.attendance_type === "particular" ? await listInstallments(supabase, financialRecord.id) : [];
 
-  const progressSteps = computeSurgeryProgressSteps(stages, surgery);
+  const progressSteps = computeSurgeryProgressSteps(
+    surgery.attendance_type === "particular" ? stages.filter((st) => st.code !== "authorization") : stages,
+    surgery
+  );
 
   const notes = parseSurgeryNotes(surgery.admin_notes);
   const currentStage = stages.find((st) => st.id === surgery.stage_id);
@@ -313,6 +316,7 @@ export default async function SurgeryDetailPage({
               insuranceProviderId={surgery.insurance_provider_id}
               requirements={requirements}
               authorization={authorization}
+              skipAuthorization={surgery.attendance_type === "particular"}
               orReservation={orReservation}
               preoperativeItems={preoperativeItems}
               documents={documents}

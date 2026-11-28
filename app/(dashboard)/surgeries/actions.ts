@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { advanceSurgeryStage } from "@/lib/data/surgery-stage-advance";
+import { advanceSurgeryStage, syncAuthorizationForAttendance } from "@/lib/data/surgery-stage-advance";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireActionPermission } from "@/lib/auth/guard";
@@ -175,6 +175,10 @@ export async function createSurgeryAction(
   if (seen.size === 0) await importBestComposition(supabase, surgeryId);
   await syncSurgeryComposition(supabase, surgeryId);
 
+  // Particular não tem autorização: dispensa a exigência e já posiciona o card.
+  await syncAuthorizationForAttendance(supabase, surgeryId, parsed.data.attendance_type);
+  await advanceSurgeryStage(supabase, surgeryId);
+
   // Foto da guia lida pela IA: fica anexada à cirurgia para consulta.
   const guidePhoto = formData.get("guide_photo");
   if (
@@ -236,6 +240,8 @@ export async function updateSurgeryAction(
   await savePatientInsurance(supabase, formData, parsed.data.patient_id);
   await importBestComposition(supabase, id);
   await syncSurgeryComposition(supabase, id);
+  await syncAuthorizationForAttendance(supabase, id, parsed.data.attendance_type);
+  await advanceSurgeryStage(supabase, id);
 
   revalidatePath("/kanban");
   revalidatePath("/surgeries");

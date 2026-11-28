@@ -12,7 +12,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * Regras de segurança:
  *   - só AVANÇA (nunca recua um card que alguém posicionou manualmente mais à frente);
  *   - só cirurgias ativas; "Realizada/Encerrada" continua sendo decisão manual;
- *   - as etapas são encadeadas: uma etapa só conta se as anteriores estiverem concluídas.
+ *   - as etapas são encadeadas: uma etapa só conta se as anteriores estiverem concluídas;
+ *   - atendimento particular não tem autorização: a exigência é dispensada e o card
+ *     vai direto de "Solicitações recebidas" para "Agendamento".
  * Falhas aqui nunca derrubam a ação principal (best-effort, apenas registradas).
  */
 const CHAIN: { fromCode: string; toCode: string }[] = [
@@ -22,13 +24,50 @@ const CHAIN: { fromCode: string; toCode: string }[] = [
   { fromCode: "preoperative", toCode: "released" },
 ];
 
+/** Motivo gravado quando o sistema dispensa a autorização sozinho (atendimento particular). */
+export const AUTO_WAIVER_REASON = "Atendimento particular — não requer autorização de convênio.";
+
+/**
+ * Particular não passa por autorização de convênio: a exigência "Autorização"
+ * fica dispensada (o avanço automático então pula essa etapa). Se o
+ * atendimento voltar a ser convênio, só desfaz a dispensa que o sistema mesmo
+ * criou — uma dispensa feita à mão (outro motivo) é preservada.
+ */
+export async function syncAuthorizationForAttendance(
+  supabase: SupabaseClient,
+  surgeryId: string,
+  attendanceType: string | null | undefined
+): Promise<void> {
+  try {
+    if (attendanceType === "particular") {
+      await supabase
+        .from("surgery_requirements")
+        .update({ waived: true, waived_reason: AUTO_WAIVER_REASON })
+        .eq("surgery_id", surgeryId)
+        .eq("requirement_key", "authorization")
+        .eq("waived", false)
+        .eq("is_satisfied", false);
+    } else if (attendanceType === "convenio") {
+      await supabase
+        .from("surgery_requirements")
+        .update({ waived: false, waived_reason: null })
+        .eq("surgery_id", surgeryId)
+        .eq("requirement_key", "authorization")
+        .eq("waived_reason", AUTO_WAIVER_REASON);
+    }
+  } catch (e) {
+    console.error("[stage-advance] dispensa de autorização:", e);
+  }
+}
+
 export async function advanceSurgeryStage(supabase: SupabaseClient, surgeryId: string): Promise<void> {
   try {
     const [{ data: surgery }, { data: stages }] = await Promise.all([
-      supabase.from("surgeries").select("id,status,stage_id").eq("id", surgeryId).maybeSingle(),
+      supabase.from("surgeries").select("id,status,stage_id,attendance_type").eq("id", surgeryId).maybeSingle(),
       supabase.from("workflow_stages").select("id,code,sort_order").eq("is_active", true).order("sort_order"),
     ]);
     if (!surgery || surgery.status !== "active" || !stages) return;
+    await syncAuthorizationForAttendance(supabase, surgeryId, surgery.attendance_type as string);
 
     const byCode = new Map(stages.map((s) => [s.code as string, s]));
     const current = stages.find((s) => s.id === surgery.stage_id);

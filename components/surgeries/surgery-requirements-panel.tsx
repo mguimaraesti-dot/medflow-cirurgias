@@ -29,6 +29,7 @@ export function SurgeryRequirementsPanel({
   insuranceProviderId,
   requirements,
   authorization,
+  skipAuthorization = false,
   orReservation,
   preoperativeItems,
   documents,
@@ -47,6 +48,8 @@ export function SurgeryRequirementsPanel({
   preoperativeItems: PreoperativeItem[];
   documents: SurgeryDocument[];
   /** Documentos do cadastro do paciente (somente leitura, vinculados por referência). */
+  /** Atendimento particular: não há autorização de convênio. */
+  skipAuthorization?: boolean;
   patientDocuments?: PatientDocument[];
   patientId?: string | null;
 }) {
@@ -73,7 +76,7 @@ export function SurgeryRequirementsPanel({
         onToggle={() => toggle("hospital_request")}
       />
 
-      {authorizationReq ? (
+      {authorizationReq && !skipAuthorization ? (
         <AuthorizationRequirementCard
           surgeryId={surgeryId}
           procedureLabel={procedureLabel}
