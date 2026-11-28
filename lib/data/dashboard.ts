@@ -29,9 +29,9 @@ function daysBetween(a: string, b: string): number {
   return Math.round((new Date(`${b}T12:00:00`).getTime() - new Date(`${a}T12:00:00`).getTime()) / 86400000);
 }
 
-export type DashboardPreset = "7d" | "30d" | "90d" | "6m" | "custom";
+export type DashboardPreset = "year" | "7d" | "30d" | "90d" | "6m" | "custom";
 
-/** Resolve o período a partir dos parâmetros da URL (padrão: últimos 30 dias, até hoje). */
+/** Resolve o período a partir dos parâmetros da URL (padrão: ano vigente, 1º/jan a 31/dez). */
 export function resolveDashboardRange(params: { p?: string; from?: string; to?: string }): {
   preset: DashboardPreset;
   from: string;
@@ -43,7 +43,11 @@ export function resolveDashboardRange(params: { p?: string; from?: string; to?: 
     return { preset: "custom", from: params.from, to: params.to };
   }
   const span: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90, "6m": 182 };
-  const preset = (params.p && span[params.p] ? params.p : "30d") as Exclude<DashboardPreset, "custom">;
+  if (!params.p || !span[params.p]) {
+    const year = today.slice(0, 4);
+    return { preset: "year", from: `${year}-01-01`, to: `${year}-12-31` };
+  }
+  const preset = params.p as Exclude<DashboardPreset, "custom" | "year">;
   return { preset, from: addDaysISO(today, -(span[preset] - 1)), to: today };
 }
 

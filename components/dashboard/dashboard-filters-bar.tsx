@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const PRESETS = [
+  { value: "year", label: "Ano atual" },
   { value: "7d", label: "Últimos 7 dias" },
   { value: "30d", label: "Últimos 30 dias" },
   { value: "90d", label: "Últimos 90 dias" },
@@ -45,7 +46,7 @@ export function DashboardFiltersBar({
     <div className="flex flex-wrap items-center gap-2" aria-busy={pending}>
       <Select
         value={preset}
-        onValueChange={(v) => (v === "custom" ? update({ p: "custom", from, to }) : update({ p: v === "30d" ? null : v, from: null, to: null }))}
+        onValueChange={(v) => (v === "custom" ? update({ p: "custom", from, to }) : update({ p: v === "year" ? null : v, from: null, to: null }))}
       >
         <SelectTrigger className="w-full sm:w-[170px]">
           <span className="flex min-w-0 items-center gap-2"><CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" /><SelectValue /></span>
