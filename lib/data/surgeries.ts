@@ -784,16 +784,38 @@ export async function updateSurgery(
  * Pra reordenar dentro da mesma coluna ou soltar entre dois cards
  * específicos (drag-and-drop do board), ver moveSurgeryCard.
  */
+/** Encerrar = mover para a etapa "Realizada/Encerrada": o status vira "completed".
+ * Sair dessa etapa reabre (completed → active). Canceladas não são alteradas. */
+async function statusPatchForStage(supabase: SupabaseClient, stageId: string): Promise<{ status?: string }> {
+  const { data } = await supabase.from("workflow_stages").select("code").eq("id", stageId).maybeSingle();
+  return { status: data?.code === "completed" ? "completed" : "active" };
+}
+
+async function applyStageMove(
+  supabase: SupabaseClient,
+  id: string,
+  stageId: string,
+  boardPosition: number
+) {
+  const { error } = await supabase
+    .from("surgeries")
+    .update({ stage_id: stageId, board_position: boardPosition })
+    .eq("id", id);
+  if (error) throw error;
+  const { status } = await statusPatchForStage(supabase, stageId);
+  if (status === "completed") {
+    await supabase.from("surgeries").update({ status: "completed" }).eq("id", id).in("status", ["active", "rescheduled"]);
+  } else {
+    await supabase.from("surgeries").update({ status: "active" }).eq("id", id).eq("status", "completed");
+  }
+}
+
 export async function moveSurgeryStage(
   supabase: SupabaseClient,
   id: string,
   stageId: string
 ) {
-  const { error } = await supabase
-    .from("surgeries")
-    .update({ stage_id: stageId, board_position: Date.now() })
-    .eq("id", id);
-  if (error) throw error;
+  await applyStageMove(supabase, id, stageId, Date.now());
 }
 
 /** Move/reordena um card do Kanban pra uma posição específica (entre dois
@@ -806,11 +828,7 @@ export async function moveSurgeryCard(
   stageId: string,
   boardPosition: number
 ) {
-  const { error } = await supabase
-    .from("surgeries")
-    .update({ stage_id: stageId, board_position: boardPosition })
-    .eq("id", id);
-  if (error) throw error;
+  await applyStageMove(supabase, id, stageId, boardPosition);
 }
 
 /** Confirma ou remarca a data/horário da cirurgia — usado pelos botões
